@@ -7,3 +7,5 @@ pub mod netlist;
 pub mod isa;
 pub mod iss;
 pub mod asm;
+pub mod qm;
+pub mod galpack;
