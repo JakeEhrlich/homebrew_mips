@@ -80,6 +80,7 @@ impl Cpu {
         // Read operands (before the delayed load lands).
         let (rs, rt) = match instr {
             Instr::R { rs, rt, .. } | Instr::I { rs, rt, .. } => (self.regs[rs as usize], self.regs[rt as usize]),
+            Instr::Sh { rt, .. } => (0, self.regs[rt as usize]),
             Instr::J { .. } => (0, 0),
         };
         // Now the previous load's value becomes visible.
@@ -107,6 +108,24 @@ impl Cpu {
                         self.finish(pending_branch, next_pc);
                         return Ok(());
                     }
+                    Op::Jalr => {
+                        self.branch = Some(rs);
+                        self.set_reg(rd, pc.wrapping_add(8));
+                        self.finish(pending_branch, next_pc);
+                        return Ok(());
+                    }
+                    Op::Sllv => rt << (rs & 31),
+                    Op::Srlv => rt >> (rs & 31),
+                    Op::Srav => ((rt as i32) >> (rs & 31)) as u32,
+                    _ => unreachable!(),
+                };
+                self.set_reg(rd, v);
+            }
+            Instr::Sh { op, rd, shamt, .. } => {
+                let v = match op {
+                    Op::Sll => rt << shamt,
+                    Op::Srl => rt >> shamt,
+                    Op::Sra => ((rt as i32) >> shamt) as u32,
                     _ => unreachable!(),
                 };
                 self.set_reg(rd, v);
@@ -127,8 +146,16 @@ impl Cpu {
                         self.load_delay = Some((rt_n, v));
                     }
                     Op::Sw => self.store_word(rs.wrapping_add(sext), rt),
-                    Op::Beq | Op::Bne => {
-                        let taken = (rs == rt) == (op == Op::Beq);
+                    Op::Beq | Op::Bne | Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez => {
+                        let s = rs as i32;
+                        let taken = match op {
+                            Op::Beq => rs == rt,
+                            Op::Bne => rs != rt,
+                            Op::Blez => s <= 0,
+                            Op::Bgtz => s > 0,
+                            Op::Bltz => s < 0,
+                            _ => s >= 0,
+                        };
                         if taken {
                             self.branch = Some(next_pc.wrapping_add(sext << 2));
                         }

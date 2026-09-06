@@ -258,3 +258,87 @@ fn jr_with_forwarded_target() {
         34.0,
     );
 }
+
+#[test]
+fn rs_conditioned_branches() {
+    check(
+        "
+        li   $t0, -3
+        li   $t1, 0
+        li   $t2, 5
+        li   $s0, 0
+        bltz $t0, a          # taken (sign)
+        nop
+        li   $s0, 1          # killed
+    a:  bgez $t0, b          # not taken
+        nop
+        li   $s1, 1          # runs
+    b:  blez $t1, c          # taken (zero)
+        nop
+        li   $s1, 2          # killed
+    c:  bgtz $t1, d          # not taken (zero)
+        nop
+        li   $s2, 1          # runs
+    d:  bgtz $t2, e          # taken
+        nop
+        li   $s2, 2          # killed
+    e:  bgez $t2, f          # taken (positive)
+        addiu $t2, $t2, 1    # delay slot
+        li   $s2, 3          # killed
+    f:  bltz $t2, g          # not taken (forwarded t2 = 6)
+        nop
+        li   $s3, 6
+    g:  nop
+        nop
+        nop
+    stop:
+        nop
+        nop
+        nop
+        nop
+        ",
+        34.0,
+    );
+}
+
+/// JAL and JALR link through the ALU's pass-B path; the link is visible to
+/// the delay slot (distance 1) and to the callee (distance 2).
+#[test]
+fn jal_jalr_links() {
+    check(
+        "
+        jal  sub
+        move $t0, $ra        # delay slot reads the link at distance 1
+        move $t1, $v0
+        li   $t3, sub
+        nop
+        jalr $t3             # target forwarded at distance 2
+        li   $a0, 20         # delay slot
+        move $t2, $v0
+        li   $t3, sub2
+        jalr $s4, $t3        # link into s4, target at distance 1
+        li   $a0, 30
+        move $t4, $v0
+        move $t5, $s4
+        b    stop
+        nop
+        nop
+    sub:
+        addiu $v0, $a0, 1
+        jr   $ra
+        move $t6, $ra        # delay slot: ra unchanged here
+        nop
+    sub2:
+        addiu $v0, $a0, 2
+        jr   $s4
+        nop
+        nop
+    stop:
+        nop
+        nop
+        nop
+        nop
+        ",
+        34.0,
+    );
+}

@@ -183,6 +183,28 @@ pub fn assemble(src: &str, base: u32) -> Result<Program, AsmError> {
             "slt" => words.push(r3(Op::Slt)?),
             "sltu" => words.push(r3(Op::Sltu)?),
             "jr" => words.push(Instr::R { op: Op::Jr, rd: 0, rs: reg(a(0)?, line)?, rt: 0 }.encode()),
+            "jalr" => {
+                // jalr rs  |  jalr rd, rs
+                let (rd, rs) = if it.args.len() == 1 { (31, reg(a(0)?, line)?) } else { (reg(a(0)?, line)?, reg(a(1)?, line)?) };
+                words.push(Instr::R { op: Op::Jalr, rd, rs, rt: 0 }.encode());
+            }
+            "sll" | "srl" | "sra" => {
+                let op = match it.mnemonic { "sll" => Op::Sll, "srl" => Op::Srl, _ => Op::Sra };
+                let shamt = num(a(2)?, line)?;
+                if !(0..32).contains(&shamt) {
+                    return Err(AsmError { line, msg: "shift amount out of range".into() });
+                }
+                words.push(Instr::Sh { op, rd: reg(a(0)?, line)?, rt: reg(a(1)?, line)?, shamt: shamt as u8 }.encode());
+            }
+            "sllv" | "srlv" | "srav" => {
+                let op = match it.mnemonic { "sllv" => Op::Sllv, "srlv" => Op::Srlv, _ => Op::Srav };
+                // rd, rt, rs
+                words.push(Instr::R { op, rd: reg(a(0)?, line)?, rt: reg(a(1)?, line)?, rs: reg(a(2)?, line)? }.encode());
+            }
+            "blez" | "bgtz" | "bltz" | "bgez" => {
+                let op = match it.mnemonic { "blez" => Op::Blez, "bgtz" => Op::Bgtz, "bltz" => Op::Bltz, _ => Op::Bgez };
+                words.push(Instr::I { op, rs: reg(a(0)?, line)?, rt: 0, imm: branch_off(a(1)?)? }.encode());
+            }
             "addiu" | "addi" => words.push(i3(Op::Addiu)?),
             "andi" => words.push(i3(Op::Andi)?),
             "ori" => words.push(i3(Op::Ori)?),

@@ -25,6 +25,17 @@ fn known_encodings() {
         ("beq $a0, $a1, 4", 0x1085_0004),
         ("bne $a0, $zero, -1", 0x1480_FFFF),
         ("andi $t0, $t1, 0xFFFF", 0x3128_FFFF),
+        ("jalr $t9", 0x0320_F809),
+        ("jalr $t0, $t9", 0x0320_4009),
+        ("sll $t0, $t1, 2", 0x0009_4080),
+        ("srl $t0, $t1, 31", 0x0009_47C2),
+        ("sra $t0, $t1, 4", 0x0009_4103),
+        ("sllv $t0, $t1, $t2", 0x0149_4004),
+        ("srav $t0, $t1, $t2", 0x0149_4007),
+        ("blez $a0, 1", 0x1880_0001),
+        ("bgtz $a0, 1", 0x1C80_0001),
+        ("bltz $a0, -1", 0x0480_FFFF),
+        ("bgez $a0, 2", 0x0481_0002),
     ];
     for &(src, want) in cases {
         let p = assemble(src, 0).unwrap();
@@ -40,7 +51,7 @@ fn known_encodings() {
 fn add_and_addi_decode_as_unsigned_forms() {
     assert_eq!(Instr::decode(0x0085_1020).unwrap().op(), Op::Addu); // add
     assert_eq!(Instr::decode(0x2082_0001).unwrap().op(), Op::Addiu); // addi
-    assert!(Instr::decode(0x0000_0040).is_none()); // sll with shamt: phase 2
+    assert_eq!(Instr::decode(0x0000_0040).unwrap().op(), Op::Sll); // sll $zero, $zero, 1
     assert!(Instr::decode(0x7000_0000).is_none());
 }
 
@@ -218,4 +229,88 @@ fn slt_variants_and_logic() {
     assert_eq!(cpu.regs[13], 1);
     assert_eq!(cpu.regs[14], !1);
     assert_eq!(cpu.regs[15], 0xFFFF_0000);
+}
+
+#[test]
+fn rs_branches_and_jalr() {
+    let cpu = run(
+        "
+        li   $t0, -3
+        li   $t1, 0
+        li   $t2, 5
+        li   $s0, 0
+        bltz $t0, a          # taken
+        nop
+        li   $s0, 1          # skipped
+    a:  bgez $t0, b          # not taken
+        nop
+        li   $s1, 1
+    b:  blez $t1, c          # taken (zero)
+        nop
+        li   $s1, 2
+    c:  bgtz $t1, d          # not taken (zero)
+        nop
+        li   $s2, 1
+    d:  bgtz $t2, e          # taken
+        nop
+        li   $s2, 2
+    e:  la_skip: nop
+        li   $t3, sub
+        jalr $t3             # link in $ra
+        li   $a0, 7          # delay slot
+        move $s3, $v0
+        li   $t3, sub2
+        jalr $s4, $t3        # link in $s4
+        li   $a0, 8
+        move $s5, $v0
+        b    stop
+        nop
+    sub:
+        addiu $v0, $a0, 1
+        jr   $ra
+        nop
+    sub2:
+        addiu $v0, $a0, 2
+        jr   $s4
+        nop
+    stop:
+        nop
+        ",
+        200,
+    );
+    assert_eq!(cpu.regs[16], 0); // s0
+    assert_eq!(cpu.regs[17], 1); // s1: bgez not taken, blez taken
+    assert_eq!(cpu.regs[18], 1); // s2
+    assert_eq!(cpu.regs[19], 8); // s3 = 7 + 1
+    assert_eq!(cpu.regs[21], 10); // s5 = 8 + 2
+    assert_eq!(cpu.regs[20], 108); // s4 = address after the second jalr's delay slot
+}
+
+#[test]
+fn shifts() {
+    let cpu = run(
+        "
+        li   $t0, 0x80000001
+        li   $t1, 4
+        sll  $t2, $t0, 1
+        srl  $t3, $t0, 1
+        sra  $t4, $t0, 1
+        sllv $t5, $t0, $t1
+        srlv $t6, $t0, $t1
+        srav $t7, $t0, $t1
+        sra  $s0, $t0, 31
+        sll  $s1, $t0, 0
+    stop:
+        nop
+        ",
+        100,
+    );
+    assert_eq!(cpu.regs[10], 0x0000_0002);
+    assert_eq!(cpu.regs[11], 0x4000_0000);
+    assert_eq!(cpu.regs[12], 0xC000_0000);
+    assert_eq!(cpu.regs[13], 0x0000_0010);
+    assert_eq!(cpu.regs[14], 0x0800_0000);
+    assert_eq!(cpu.regs[15], 0xF800_0000);
+    assert_eq!(cpu.regs[16], 0xFFFF_FFFF);
+    assert_eq!(cpu.regs[17], 0x8000_0001);
 }

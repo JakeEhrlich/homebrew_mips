@@ -82,7 +82,15 @@ struct Dec {
     sltu: bool,
     beq: bool,
     bne: bool,
+    /// Branch on a condition of rs alone (BLEZ, BGTZ, BLTZ, BGEZ).
+    brs: bool,
+    /// ... including "rs == 0" (BLEZ, BGTZ).
+    bz: bool,
+    /// ... inverted (BGTZ, BGEZ).
+    binv: bool,
     jr: bool,
+    /// JAL or JALR: B takes the link (PC+8) and the ALU passes it through.
+    link: bool,
     load: bool,
 }
 
@@ -110,16 +118,27 @@ fn decode(word: u32) -> Option<Dec> {
         sltu: false,
         beq: false,
         bne: false,
+        brs: false,
+        bz: false,
+        binv: false,
         jr: false,
+        link: false,
         load: false,
     };
     match op {
         Nop => {}
+        // Shifts are not in the hardware yet: undefined, so don't-care.
+        Sll | Srl | Sra | Sllv | Srlv | Srav => return None,
         Addu | Subu | And | Or | Xor | Nor | Slt | Sltu => {
             d.rtype_rw = true;
             d.uses_rt = true;
         }
         Jr => d.jr = true,
+        Jalr => {
+            d.rtype_rw = true;
+            d.jr = true;
+            d.link = true;
+        }
         Addiu | Andi | Ori | Xori | Slti | Sltiu | Lui | Lw => {
             d.itype_rw = true;
             d.selimm = true;
@@ -128,18 +147,23 @@ fn decode(word: u32) -> Option<Dec> {
             d.selimm = true;
             d.store = true;
         }
-        Beq | Bne => d.uses_rt = true,
+        Beq | Bne | Blez | Bgtz => d.uses_rt = true,
+        Bltz | Bgez => {}
         J => d.seljt = true,
         Jal => {
             d.seljt = true;
             d.jal = true;
+            d.link = true;
         }
     }
+    d.brs = matches!(op, Blez | Bgtz | Bltz | Bgez);
+    d.bz = matches!(op, Blez | Bgtz);
+    d.binv = matches!(op, Bgtz | Bgez);
     d.sext = matches!(op, Addiu | Slti | Sltiu | Lw | Sw);
     d.lui = op == Lui;
     // XADD: the result is the adder output (SLT/SLTU use the adder but
     // produce only the compare bit).  XSUB: invert B, carry-in 1.
-    d.add = matches!(op, Addu | Addiu | Subu | Lui | Lw | Sw | Jal | Jr | Nop);
+    d.add = matches!(op, Addu | Addiu | Subu | Lui | Lw | Sw | Jr | Nop);
     d.sub = matches!(op, Subu | Slt | Sltu | Slti | Sltiu);
     d.and = matches!(op, And | Andi);
     d.or = matches!(op, Or | Ori);
@@ -163,6 +187,15 @@ fn dec_word(m: u32) -> u32 {
     let funct = m >> 6 & 0x3F;
     opcode << 26 | funct
 }
+/// ALU operation code carried in ID/EX as XOP2..0 (sub is add with XSUB).
+fn alu_op(d: &Dec) -> u32 {
+    if d.link { 1 } else if d.and { 2 } else if d.or { 3 } else if d.xor { 4 } else if d.nor { 5 } else if d.slt { 6 } else if d.sltu { 7 } else { 0 }
+}
+/// Literals selecting ALU operation `code` in the EX/MEM result terms.
+fn op_lits(code: u32) -> Vec<SLit> {
+    (0..3).map(|b| if code >> b & 1 == 1 { l(&format!("XOP{b}")) } else { nl_(&format!("XOP{b}")) }).collect()
+}
+
 fn dec_table(out: &str, mode: Mode, f: impl Fn(&Dec) -> bool) -> Eq {
     let ins = dec_inputs();
     Eq::table(out, mode, &strs(&ins), |m| decode(dec_word(m)).map(|d| f(&d)))
@@ -237,6 +270,7 @@ fn dec_block() -> Vec<Eq> {
         dec_table("DSELJT", Mode::Comb, |d| d.seljt),
         dec_table("USESRT", Mode::Comb, |d| d.uses_rt),
         dec_table("STORE", Mode::Comb, |d| d.store),
+        dec_table("LINK", Mode::Comb, |d| d.link),
     ]
 }
 
@@ -245,16 +279,25 @@ fn dec_block() -> Vec<Eq> {
 /// enable, memory bits.
 fn ctrl_block() -> Vec<Eq> {
     let mut eqs = vec![
-        dec_table("XADD", Mode::Reg, |d| d.add),
+        dec_table("XOP0", Mode::Reg, |d| alu_op(d) & 1 == 1),
+        dec_table("XOP1", Mode::Reg, |d| alu_op(d) >> 1 & 1 == 1),
+        dec_table("XOP2", Mode::Reg, |d| alu_op(d) >> 2 & 1 == 1),
         dec_table("XSUB", Mode::Reg, |d| d.sub),
-        dec_table("XAND", Mode::Reg, |d| d.and),
-        dec_table("XOR_", Mode::Reg, |d| d.or),
-        dec_table("XXOR", Mode::Reg, |d| d.xor),
-        dec_table("XNOR", Mode::Reg, |d| d.nor),
-        dec_table("XSLT", Mode::Reg, |d| d.slt),
-        dec_table("XSLTU", Mode::Reg, |d| d.sltu),
         dec_table("XBEQ", Mode::Reg, |d| d.beq),
         dec_table("XBNE", Mode::Reg, |d| d.bne),
+        dec_table("XBRS", Mode::Reg, |d| d.brs),
+        dec_table("XBZ", Mode::Reg, |d| d.bz),
+        // BLTZ and BGEZ share opcode 1 (REGIMM) and differ in the rt field,
+        // which the opcode/funct tables cannot see: invert when BGTZ
+        // (opcode 7) or REGIMM with IR16 set.
+        Eq::sop(
+            "XBINV",
+            Mode::Reg,
+            vec![
+                vec![nl_(&ir(31)), nl_(&ir(30)), nl_(&ir(29)), l(&ir(28)), l(&ir(27)), l(&ir(26))],
+                vec![nl_(&ir(31)), nl_(&ir(30)), nl_(&ir(29)), nl_(&ir(28)), nl_(&ir(27)), l(&ir(26)), l(&ir(16))],
+            ],
+        ),
         dec_table("XJR", Mode::Reg, |d| d.jr),
         dec_table("XMR", Mode::Reg, |d| d.load),
         dec_table("XMW", Mode::Reg, |d| d.store),
@@ -331,30 +374,25 @@ fn fwdctl_block() -> Vec<Eq> {
     eqs
 }
 
-/// ID/EX operand A: register file / MEM/WB (steer) / PC+4 (JAL link).
+/// ID/EX operand A: register file, or MEM/WB when steered.
 fn idex_a_block() -> Vec<Eq> {
     (0..32)
         .map(|i| {
-            let mut terms = vec![
-                vec![nl_("JAL"), nl_("STA"), l(&n("RA", i))],
-                vec![nl_("JAL"), l("STA"), l(&n("WD", i))],
-            ];
-            if (2..=14).contains(&i) {
-                terms.push(vec![l("JAL"), l(&p4(i))]);
-            }
-            Eq::sop(&n("XA", i), Mode::Reg, terms)
+            Eq::sop(&n("XA", i), Mode::Reg, vec![vec![nl_("STA"), l(&n("RA", i))], vec![l("STA"), l(&n("WD", i))]])
         })
         .collect()
 }
 
 /// ID/EX operand B: register file / MEM/WB / immediate (sign, zero or
-/// LUI-extended) / constant 4 (JAL link).
+/// LUI-extended) / the link address for JAL and JALR.  While the jump is in
+/// ID the incrementer holds PC+4 of its delay slot, i.e. PC+8: exactly the
+/// link, with no adder.
 fn idex_b_block() -> Vec<Eq> {
     (0..32)
         .map(|i| {
             let mut terms = vec![
-                vec![nl_("SELIMM"), nl_("JAL"), nl_("STB"), l(&n("RB", i))],
-                vec![nl_("SELIMM"), nl_("JAL"), l("STB"), l(&n("WD", i))],
+                vec![nl_("SELIMM"), nl_("LINK"), nl_("STB"), l(&n("RB", i))],
+                vec![nl_("SELIMM"), nl_("LINK"), l("STB"), l(&n("WD", i))],
             ];
             if i < 16 {
                 terms.push(vec![l("SELIMM"), nl_("LUI"), l(&ir(i))]);
@@ -362,8 +400,8 @@ fn idex_b_block() -> Vec<Eq> {
                 terms.push(vec![l("SELIMM"), l("SEXT"), l(&ir(15))]);
                 terms.push(vec![l("SELIMM"), l("LUI"), l(&ir(i - 16))]);
             }
-            if i == 2 {
-                terms.push(vec![l("JAL")]);
+            if (2..=14).contains(&i) {
+                terms.push(vec![l("LINK"), l(&n("INC", i))]);
             }
             Eq::sop(&n("XB", i), Mode::Reg, terms)
         })
@@ -543,30 +581,31 @@ fn exmem_result_block() -> Vec<Eq> {
             let (fa, fb) = (n("FA", i), n("FB", i));
             // Sum with carry select (group 0's carry-in is XSUB).
             let c = if k == 0 { "XSUB".to_string() } else { format!("C{k}") };
+            let with = |code: u32, extra: Vec<SLit>| { let mut t = op_lits(code); t.extend(extra); t };
             let mut terms = vec![
-                vec![l("XADD"), l(&c), l(&s1)],
-                vec![l("XADD"), nl_(&c), l(&s0)],
-                vec![l("XAND"), l(&fa), l(&fb)],
-                vec![l("XOR_"), l(&fa)],
-                vec![l("XOR_"), l(&fb)],
-                vec![l("XXOR"), l(&fa), nl_(&fb)],
-                vec![l("XXOR"), nl_(&fa), l(&fb)],
-                vec![l("XNOR"), nl_(&fa), nl_(&fb)],
+                with(0, vec![l(&c), l(&s1)]),
+                with(0, vec![nl_(&c), l(&s0)]),
+                with(1, vec![l(&fb)]),
+                with(2, vec![l(&fa), l(&fb)]),
+                with(3, vec![l(&fa)]),
+                with(3, vec![l(&fb)]),
+                with(4, vec![l(&fa), nl_(&fb)]),
+                with(4, vec![nl_(&fa), l(&fb)]),
+                with(5, vec![nl_(&fa), nl_(&fb)]),
             ];
             if i == 0 {
                 // SLTU: a < b  <=>  no carry out of a + !b + 1.
                 // carry out = G10 + PP10 & C10.
-                terms.push(vec![l("XSLTU"), nl_("G10"), nl_("PP10")]);
-                terms.push(vec![l("XSLTU"), nl_("G10"), nl_("C10")]);
+                terms.push(with(7, vec![nl_("G10"), nl_("PP10")]));
+                terms.push(with(7, vec![nl_("G10"), nl_("C10")]));
                 // SLT (signed): signs differ -> a negative; else sign of a - b,
                 // whose bit 31 is the selected sum bit 31 (b inverted, cin 1).
                 // b31 as seen here is !FB31.
-                terms.push(vec![l("XSLT"), l("FA31"), l("FB31")]); // a neg, b pos
-                for (cval, s) in [(true, "S1_31"), (false, "S0_31")] {
+                terms.push(with(6, vec![l("FA31"), l("FB31")])); // a neg, b pos
+                for (cval, sb) in [(true, "S1_31"), (false, "S0_31")] {
                     let cl = if cval { l("C10") } else { nl_("C10") };
-                    // same sign (FA31 != FB31 since FB is inverted): result negative
-                    terms.push(vec![l("XSLT"), l("FA31"), nl_("FB31"), cl.clone(), l(s)]);
-                    terms.push(vec![l("XSLT"), nl_("FA31"), l("FB31"), cl, l(s)]);
+                    terms.push(with(6, vec![l("FA31"), nl_("FB31"), cl.clone(), l(sb)]));
+                    terms.push(with(6, vec![nl_("FA31"), l("FB31"), cl, l(sb)]));
                 }
             }
             Eq::sop(&n("MR", i), Mode::Reg, terms)
@@ -623,9 +662,15 @@ fn cmp_block() -> Vec<Eq> {
 
 /// Next-PC selection and kill.
 fn taken_block() -> Vec<Eq> {
-    let ins = ["NEQ0", "NEQ1", "NEQ2", "NEQ3", "XBEQ", "XBNE", "XJR", "DSELJT"];
+    let ins = ["NEQ0", "NEQ1", "NEQ2", "NEQ3", "XBEQ", "XBNE", "XJR", "DSELJT", "FA31", "XBRS", "XBZ", "XBINV"];
     let neq = |m: u32| m & 15 != 0;
-    let taken = move |m: u32| (m >> 4 & 1 == 1 && !neq(m)) || (m >> 5 & 1 == 1 && neq(m));
+    let bit = |m: u32, b: u32| m >> b & 1 == 1;
+    let taken = move |m: u32| {
+        // rs-conditioned: sign, optionally OR'd with "rs == 0" (rt is r0,
+        // so NEQ is rs != 0), optionally inverted.
+        let cond = bit(m, 8) || (bit(m, 10) && !neq(m));
+        (bit(m, 4) && !neq(m)) || (bit(m, 5) && neq(m)) || (bit(m, 9) && (cond != bit(m, 11)))
+    };
     let jr = |m: u32| m >> 6 & 1 == 1;
     let jt = |m: u32| m >> 7 & 1 == 1;
     vec![
