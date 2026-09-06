@@ -702,22 +702,25 @@ pub struct Cpu {
     pub gal_count: usize,
 }
 
-/// Clock-generator phases, ns after the rising edge: (fall, rise) for the
-/// active-low strobes, (rise, fall) for PH_SD.
+/// Clock-generator phases as (fall, rise) for the active-low strobes and
+/// (rise, fall) for PH_SD, in ns after the rising edge, given the period.
 ///
 /// * PH_RF: register-file write CE.  Falls after the steer has settled
-///   (13 ns) plus tPS; rises early enough for the address hold (tHA 2 ns
-///   before the next MEM/WB update at 36).
+///   (13 ns) plus tPS; rises at least tHA (2 ns) before the next MEM/WB
+///   update (next edge + 2), and after a >= 12 ns pulse.
 /// * PH_CE: data-memory CE#.  Load data is valid 15 ns after the fall and
-///   must still be there at the next edge (34), so it rises 1 ns after the
-///   edge; the address (EX/MEM) does not change before 36.
+///   must still be there at the next edge, so it rises 1 ns after it; the
+///   EX/MEM address does not change before next edge + 2.
 /// * PH_SD: store-data output enable.  Rises after a preceding load's
-///   outputs are off (CE# up at 35 plus tCHZ 7, i.e. 8 ns into the next
-///   cycle... measured from this cycle's edge: previous 35 + 7 - 34 = 8),
-///   falls before a following load's outputs turn on (next 10 + tCLZ 4).
-pub const PH_RF: (f64, f64) = (15.0, 31.0);
-pub const PH_CE: (f64, f64) = (10.0, 35.0);
-pub const PH_SD: (f64, f64) = (8.0, 32.0);
+///   outputs are off (CE# up at next+1, tCHZ 7: 8 ns into the cycle);
+///   falls so the data holds to the write end (tER min 3) yet is gone
+///   before a following load's outputs turn on (10 + tCLZ 4).
+pub fn phases(period_ns: f64) -> [(f64, f64); 3] {
+    [(15.0, period_ns - 3.0), (10.0, period_ns + 1.0), (8.0, period_ns - 2.0)]
+}
+pub const PH_RF: usize = 0;
+pub const PH_CE: usize = 1;
+pub const PH_SD: usize = 2;
 
 impl Cpu {
     /// Build the netlist with `program` in instruction memory at address 0.
@@ -876,14 +879,15 @@ impl Cpu {
         let base = self.sim.now();
         let t = |off: f64| base + Self::ns(off);
         let half = base + self.period / 2;
+        let ph = phases(self.period as f64 / NS as f64);
         self.sim.schedule(base, self.clk, Level::H);
         self.sim.schedule(half, self.clk, Level::L);
-        self.sim.schedule(t(PH_RF.0), self.ph_rf, Level::L);
-        self.sim.schedule(t(PH_RF.1), self.ph_rf, Level::H);
-        self.sim.schedule(t(PH_CE.0), self.ph_ce, Level::L);
-        self.sim.schedule(t(PH_CE.1), self.ph_ce, Level::H);
-        self.sim.schedule(t(PH_SD.0), self.ph_sd, Level::H);
-        self.sim.schedule(t(PH_SD.1), self.ph_sd, Level::L);
+        self.sim.schedule(t(ph[PH_RF].0), self.ph_rf, Level::L);
+        self.sim.schedule(t(ph[PH_RF].1), self.ph_rf, Level::H);
+        self.sim.schedule(t(ph[PH_CE].0), self.ph_ce, Level::L);
+        self.sim.schedule(t(ph[PH_CE].1), self.ph_ce, Level::H);
+        self.sim.schedule(t(ph[PH_SD].0), self.ph_sd, Level::H);
+        self.sim.schedule(t(ph[PH_SD].1), self.ph_sd, Level::L);
         // Sample the PC just before the next edge (what IF is fetching).
         self.sim.run_until(base + self.period - Self::ns(3.5));
         self.pc_trace.push(self.sim.read_bus(&self.pc).map(|w| w << 2));
