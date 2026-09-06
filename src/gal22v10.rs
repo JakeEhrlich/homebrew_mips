@@ -274,8 +274,9 @@ pub enum WarningKind {
     ClockWidth { width: Time },
     /// Clock pin went X/Z.
     ClockUnknown,
-    /// Register captured an unknown D (some cone input was X at the edge).
-    CapturedX { olmc: usize },
+    /// Register captured an unknown D; `x_inputs` are the array inputs that
+    /// were X at the edge.
+    CapturedX { olmc: usize, x_inputs: Vec<(usize, Time)> },
     /// Asynchronous reset asserted for less than tAW.
     AsyncResetWidth { width: Time },
     /// Clock edge less than tAR after asynchronous reset release.
@@ -564,6 +565,17 @@ impl Gal22v10 {
     pub fn q(&self, k: usize) -> Level {
         self.olmc[k].q
     }
+    /// Debug view of one macrocell: q, out, oe, and the array inputs of its
+    /// OE term with their current values.
+    pub fn debug_olmc(&self, k: usize) -> String {
+        let o = &self.olmc[k];
+        let oe_ins: Vec<(usize, Level)> = match &self.cfg.olmc[k].oe {
+            Oe::Term(t) => t.0.iter().map(|l| (l.input, self.arr[l.input])).collect(),
+            _ => vec![],
+        };
+        format!("q={:?} out={:?} oe={:?} oe_settle={} oe_inputs={:?} pending={:?}", o.q, o.out, o.oe, o.oe_settle, oe_ins,
+            self.queue.iter().filter(|(_, ev)| matches!(ev, Ev::OeX(j) | Ev::OeSettle(j, _) if *j == k)).map(|(t, ev)| (t.0, format!("{ev:?}"))).collect::<Vec<_>>())
+    }
 
     fn pin_drive(&self, k: usize) -> Level {
         let o = &self.olmc[k];
@@ -646,7 +658,10 @@ impl Gal22v10 {
     /// or H for all of them with one product term true throughout.
     fn hazard_free(&self, terms: &[Term]) -> bool {
         let t = self.now;
-        let changed: Vec<usize> = (0..ARRAY_INPUTS).filter(|&j| self.arr_since[j] == t).collect();
+        let used = |j: usize| terms.iter().any(|term| term.0.iter().any(|l| l.input == j));
+        // Inputs that changed now take their old and new values; inputs that
+        // are X (in a transition window) take both levels.
+        let changed: Vec<usize> = (0..ARRAY_INPUTS).filter(|&j| used(j) && (self.arr_since[j] == t || self.arr[j] == Level::X)).collect();
         if changed.len() > 6 {
             return false;
         }
@@ -656,7 +671,14 @@ impl Gal22v10 {
         let mut covering: Vec<bool> = vec![true; terms.len()];
         for c in 0..combos {
             for (b, &j) in changed.iter().enumerate() {
-                arr[j] = if c >> b & 1 == 1 { self.arr_prev[j] } else { self.arr[j] };
+                // An X (now or before) can be either level; otherwise the
+                // input is either its old or its new value.
+                let (a0, a1) = if self.arr[j] == Level::X || self.arr_prev[j] == Level::X {
+                    (Level::L, Level::H)
+                } else {
+                    (self.arr[j], self.arr_prev[j])
+                };
+                arr[j] = if c >> b & 1 == 1 { a1 } else { a0 };
             }
             let mut any_h = false;
             for (ti, term) in terms.iter().enumerate() {
@@ -755,12 +777,49 @@ impl Gal22v10 {
         }
         v
     }
+    /// Sum of products, resolving X inputs by enumeration: if the result is
+    /// the same for every assignment of the (up to 6) X inputs it is that
+    /// value, else X.
     fn eval_sop(&self, terms: &[Term]) -> Level {
-        let mut v = Level::L;
-        for t in terms {
-            v = or3(v, self.eval_term(t));
+        let xs: Vec<usize> = (0..ARRAY_INPUTS)
+            .filter(|&i| self.arr[i] == Level::X && terms.iter().any(|t| t.0.iter().any(|l| l.input == i)))
+            .collect();
+        if xs.is_empty() {
+            let mut v = Level::L;
+            for t in terms {
+                v = or3(v, self.eval_term(t));
+            }
+            return v;
         }
-        v
+        if xs.len() > 6 {
+            return Level::X;
+        }
+        let mut arr = self.arr;
+        let mut result: Option<Level> = None;
+        for c in 0..(1usize << xs.len()) {
+            for (b, &j) in xs.iter().enumerate() {
+                arr[j] = if c >> b & 1 == 1 { Level::H } else { Level::L };
+            }
+            let mut v = Level::L;
+            for t in terms {
+                let mut tv = Level::H;
+                for l in &t.0 {
+                    let a = arr[l.input];
+                    tv = and3(tv, if l.neg { not3(a) } else { a });
+                }
+                v = or3(v, tv);
+            }
+            match result {
+                None => result = Some(v),
+                Some(r) if r == v => {}
+                _ => return Level::X,
+            }
+        }
+        result.unwrap()
+    }
+    /// Single term with the same X resolution.
+    fn eval_term_x(&self, t: &Term) -> Level {
+        self.eval_sop(std::slice::from_ref(t))
     }
 
     fn process(&mut self, ev: Ev) {
@@ -789,7 +848,7 @@ impl Gal22v10 {
                 let v = match &self.cfg.olmc[k].oe {
                     Oe::Always => Level::H,
                     Oe::Never => Level::L,
-                    Oe::Term(t) => self.eval_term(t),
+                    Oe::Term(t) => self.eval_term_x(t),
                 };
                 self.olmc[k].oe = v;
                 self.refresh_io_pin(k);
@@ -799,7 +858,7 @@ impl Gal22v10 {
                 if when < self.ar_settle {
                     return;
                 }
-                let v = self.cfg.ar.as_ref().map_or(Level::L, |t| self.eval_term(t));
+                let v = self.cfg.ar.as_ref().map_or(Level::L, |t| self.eval_term_x(t));
                 self.set_ar(v);
             }
             Ev::RegPin(k, v) => self.set_out(k, v),
@@ -929,7 +988,7 @@ impl Gal22v10 {
                     self.warn(WarningKind::SyncPresetSetup);
                     Level::X
                 } else {
-                    self.eval_term(term)
+                    self.eval_term_x(term)
                 }
             }
         };
@@ -955,7 +1014,11 @@ impl Gal22v10 {
                 self.warn(WarningKind::Setup { olmc: k, changed_at: cone_changed });
                 v = Level::X;
             } else if v == Level::X && !ar_bad && sp != Level::X {
-                self.warn(WarningKind::CapturedX { olmc: k });
+                let x_inputs: Vec<(usize, Time)> = (0..ARRAY_INPUTS)
+                    .filter(|&i| self.arr[i] == Level::X && self.sop_users[i].contains(&k))
+                    .map(|i| (i, self.arr_since[i]))
+                    .collect();
+                self.warn(WarningKind::CapturedX { olmc: k, x_inputs });
             }
             new_q[k] = v;
         }

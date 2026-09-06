@@ -100,7 +100,8 @@ impl GalSpec {
         if self.eqs.len() > 10 {
             return Err(format!("{}: {} outputs", self.name, self.eqs.len()));
         }
-        let dedicated = if self.needs_clock() { 12 } else { 13 };
+        // Pins 1..11 and 13 are inputs; pin 1 is the clock when needed.
+        let dedicated = if self.needs_clock() { 11 } else { 12 };
         let ins = self.external_inputs().len();
         let spare_io = 10 - self.eqs.len();
         if ins > dedicated + spare_io {

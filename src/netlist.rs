@@ -35,6 +35,8 @@ pub trait Chip {
     /// Next time strictly after `t` at which an output changes by itself.
     fn next_event(&self, t: Time) -> Option<Time>;
     fn warnings(&self) -> Vec<String>;
+    /// For downcasting to the concrete model (to peek memory contents etc.).
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +72,9 @@ impl Chip for Gal22v10 {
     }
     fn warnings(&self) -> Vec<String> {
         Gal22v10::warnings(self).iter().map(|w| w.to_string()).collect()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -174,6 +179,9 @@ impl Chip for Cy7c131 {
     fn warnings(&self) -> Vec<String> {
         Cy7c131::warnings(self).iter().map(|w| w.to_string()).collect()
     }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +276,9 @@ impl Chip for As7c164a {
     }
     fn warnings(&self) -> Vec<String> {
         As7c164a::warnings(self).iter().map(|w| w.to_string()).collect()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -405,6 +416,25 @@ impl Sim {
     }
     pub fn net_name(&self, id: NetId) -> &str {
         &self.nets[id].name
+    }
+    /// A chip model, for downcasting.
+    pub fn chip(&self, id: ChipId) -> &dyn std::any::Any {
+        self.chips[id].1.as_any()
+    }
+    pub fn chip_id(&self, name: &str) -> ChipId {
+        self.chips.iter().position(|(n, _)| n == name).unwrap_or_else(|| panic!("no chip {name}"))
+    }
+    /// What chip `id` currently drives on `pin`.
+    pub fn chip_drive(&self, id: ChipId, pin: usize) -> Level {
+        self.drives[id][pin]
+    }
+    /// Level last fed to `chip` on `pin`.
+    pub fn fed_level(&self, chip: ChipId, pin: usize) -> Level {
+        self.fed[chip][pin]
+    }
+    /// Pins of `chip` connected to `net`.
+    pub fn pins_on(&self, net: NetId, chip: ChipId) -> Vec<usize> {
+        self.nets[net].pins.iter().filter(|&&(c, _)| c == chip).map(|&(_, p)| p).collect()
     }
     /// Resolved level on a net right now.
     pub fn value(&self, net: NetId) -> Level {
@@ -548,6 +578,11 @@ impl Sim {
             w.push(format!("t={:.3}ns net {}: drive conflict", t as f64 / NS as f64, self.nets[n].name));
         }
         w
+    }
+
+    /// Every net change in `[t0, t1]`: (time, net name, level).
+    pub fn changes_between(&self, t0: Time, t1: Time) -> Vec<(Time, String, Level)> {
+        self.trace.iter().filter(|e| e.0 >= t0 && e.0 <= t1).map(|e| (e.0, self.nets[e.1].name.clone(), e.2)).collect()
     }
 
     /// Value history of one net: (time, level) at each change.

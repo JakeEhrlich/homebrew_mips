@@ -973,7 +973,9 @@ impl Cy7c131 {
                 }
             }
             Some(false) => {
-                if cur != DataOut::Z {
+                // Already turning off keeps its schedule.
+                let turning_off = cur == DataOut::X && self.ps(p).data_out.next_change_after(t).is_some();
+                if cur != DataOut::Z && !turning_off {
                     let hz = tm.thzce.max(tm.thzoe).max(tm.thzwe);
                     let ps = self.ps_mut(p);
                     ps.data_out.set_from(t, DataOut::X);
@@ -1027,7 +1029,7 @@ impl Cy7c131 {
                 }
                 match levels_value(&n.addr) {
                     None => {
-                        self.warn(p, WarningKind::AddrUnknown);
+                        // Reading an unknown address just yields unknown data.
                         let ps = self.ps_mut(p);
                         ps.data_out.set_from(x_start, DataOut::X);
                         ps.valid_not_before = valid;

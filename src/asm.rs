@@ -90,8 +90,11 @@ pub fn assemble(src: &str, base: u32) -> Result<Program, AsmError> {
         let size = match mnemonic {
             ".word" => args.len() as u32,
             "li" => {
-                let v = num(args.get(1).ok_or(AsmError { line, msg: "li needs 2 args".into() })?, line)?;
-                if (-32768..=32767).contains(&v) || (0..=0xFFFF).contains(&v) { 1 } else { 2 }
+                // A label (resolved in pass 2) always fits in one word here.
+                match num(args.get(1).ok_or(AsmError { line, msg: "li needs 2 args".into() })?, line) {
+                    Ok(v) if !((-32768..=32767).contains(&v) || (0..=0xFFFF).contains(&v)) => 2,
+                    _ => 1,
+                }
             }
             _ => 1,
         };
@@ -159,7 +162,7 @@ pub fn assemble(src: &str, base: u32) -> Result<Program, AsmError> {
             "move" => words.push(Instr::R { op: Op::Addu, rd: reg(a(0)?, line)?, rs: reg(a(1)?, line)?, rt: 0 }.encode()),
             "li" => {
                 let rt = reg(a(0)?, line)?;
-                let v = num(a(1)?, line)?;
+                let v = if let Some(&lv) = labels.get(a(1)?.trim()) { lv as i64 } else { num(a(1)?, line)? };
                 if (-32768..=32767).contains(&v) {
                     words.push(Instr::I { op: Op::Addiu, rt, rs: 0, imm: v as u16 }.encode());
                 } else if (0..=0xFFFF).contains(&v) {

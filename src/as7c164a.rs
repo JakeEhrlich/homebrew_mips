@@ -453,7 +453,10 @@ impl As7c164a {
                 }
             }
             Some(false) => {
-                if cur != DataOut::Z {
+                // Already turning off (X with a high-Z pending) keeps its
+                // schedule; only a driving output starts the turn-off timer.
+                let turning_off = cur == DataOut::X && self.data_out.next_change_after(t).is_some();
+                if cur != DataOut::Z && !turning_off {
                     // Which control turned it off decides the high-Z time.
                     let hz = if o.we_n != n.we_n && n.we_n == Level::L { tm.twhz } else { tm.tchz.max(tm.tohz) };
                     self.data_out.set_from(t, DataOut::X);

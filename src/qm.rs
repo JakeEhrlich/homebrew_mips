@@ -45,17 +45,22 @@ pub fn minimize(n: usize, f: impl Fn(u32) -> Option<bool>) -> Vec<Cube> {
     loop {
         let mut next: Vec<Imp> = Vec::new();
         let mut used = vec![false; current.len()];
-        for i in 0..current.len() {
-            for j in (i + 1)..current.len() {
-                let (a, b) = (current[i], current[j]);
-                if a.mask != b.mask {
-                    continue;
-                }
-                let diff = a.val ^ b.val;
-                if diff.count_ones() == 1 {
-                    used[i] = true;
-                    used[j] = true;
-                    next.push(Imp { mask: a.mask & !diff, val: a.val & !diff });
+        // Index by (mask, popcount): only groups one apart can combine.
+        let mut groups: std::collections::BTreeMap<(u32, u32), Vec<usize>> = Default::default();
+        for (i, imp) in current.iter().enumerate() {
+            groups.entry((imp.mask, imp.val.count_ones())).or_default().push(i);
+        }
+        for (&(mask, pop), lo) in &groups {
+            let Some(hi) = groups.get(&(mask, pop + 1)) else { continue };
+            for &i in lo {
+                for &j in hi {
+                    let (a, b) = (current[i], current[j]);
+                    let diff = a.val ^ b.val;
+                    if diff.count_ones() == 1 {
+                        used[i] = true;
+                        used[j] = true;
+                        next.push(Imp { mask: a.mask & !diff, val: a.val & !diff });
+                    }
                 }
             }
         }
