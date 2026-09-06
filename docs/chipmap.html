@@ -115,13 +115,13 @@ function bitsLabel(bits){ const a=[...bits].filter(b=>b!==null); if (!a.length) 
 // ---------- column plan ----------
 const COLS = [
   {title:'IF', w:300, blocks:['PC','PC+4','Instruction memory']},
-  {title:'', w:150, blocks:['IF/ID'], reg:true},
+  {title:'', w:240, blocks:['IF/ID'], reg:true},
   {title:'ID', w:330, blocks:['Decode','Steer','Register file','Branch target adder']},
-  {title:'', w:200, blocks:['ID/EX control','Forwarding control','ID/EX A','ID/EX B','ID/EX store data','ID/EX branch target'], reg:true},
+  {title:'', w:240, blocks:['ID/EX control','Forwarding control','ID/EX A','ID/EX B','ID/EX store data','ID/EX branch target'], reg:true},
   {title:'EX', w:330, blocks:['Forward A','Forward B','ALU slices + carries','Compare','Next PC']},
-  {title:'', w:200, blocks:['EX/MEM result (ALU last level)','EX/MEM store data','EX/MEM control'], reg:true},
+  {title:'', w:240, blocks:['EX/MEM result (ALU last level)','EX/MEM store data','EX/MEM control'], reg:true},
   {title:'MEM', w:240, blocks:['Data memory']},
-  {title:'', w:150, blocks:['MEM/WB'], reg:true},
+  {title:'', w:240, blocks:['MEM/WB'], reg:true},
   {title:'WB', w:170, blocks:[]},
 ];
 const colOf = new Map(), rowOf = new Map();
