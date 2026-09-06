@@ -52,6 +52,10 @@ fn nl_(s: &str) -> SLit {
 fn ir(bit: usize) -> String {
     n("IR", bit)
 }
+/// PC+4 bit (in IF/ID) -> net.  Underscore so the diagram groups it as P4.
+fn p4(bit: usize) -> String {
+    format!("P4_{bit}")
+}
 
 // ---------------------------------------------------------------------------
 // Decode (combinatorial, from opcode and funct).  Truth tables over the 12
@@ -216,7 +220,7 @@ fn ifid_block() -> Vec<Eq> {
         eqs.push(Eq::sop(&ir(i), Mode::Reg, vec![vec![l(&n("IM", i)), nl_("KILL")]]));
     }
     for i in 2..=14 {
-        eqs.push(Eq::sop(&n("P4", i), Mode::Reg, vec![vec![l(&n("INC", i))]]));
+        eqs.push(Eq::sop(&p4(i), Mode::Reg, vec![vec![l(&n("INC", i))]]));
     }
     eqs
 }
@@ -336,7 +340,7 @@ fn idex_a_block() -> Vec<Eq> {
                 vec![nl_("JAL"), l("STA"), l(&n("WD", i))],
             ];
             if (2..=14).contains(&i) {
-                terms.push(vec![l("JAL"), l(&n("P4", i))]);
+                terms.push(vec![l("JAL"), l(&p4(i))]);
             }
             Eq::sop(&n("XA", i), Mode::Reg, terms)
         })
@@ -390,7 +394,7 @@ fn bt_block() -> (Vec<Eq>, Vec<Eq>, Vec<Eq>) {
     let groups: Vec<(usize, usize)> = vec![(2, 4), (5, 7), (8, 10), (11, 13), (14, 14)];
     for (k, &(lo, hi)) in groups.iter().enumerate() {
         let w = hi - lo + 1;
-        let mut ins: Vec<String> = (lo..=hi).map(|i| n("P4", i)).collect();
+        let mut ins: Vec<String> = (lo..=hi).map(|i| p4(i)).collect();
         ins.extend((lo..=hi).map(|i| ir(i - 2)));
         let mask = (1u32 << w) - 1;
         for cin in 0..2u32 {
