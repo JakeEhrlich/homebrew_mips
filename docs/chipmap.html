@@ -454,10 +454,13 @@ function fit() { const r = view.getBoundingClientRect(); const s = Math.max(tota
 function apply() { svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
 document.getElementById('fit').addEventListener('click', fit);
 view.addEventListener('wheel', ev => { ev.preventDefault(); const r = view.getBoundingClientRect(); const mx = vb.x + (ev.clientX - r.left) / r.width * vb.w, my = vb.y + (ev.clientY - r.top) / r.height * vb.h; const k = Math.exp(ev.deltaY * 0.0015); vb = {x: mx - (mx - vb.x)*k, y: my - (my - vb.y)*k, w: vb.w*k, h: vb.h*k}; apply(); }, {passive:false});
-let drag = null;
-view.addEventListener('pointerdown', ev => { if (ev.button !== 0) return; drag = {x:ev.clientX, y:ev.clientY, vx:vb.x, vy:vb.y}; view.classList.add('dragging'); view.setPointerCapture(ev.pointerId); });
-view.addEventListener('pointermove', ev => { if (!drag) return; const r = view.getBoundingClientRect(); vb.x = drag.vx - (ev.clientX - drag.x) / r.width * vb.w; vb.y = drag.vy - (ev.clientY - drag.y) / r.height * vb.h; apply(); });
-view.addEventListener('pointerup', () => { drag = null; view.classList.remove('dragging'); });
+// Pan only once the pointer has moved; a plain click reaches the wire or
+// chip under it (pointer capture would steal the click).
+let drag = null, moved = false;
+view.addEventListener('pointerdown', ev => { if (ev.button !== 0) return; drag = {x:ev.clientX, y:ev.clientY, vx:vb.x, vy:vb.y}; moved = false; });
+window.addEventListener('pointermove', ev => { if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; if (!moved && Math.hypot(dx, dy) < 4) return; moved = true; view.classList.add('dragging'); const r = view.getBoundingClientRect(); vb.x = drag.vx - dx / r.width * vb.w; vb.y = drag.vy - dy / r.height * vb.h; apply(); });
+window.addEventListener('pointerup', () => { drag = null; view.classList.remove('dragging'); });
+svg.addEventListener('click', ev => { if (moved) { moved = false; ev.stopPropagation(); } }, true);
 window.addEventListener('resize', fit);
 fit();
 </script>

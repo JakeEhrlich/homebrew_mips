@@ -1,0 +1,224 @@
+<title>MIPS-I Datapath Overview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F1F3F5; --ink: #1C2530; --ink-2: #5B6B7A; --unit: #FFFFFF; --reg: #DFE5EB; --rule: #C9D1D9; --corridor: #E8ECF0;
+  --copper: #C46A22; --back: #1F6FB5; --ctl: #7A8794; --hi: #0B8F6A; --panel: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --unit: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+    --copper: #E8964F; --back: #62AEEE; --ctl: #8E9CAA; --hi: #3FD39E; --panel: #1B2129;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --unit: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+  --copper: #E8964F; --back: #62AEEE; --ctl: #8E9CAA; --hi: #3FD39E; --panel: #1B2129;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14px; }
+header { display: flex; align-items: baseline; gap: 18px; padding: 12px 20px; border-bottom: 1px solid var(--rule); }
+header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+header .meta { color: var(--ink-2); font-size: 12px; }
+figure { margin: 0; padding: 12px 20px 0; }
+figure svg { width: 100%; height: auto; max-width: 1560px; display: block; }
+figcaption { color: var(--ink-2); font-size: 12px; margin: 8px 0 0; max-width: 70ch; }
+section { padding: 8px 20px 32px; max-width: 1560px; }
+section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 18px 0 8px; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; max-width: 110ch; }
+dt { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; font-weight: 500; }
+dd { margin: 0; line-height: 1.45; }
+dd .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+.corridor { fill: var(--corridor); }
+.corridor-label { font: 500 10px "IBM Plex Sans", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; fill: var(--ink-2); }
+.stage { font: 500 12px "IBM Plex Sans", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; fill: var(--ink-2); }
+.regbar { fill: var(--reg); stroke: var(--ink); stroke-width: 1; }
+.regbar-label { font: 600 10px "IBM Plex Sans", sans-serif; fill: var(--ink); }
+.unit { fill: var(--unit); stroke: var(--ink); stroke-width: 1.3; }
+.unit-label { font: 600 12px "IBM Plex Sans", sans-serif; fill: var(--ink); }
+.unit-sub { font: 400 10px "IBM Plex Mono", monospace; fill: var(--ink-2); }
+.pinlabel { font: 400 9.5px "IBM Plex Mono", monospace; fill: var(--ink-2); }
+.w { fill: none; stroke: var(--copper); stroke-width: 2.4; stroke-linejoin: round; }
+.w.thin { stroke-width: 1.4; }
+.w.back { stroke: var(--back); }
+.w.ctl { stroke: var(--ctl); stroke-width: 1.2; stroke-dasharray: 5 3; }
+.w.hi { stroke: var(--hi); stroke-width: 3.2; }
+.w.dim { opacity: 0.18; }
+.hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
+.arrow { fill: var(--copper); } .arrow.back { fill: var(--back); } .arrow.ctl { fill: var(--ctl); } .arrow.hi { fill: var(--hi); }
+.wlabel { font: 400 10px "IBM Plex Mono", monospace; fill: var(--ink-2); }
+.wlabel.hi { fill: var(--hi); font-weight: 500; }
+#info { min-height: 3.2em; color: var(--ink-2); font-size: 13px; padding: 8px 20px 0; max-width: 90ch; }
+#info b { color: var(--ink); font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 500; }
+@media (prefers-reduced-motion: no-preference) { .w { transition: opacity .12s, stroke .12s; } }
+</style>
+<header>
+  <h1>MIPS-I Datapath Overview</h1>
+  <span class="meta">Logical units and the data that moves between them. Control signals are omitted except the one branch decision. Hover a wire to trace it; click to keep it lit.</span>
+</header>
+<figure>
+<svg id="svg" viewBox="0 0 1560 700" role="img" aria-label="The five-stage datapath: PC mux and PC, PC+4, instruction memory, IF/ID, register file, branch target adder, three ID/EX operand muxes, three EX forwarding muxes, ALU and compare, EX/MEM, data memory, MEM/WB mux, and write-back returning over the top"></svg>
+<figcaption>Orange: data flowing forward. Blue: data returning to an earlier point in the pipe, drawn over the top corridor. Grey dashed: the only control signal shown, the branch decision. Widths in bits are marked on the wires; the PC is 13 bits because code lives in a 32 KB space.</figcaption>
+</figure>
+<div id="info">Hover a wire or a unit.</div>
+<section>
+<h2>Every mux, and why it has the inputs it has</h2>
+<dl>
+<dt>PC select</dt><dd>4:1. PC+4 for sequential flow; the jump field of the instruction in ID (J, JAL resolve in ID, no adder needed since MIPS jumps are absolute); the branch target from ID/EX (BEQ, BNE resolve in EX); the forwarded rs from EX (JR). One of the four is chosen by the Next-PC logic each cycle.</dd>
+<dt>ID/EX A</dt><dd>3:1. rs from the register file; the write-back data when rs is the register being written this cycle (the file cannot deliver it, so it is steered from MEM/WB); PC+4 for JAL, so the link address PC+8 is formed by the ALU adding 4.</dd>
+<dt>ID/EX B</dt><dd>4:1. rt from the register file; write-back data by the same steer; the immediate, sign- or zero-extended or shifted for LUI; the constant 4 for JAL.</dd>
+<dt>ID/EX store data</dt><dd>2:1. rt from the file or steered write-back. Exists because SW needs rt as data while B carries the address offset.</dd>
+<dt>Forward A, B, store data</dt><dd>3:1 each. The ID/EX value; the EX/MEM result when the writer is the instruction one ahead; MEM/WB data when it is two ahead. Three ahead was already handled by steer. B is also inverted here for subtraction.</dd>
+<dt>MEM/WB</dt><dd>2:1. Load data from memory, or the ALU result, whichever this instruction produced.</dd>
+</dl>
+<h2>Units with no mux</h2>
+<dl>
+<dt>PC+4</dt><dd>13-bit incrementer on the word address.</dd>
+<dt>Branch target adder</dt><dd>13-bit add of PC+4 and the branch offset, in ID, so the target is ready when the branch is decided in EX.</dd>
+<dt>ALU</dt><dd>32-bit add, subtract (B inverted, carry-in 1), and, or, xor, nor, slt, sltu. The compare beside it decides BEQ/BNE from the same forwarded operands.</dd>
+<dt>Register file</dt><dd>Two read ports (rs, rt) and one write port, fed by the write-back wire: data, destination and enable travel together.</dd>
+<dt>Instruction and data memory</dt><dd>32 KB each. Instruction memory only reads; data memory reads for loads and writes store data for SW.</dd>
+</dl>
+<p style="color:var(--ink-2);max-width:90ch">Not drawn: decode, which turns the instruction into the select and enable signals that steer every unit above, and the forwarding and steer comparators that compute those selects one stage early.</p>
+</section>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+const el = (t, a={}, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+const defs = el('defs', {}, svg);
+for (const c of ['', 'back', 'ctl', 'hi']) {
+  const m = el('marker', {id:'ar'+(c||'fwd'), viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'6', markerHeight:'6', orient:'auto'}, defs);
+  el('path', {d:'M0,0 L10,5 L0,10 z', class:'arrow '+c}, m);
+}
+const gBg = el('g', {}, svg), gW = el('g', {}, svg), gU = el('g', {}, svg), gL = el('g', {}, svg);
+// corridor and stages
+el('rect', {x:0, y:0, width:1560, height:132, class:'corridor'}, gBg);
+el('text', {x:14, y:16, class:'corridor-label'}, gBg).textContent = 'back edges';
+const stages = [['IF',30,350],['ID',400,760],['EX',810,1130],['MEM',1180,1390],['WB',1440,1540]];
+for (const [n,a,b] of stages) el('text', {x:(a+b)/2, y:160, 'text-anchor':'middle', class:'stage'}, gBg).textContent = n;
+const bars = [['IF/ID',372],['ID/EX',782],['EX/MEM',1152],['MEM/WB',1412]];
+for (const [n,x] of bars) {
+  el('rect', {x, y:180, width:22, height:500, class:'regbar'}, gU);
+  const t = el('text', {x:x+15, y:660, class:'regbar-label', transform:`rotate(-90 ${x+15} 660)`}, gU); t.textContent = n;
+}
+// units
+function unit(x, y, w, h, label, sub) {
+  el('rect', {x, y, width:w, height:h, rx:2, class:'unit'}, gU);
+  el('text', {x:x+w/2, y:y+h/2+(sub?-2:4), 'text-anchor':'middle', class:'unit-label'}, gU).textContent = label;
+  if (sub) el('text', {x:x+w/2, y:y+h/2+13, 'text-anchor':'middle', class:'unit-sub'}, gU).textContent = sub;
+}
+function mux(x, y, h, label) { // trapezoid, inputs on the left edge
+  el('path', {d:`M${x},${y} L${x},${y+h} L${x+50},${y+h-16} L${x+50},${y+16} z`, class:'unit'}, gU);
+  const t = el('text', {x:x+25, y:y+h/2+4, 'text-anchor':'middle', class:'unit-sub'}, gU); t.textContent = label;
+}
+unit(150, 325, 60, 50, 'PC', '13');
+unit(240, 210, 90, 50, 'PC + 4', '13-bit inc');
+unit(240, 320, 100, 80, 'Instruction', 'memory 32 KB');
+mux(60, 270, 160, 'PC sel');
+unit(450, 200, 120, 60, 'Branch target', 'adder, 13-bit');
+unit(450, 300, 120, 140, 'Register file', '32 x 32, 2R 1W');
+mux(640, 290, 70, 'A');
+mux(640, 385, 88, 'B');
+mux(640, 495, 50, 'SD');
+mux(870, 290, 70, 'fwd A');
+mux(870, 392, 70, 'fwd B');
+mux(870, 495, 50, 'fwd SD');
+unit(980, 300, 80, 150, 'ALU', '32-bit');
+unit(980, 200, 80, 50, 'A = B ?', 'compare');
+unit(1220, 320, 110, 130, 'Data memory', '32 KB');
+mux(1360, 340, 70, 'WB');
+// wires: name, class, points, label position
+const wires = [];
+function wire(name, cls, pts, lab, lx, ly, arrow=true) {
+  const d = 'M' + pts.map(p => p.join(',')).join(' L');
+  const p = el('path', {d, class:'w '+cls, 'data-net':name}, gW);
+  if (arrow) p.setAttribute('marker-end', `url(#ar${cls.includes('back')?'back':cls.includes('ctl')?'ctl':'fwd'})`);
+  const h = el('path', {d, class:'hit', 'data-net':name}, gL);
+  if (lab) el('text', {x:lx, y:ly, class:'wlabel', 'data-net':name}, gL).textContent = lab;
+  wires.push({name, p, h});
+  h.addEventListener('mouseenter', () => hover(name)); h.addEventListener('mouseleave', () => hover(null));
+  h.addEventListener('click', ev => { ev.stopPropagation(); pin(name); });
+}
+// --- IF ---
+wire('PC', '', [[110,350],[150,350]], '13', 118, 344);
+wire('PC', '', [[210,350],[240,350]]);
+wire('PC', '', [[225,350],[225,235],[240,235]]);
+wire('P4', '', [[330,235],[372,235]], 'PC+4', 336, 229);
+wire('P4', 'back', [[352,235],[352,30],[42,30],[42,290],[60,290]], '+4', 60, 26);
+wire('INSTR', '', [[340,360],[372,360]], 'instr 32', 341, 354);
+// --- ID ---
+wire('P4', '', [[394,235],[450,220]]);
+wire('P4', '', [[420,235],[420,280],[620,280],[620,345],[640,345]], 'PC+4 (JAL link)', 470, 276);
+wire('INSTR', '', [[394,360],[450,360]], 'rs, rt', 412, 354);
+wire('INSTR', '', [[430,360],[430,240],[450,240]], 'offset', 434, 252);
+wire('JUMP', 'back', [[412,360],[412,44],[46,44],[46,325],[60,325]], 'jump target (J/JAL, from ID)', 60, 40);
+wire('INSTR', '', [[430,360],[430,470],[622,470],[622,445],[640,445]], 'imm', 500, 466);
+wire('BT', '', [[570,230],[782,230]], 'branch target 13', 600, 224);
+wire('RA', '', [[570,330],[600,330],[600,305],[640,305]], 'rs 32', 578, 324);
+wire('RB', '', [[570,400],[640,400]], 'rt 32', 578, 394);
+wire('RB', '', [[610,400],[610,510],[640,510]]);
+wire('XA', '', [[690,325],[782,325]], 'A', 735, 319);
+wire('XB', '', [[690,429],[782,429]], 'B', 735, 423);
+wire('XSD', '', [[690,520],[782,520]], 'store data', 700, 514);
+// constant 4 into B
+el('text', {x:626, y:465, class:'pinlabel'}, gL).textContent = '4';
+wire('C4', 'thin', [[634,462],[640,462]], '', 0, 0, false);
+// --- EX ---
+wire('XA', '', [[804,325],[870,305]]);
+wire('XB', '', [[804,429],[870,407]]);
+wire('XSD', '', [[804,520],[870,505]]);
+wire('BT', 'back', [[820,230],[830,230],[830,58],[50,58],[50,360],[60,360]], 'branch target (from ID/EX)', 60, 54);
+wire('FA', '', [[920,325],[980,325]], 'A', 940, 319);
+wire('FB', '', [[920,427],[980,427]], 'B', 940, 421);
+wire('FA', '', [[950,325],[950,215],[980,215]]);
+wire('FB', '', [[960,427],[960,235],[980,235]]);
+wire('FA', 'back', [[940,325],[940,72],[54,72],[54,395],[60,395]], 'rs forwarded (JR target, from EX)', 60, 68);
+wire('TAKEN', 'ctl', [[1060,225],[1080,225],[1080,120],[85,120],[85,272]], 'branch taken?', 90, 116);
+wire('RESULT', '', [[1060,376],[1152,376]], 'result 32', 1070, 370);
+wire('FSD', '', [[920,520],[1152,520]], 'store data', 960, 514);
+// --- MEM ---
+wire('RESULT', '', [[1174,376],[1220,376]], 'addr', 1180, 370);
+wire('RESULT', '', [[1195,376],[1195,470],[1345,470],[1345,390],[1360,390]]);
+wire('FSD', '', [[1174,520],[1200,520],[1200,430],[1220,430]], 'write data', 1200, 444);
+wire('DQ', '', [[1330,362],[1360,362]], 'load', 1332, 356);
+wire('WD', '', [[1410,376],[1412,376]], '', 0, 0, false);
+// --- WB and back edges ---
+wire('WD', 'back', [[1434,376],[1450,376],[1450,100],[510,100],[510,300]], 'write-back: data, destination, enable (from MEM/WB)', 520, 96);
+wire('WD', 'back', [[630,100],[630,325],[640,325]]);
+wire('WD', 'back', [[630,325],[630,420],[640,420]]);
+wire('WD', 'back', [[630,420],[630,530],[640,530]]);
+wire('WD', 'back', [[858,100],[858,345],[870,345]]);
+wire('WD', 'back', [[858,345],[858,447],[870,447]]);
+wire('WD', 'back', [[858,447],[858,535],[870,535]]);
+wire('RESULT', 'back', [[1190,376],[1190,86],[850,86],[850,325],[870,325]], 'result one ahead (from EX/MEM)', 860, 82);
+wire('RESULT', 'back', [[850,325],[850,427],[870,427]]);
+wire('RESULT', 'back', [[850,427],[850,520],[870,520]]);
+el('text', {x:1450, y:160, class:'stage'}, gL);
+// --- interaction ---
+const DESC = {
+  PC: 'The program counter, 13 bits of word address. Fetches the instruction and feeds the incrementer.',
+  P4: 'PC+4 of the fetched instruction. Goes back to the PC select for sequential flow, and travels with the instruction into ID for branch targets and the JAL link.',
+  INSTR: 'The 32-bit instruction in ID: its rs and rt fields address the register file, its offset feeds the branch adder, its immediate feeds mux B, and its jump field can become the next PC.',
+  JUMP: 'Jump target from the instruction in ID. MIPS jumps are absolute, so this is wiring, not an add.',
+  BT: 'Branch target, computed in ID and registered, so it is ready the moment the branch is decided in EX.',
+  RA: 'Register rs as read from the file.', RB: 'Register rt as read from the file; also the store data for SW.',
+  XA: 'Operand A entering EX.', XB: 'Operand B entering EX.', XSD: 'Store data entering EX.',
+  FA: 'Operand A after forwarding. Also the JR target.', FB: 'Operand B after forwarding (inverted for subtract).',
+  TAKEN: 'The branch decision: with BEQ/BNE in EX, the compare result picks the branch target as next PC and kills the instruction being fetched.',
+  RESULT: 'The ALU result. Written back, used as the memory address, and forwarded to the next instruction.',
+  FSD: 'Store data after forwarding, written to memory during SW.',
+  DQ: 'Data read from memory for a load.',
+  WD: 'Write-back: the value this instruction produced (result or load data) with its destination register and write enable. Written to the file, steered into the ID muxes, and forwarded to the EX muxes.',
+  C4: 'Constant 4, so JAL links PC+8 with the ALU.',
+};
+const info = document.getElementById('info');
+let pinned = null;
+function light(name) {
+  for (const w of wires) { w.p.classList.remove('hi','dim'); if (name) w.p.classList.add(w.name === name ? 'hi' : 'dim'); }
+  for (const t of gL.querySelectorAll('.wlabel')) t.classList.toggle('hi', !!name && t.dataset.net === name);
+  info.innerHTML = name ? `<b>${name}</b> ${DESC[name] || ''}` : (pinned ? '' : 'Hover a wire or a unit.');
+}
+function hover(name) { if (pinned) return; light(name); }
+function pin(name) { pinned = name; light(name); }
+svg.addEventListener('click', () => { pinned = null; light(null); });
+</script>
