@@ -957,3 +957,130 @@ impl Cpu {
         &self.imem
     }
 }
+
+// ---------------------------------------------------------------------------
+// Structure export (for diagrams)
+
+/// One chip of the CPU with its pin-to-net map, block and stage.
+pub struct ChipInfo {
+    pub name: String,
+    pub kind: &'static str,
+    pub block: &'static str,
+    pub stage: &'static str,
+    /// (pin, net, is_output)
+    pub pins: Vec<(usize, String, bool)>,
+}
+
+/// Block and stage of a chip, from its name prefix.
+fn block_of(name: &str) -> (&'static str, &'static str) {
+    let prefix: String = name.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+    match prefix.as_str() {
+        "pc" => ("PC", "IF"),
+        "inc" => ("PC+4", "IF"),
+        "imem" => ("Instruction memory", "IF"),
+        "ifid" => ("IF/ID", "IF/ID"),
+        "dec" => ("Decode", "ID"),
+        "ctl" => ("ID/EX control", "ID/EX"),
+        "steer" => ("Steer", "ID"),
+        "fwdc" => ("Forwarding control", "ID/EX"),
+        "rf" => ("Register file", "ID"),
+        "bt" => ("Branch target adder", "ID"),
+        "xa" => ("ID/EX A", "ID/EX"),
+        "xb" => ("ID/EX B", "ID/EX"),
+        "xsd" => ("ID/EX store data", "ID/EX"),
+        "xbt" => ("ID/EX branch target", "ID/EX"),
+        "fa" => ("Forward A", "EX"),
+        "fb" => ("Forward B", "EX"),
+        "alu" => ("ALU slices + carries", "EX"),
+        "cmp" => ("Compare", "EX"),
+        "nxt" => ("Next PC", "EX"),
+        "mr" => ("EX/MEM result (ALU last level)", "EX/MEM"),
+        "msd" => ("EX/MEM store data", "EX/MEM"),
+        "mctl" => ("EX/MEM control", "EX/MEM"),
+        "dmem" => ("Data memory", "MEM"),
+        "wb" => ("MEM/WB", "MEM/WB"),
+        _ => ("?", "?"),
+    }
+}
+
+/// Every chip in the CPU with its wiring, as built by [`Cpu::new`].
+pub fn chip_infos() -> Vec<ChipInfo> {
+    let mut out = Vec::new();
+    for spec in gal_specs() {
+        let mut nl = Netlist::new();
+        let (_, pins) = crate::galpack::instantiate(&mut nl, &spec);
+        let outs: Vec<&str> = spec.eqs.iter().map(|e| e.out.as_str()).collect();
+        let (block, stage) = block_of(&spec.name);
+        out.push(ChipInfo {
+            name: spec.name.clone(),
+            kind: "ATF22V10C",
+            block,
+            stage,
+            pins: pins.into_iter().map(|(p, n)| (p, n.clone(), outs.contains(&n.as_str()))).collect(),
+        });
+    }
+    // SRAMs: replicate the wiring of Cpu::new.
+    for lane in 0..4 {
+        let mut pins = Vec::new();
+        for a in 0..13 {
+            pins.push((sram8k_pin_of(Sram8kPin::A(a as u8)), n("PC", a + 2), false));
+        }
+        for b in 0..8 {
+            pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("IM", 8 * lane + b), true));
+        }
+        let (block, stage) = block_of("imem");
+        out.push(ChipInfo { name: format!("imem{lane}"), kind: "AS7C164A", block, stage, pins });
+        let mut pins = Vec::new();
+        for a in 0..13 {
+            pins.push((sram8k_pin_of(Sram8kPin::A(a as u8)), n("MR", a + 2), false));
+        }
+        for b in 0..8 {
+            pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("DQ", 8 * lane + b), true));
+        }
+        pins.push((sram8k_pin_of(Sram8kPin::CeN), "PH_CE".into(), false));
+        pins.push((sram8k_pin_of(Sram8kPin::WeN), "MMW_n".into(), false));
+        let (block, stage) = block_of("dmem");
+        out.push(ChipInfo { name: format!("dmem{lane}"), kind: "AS7C164A", block, stage, pins });
+    }
+    for bank in 0..2 {
+        for lane in 0..4 {
+            let (field, rdata, ce) = if bank == 0 { (21, "RA", "CERA_n") } else { (16, "RB", "CERB_n") };
+            let mut pins = Vec::new();
+            for i in 0..5 {
+                pins.push((sram_pin_of(SramPin::A(Port::Left, i as u8)), ir(field + i), false));
+                pins.push((sram_pin_of(SramPin::A(Port::Right, i as u8)), n("WDEST", i), false));
+            }
+            pins.push((sram_pin_of(SramPin::A(Port::Right, 5)), "WREG_n".into(), false));
+            for b in 0..8 {
+                pins.push((sram_pin_of(SramPin::Io(Port::Left, b as u8)), n(rdata, 8 * lane + b), true));
+                pins.push((sram_pin_of(SramPin::Io(Port::Right, b as u8)), n("WD", 8 * lane + b), false));
+            }
+            pins.push((sram_pin_of(SramPin::Ce(Port::Left)), ce.into(), false));
+            pins.push((sram_pin_of(SramPin::Ce(Port::Right)), "PH_RF".into(), false));
+            pins.push((sram_pin_of(SramPin::Rw(Port::Right)), "WREG_n".into(), false));
+            let (block, stage) = block_of("rf");
+            out.push(ChipInfo { name: format!("rf{bank}{lane}"), kind: "CY7C131", block, stage, pins });
+        }
+    }
+    out
+}
+
+/// The structure as JSON: `{"chips":[{name,kind,block,stage,pins:[[pin,net,out]]}]}`.
+pub fn structure_json() -> String {
+    let mut s = String::from("{\"chips\":[");
+    for (i, c) in chip_infos().iter().enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push_str(&format!("{{\"name\":\"{}\",\"kind\":\"{}\",\"block\":\"{}\",\"stage\":\"{}\",\"pins\":[", c.name, c.kind, c.block, c.stage));
+        for (j, (p, net, o)) in c.pins.iter().enumerate() {
+            if j > 0 {
+                s.push(',');
+            }
+            s.push_str(&format!("[{p},\"{net}\",{o}]"));
+        }
+        s.push_str("]}");
+    }
+    s.push_str("]}");
+    s
+}
