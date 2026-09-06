@@ -230,6 +230,72 @@ fn ce_after_we_keeps_outputs_off() {
     b.no_warnings();
 }
 
+/// A strobe that passes through a GAL has X windows at both edges.  The
+/// write is still provable as long as the constraints hold for every instant
+/// in the window.
+#[test]
+fn write_through_x_windows_on_we() {
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(L).with_addr(0x123).with_data(0x5A));
+    b.at(11, |i| i.we_n = Level::X); // WE# falling somewhere in 11..15.5
+    b.at(15, |i| i.we_n = L);
+    b.at(31, |i| i.we_n = Level::X); // rising somewhere in 31..35.5
+    b.at(35, |i| i.we_n = H);
+    assert_eq!(b.chip.peek(0x123), Some(0x5A));
+    b.no_warnings();
+
+    // Data changing inside the end window: hold not provable.
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(L).with_addr(0x123).with_data(0x5A));
+    b.at(15, |i| i.we_n = L);
+    b.at(31, |i| i.we_n = Level::X);
+    b.at(33, |i| i.data = Inputs::idle().with_data(0x5B).data);
+    b.at(35, |i| i.we_n = H);
+    assert_eq!(b.chip.peek(0x123), None);
+    assert!(b.kinds().iter().any(|k| matches!(k, WarningKind::DataSetup { .. })));
+
+    // Pulse too short if it ended at the start of the window.
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(L).with_addr(0x123).with_data(0x5A));
+    b.at(15, |i| i.we_n = L);
+    b.at(24, |i| i.we_n = Level::X); // 9ns if it ended now
+    b.at(28, |i| i.we_n = H);
+    assert_eq!(b.chip.peek(0x123), None);
+    assert!(b.kinds().contains(&WarningKind::WritePulseTooShort { width: ns(9) }));
+
+    // X that resolves back to low: may have ended and restarted; the second
+    // pulse is measured from the resolution.
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(L).with_addr(0x123).with_data(0x5A));
+    b.at(15, |i| i.we_n = L);
+    b.at(30, |i| i.we_n = Level::X);
+    b.at(34, |i| i.we_n = L);
+    b.at(40, |i| i.we_n = H); // 6ns second pulse
+    assert_eq!(b.chip.peek(0x123), None);
+    assert!(b.kinds().contains(&WarningKind::WritePulseTooShort { width: ns(6) }));
+
+    // X on WE# with no write intended and back high: glitch of unknown width.
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(L).with_addr(0x123).with_data(0x5A));
+    b.at(15, |i| i.we_n = Level::X);
+    b.at(20, |i| i.we_n = H);
+    assert_eq!(b.chip.peek(0x123), None);
+    assert!(b.kinds().contains(&WarningKind::GlitchWrite));
+}
+
+/// X on a control that is already overridden by a known-inactive one is not
+/// a write at all.
+#[test]
+fn x_on_irrelevant_control_is_harmless() {
+    let mut b = Bench::new();
+    b.at(0, |i| *i = Inputs::idle().with_ce(H).with_addr(0x123).with_data(0x5A));
+    b.at(10, |i| i.we_n = Level::X);
+    b.at(20, |i| i.we_n = L);
+    b.at(30, |i| i.we_n = H);
+    assert_eq!(b.chip.peek(0x123), Some(preloaded(0x123)));
+    b.no_warnings();
+}
+
 #[test]
 fn unknown_controls_are_x_not_violations() {
     let mut b = Bench::new();
@@ -248,8 +314,10 @@ fn unknown_controls_are_x_not_violations() {
     });
     b.at(60, |i| i.we_n = L);
     b.at(75, |i| i.we_n = Level::X);
+    b.at(76, |i| i.data = [Level::Z; 8]); // data vanishes inside the window
+    b.at(80, |i| i.we_n = H);
     assert_eq!(b.chip.peek(7), None);
-    assert!(b.kinds().contains(&WarningKind::ControlUnknown));
+    assert!(b.kinds().contains(&WarningKind::DataNotDriven));
 }
 
 #[test]

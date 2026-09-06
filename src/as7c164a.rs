@@ -164,8 +164,9 @@ pub enum WarningKind {
     BusConflict,
     /// Address contains X/Z at write end: whole array corrupted.
     AddrUnknown,
-    /// Write ended because a control pin went X/Z.
-    ControlUnknown,
+    /// A control pin was X while no write was active and then went inactive:
+    /// a pulse of unknown width may have written the cell.
+    GlitchWrite,
 }
 
 impl fmt::Display for Warning {
@@ -181,15 +182,28 @@ enum DataOut {
     Read(u16),
 }
 
-/// Three-valued "selected" (CE# low and CE2 high).
+/// Three-valued AND of "active" conditions: `Some(false)` as soon as any
+/// input is known inactive, `Some(true)` if all are known active, else `None`.
+fn all_active(conds: &[(Level, Level)]) -> Option<bool> {
+    let mut all = true;
+    for &(l, active) in conds {
+        match l {
+            x if x == active => {}
+            Level::L | Level::H => return Some(false),
+            _ => all = false,
+        }
+    }
+    if all { Some(true) } else { None }
+}
+/// Selected: CE# low and CE2 high.
 fn selected(i: &Inputs) -> Option<bool> {
-    Some(!i.ce_n.bit()? && i.ce2.bit()?)
+    all_active(&[(i.ce_n, Level::L), (i.ce2, Level::H)])
 }
 fn write_conditions(i: &Inputs) -> Option<bool> {
-    Some(selected(i)? && !i.we_n.bit()?)
+    all_active(&[(i.ce_n, Level::L), (i.ce2, Level::H), (i.we_n, Level::L)])
 }
 fn read_driving(i: &Inputs) -> Option<bool> {
-    Some(selected(i)? && !i.oe_n.bit()? && i.we_n.bit()?)
+    all_active(&[(i.ce_n, Level::L), (i.ce2, Level::H), (i.oe_n, Level::L), (i.we_n, Level::H)])
 }
 
 /// The chip.
@@ -204,6 +218,11 @@ pub struct As7c164a {
     sel_since: Time,
     data_since: Time,
     write_start: Option<Time>,
+    /// A control went X while a write was active: the write may have ended
+    /// at any time since.
+    write_x: Option<Time>,
+    /// A control went X while no write was active: one may have started.
+    start_x: Option<Time>,
     write_end: Option<Time>,
     data_out: Timeline<DataOut>,
     valid_not_before: Time,
@@ -224,6 +243,8 @@ impl As7c164a {
             sel_since: 0,
             data_since: 0,
             write_start: None,
+            write_x: None,
+            start_x: None,
             write_end: None,
             data_out: Timeline::new(DataOut::Z),
             valid_not_before: 0,
@@ -290,14 +311,67 @@ impl As7c164a {
             self.sel_since = t;
         }
 
-        // Write end (either control leaving its active level, or going X).
-        let now_writing = write_conditions(&n);
-        if self.write_start.is_some() && now_writing != Some(true) {
-            self.finish_write(o, now_writing == Some(false));
-            self.write_start = None;
+        // Write state machine.  `wc`: are the write conditions met?
+        let wc = write_conditions(&n);
+        match (self.write_start, self.write_x, self.start_x, wc) {
+            // Active write.
+            (Some(_), None, _, Some(true)) => {}
+            (Some(_), None, _, None) => self.write_x = Some(t),
+            (Some(_), None, _, Some(false)) => {
+                self.finish_write(o, t, t);
+                self.write_start = None;
+            }
+            // Active write whose end is uncertain since `tx`.
+            (Some(_), Some(tx), _, Some(false)) => {
+                self.finish_write(o, tx, t);
+                self.write_start = None;
+                self.write_x = None;
+            }
+            (Some(_), Some(tx), _, Some(true)) => {
+                // May have ended and restarted: evaluate, then a fresh write.
+                self.finish_write(o, tx, t);
+                self.write_start = Some(t);
+                self.write_x = None;
+                self.write_end = None;
+            }
+            (Some(_), Some(_), _, None) => {}
+            // No write.
+            (None, _, None, Some(true)) => {
+                self.write_start = Some(t);
+                self.write_end = None;
+            }
+            (None, _, None, None) => self.start_x = Some(t),
+            (None, _, None, Some(false)) => {}
+            // No write, but one may have started at `sx`.
+            (None, _, Some(sx), Some(true)) => {
+                if self.addr_since > sx {
+                    self.warn(WarningKind::AddrChangedDuringWrite);
+                    match levels_value(&o.addr) {
+                        Some(a) => self.mem[a as usize] = None,
+                        None => self.corrupt_all(),
+                    }
+                }
+                self.write_start = Some(t);
+                self.start_x = None;
+                self.write_end = None;
+            }
+            (None, _, Some(sx), Some(false)) => {
+                // A pulse of unknown (possibly illegal) width may have hit,
+                // unless the controls were simply unknown since power-up.
+                if sx > 0 {
+                    self.warn(WarningKind::GlitchWrite);
+                    match levels_value(&o.addr) {
+                        Some(a) => self.mem[a as usize] = None,
+                        None => self.corrupt_all(),
+                    }
+                }
+                self.start_x = None;
+            }
+            (None, _, Some(_), None) => {}
         }
         if addr_changed {
-            if self.write_start.is_some() && now_writing == Some(true) {
+            if self.write_start.is_some_and(|ws| ws < t) && wc != Some(false) {
+                // Address moved under a (possibly) active write.
                 self.warn(WarningKind::AddrChangedDuringWrite);
                 match levels_value(&o.addr) {
                     Some(a) => self.mem[a as usize] = None,
@@ -305,18 +379,10 @@ impl As7c164a {
                 }
             } else if let Some(we) = self.write_end
                 && t < we + self.t.twr
+                && let Some(a) = levels_value(&o.addr)
             {
-                // tWR = 0 for this part, so this never fires, but keep the
-                // check so other grades can be modelled.
-                if let Some(a) = levels_value(&o.addr) {
-                    self.mem[a as usize] = None;
-                }
+                self.mem[a as usize] = None;
             }
-        }
-        // Write start.
-        if now_writing == Some(true) && self.write_start.is_none() {
-            self.write_start = Some(t);
-            self.write_end = None;
         }
         self.update_data_out(o, addr_changed);
     }
@@ -327,33 +393,35 @@ impl As7c164a {
         }
     }
 
-    fn finish_write(&mut self, o: Inputs, end_known: bool) {
-        let te = self.now;
+    /// The write ended at some instant in `[tx, tr]` (`tx == tr` when the
+    /// end is exact).  Constraints are checked for the worst case.
+    fn finish_write(&mut self, o: Inputs, tx: Time, tr: Time) {
         let tm = self.t;
         let start = self.write_start.unwrap();
-        self.write_end = Some(te);
-        let out_z = self.data_out.is_const_over(te.saturating_sub(tm.tdw), te, DataOut::Z);
+        self.write_end = Some(tr);
+        let out_z = self.data_out.is_const_over(tx.saturating_sub(tm.tdw), tr, DataOut::Z);
         let Some(addr) = levels_value(&o.addr) else {
             self.warn(WarningKind::AddrUnknown);
             self.corrupt_all();
             return;
         };
         let cell = addr as usize;
-        let mut ok = end_known;
-        if !end_known {
-            self.warn(WarningKind::ControlUnknown);
+        let mut ok = true;
+        if self.addr_since > tx {
+            self.warn(WarningKind::AddrChangedDuringWrite);
+            ok = false;
         }
-        let width = te - start;
+        let width = tx.saturating_sub(start);
         if width < tm.twp {
             self.warn(WarningKind::WritePulseTooShort { width });
             ok = false;
         }
-        if te - self.sel_since < tm.tcw {
-            self.warn(WarningKind::ChipEnableSetup { have: te - self.sel_since });
+        if tx.saturating_sub(self.sel_since) < tm.tcw {
+            self.warn(WarningKind::ChipEnableSetup { have: tx.saturating_sub(self.sel_since) });
             ok = false;
         }
-        if te - self.addr_since < tm.taw {
-            self.warn(WarningKind::AddrSetup { have: te - self.addr_since });
+        if tx.saturating_sub(self.addr_since) < tm.taw {
+            self.warn(WarningKind::AddrSetup { have: tx.saturating_sub(self.addr_since) });
             ok = false;
         }
         let Some(data) = levels_value(&o.data) else {
@@ -361,8 +429,8 @@ impl As7c164a {
             self.mem[cell] = None;
             return;
         };
-        if te - self.data_since < tm.tdw {
-            self.warn(WarningKind::DataSetup { have: te - self.data_since });
+        if self.data_since > tx || tx - self.data_since < tm.tdw {
+            self.warn(WarningKind::DataSetup { have: tx.saturating_sub(self.data_since) });
             ok = false;
         }
         if !out_z {

@@ -331,8 +331,9 @@ pub enum WarningKind {
     /// Address contains X/Z while port enabled; a write here corrupts the
     /// whole array.
     AddrUnknown,
-    /// A write ended because CE or R/W went X/Z.
-    ControlUnknown,
+    /// A control was X while no write was active and then went inactive: a
+    /// pulse of unknown width may have written the cell.
+    GlitchWrite,
     /// Write ended while the internal write-inhibit was in an undefined state
     /// (BUSY transitioning).
     WriteDuringBusyTransition,
@@ -428,6 +429,10 @@ struct PortState {
     data_since: Time,
     /// Time CE and R/W both went low (write active), if they are.
     write_start: Option<Time>,
+    /// A control went X while a write was active: it may have ended since.
+    write_x: Option<Time>,
+    /// A control went X while no write was active: one may have started.
+    start_x: Option<Time>,
     /// End of the most recent write, for the tHA check.
     write_end: Option<Time>,
     /// Latest time by which BUSY is guaranteed released after the most recent
@@ -452,6 +457,8 @@ impl PortState {
             ce_low_since: 0,
             data_since: 0,
             write_start: None,
+            write_x: None,
+            start_x: None,
             write_end: None,
             busy_release_by: None,
             busy_since: None,
@@ -468,9 +475,6 @@ impl PortState {
     fn key(&self) -> Option<(bool, u16)> {
         arb_key(&self.inp)
     }
-    fn write_conditions(&self) -> Option<bool> {
-        write_conditions(&self.inp)
-    }
     fn read_driving(&self) -> Option<bool> {
         read_driving(&self.inp)
     }
@@ -486,11 +490,24 @@ fn arb_key(i: &PortInputs) -> Option<(bool, u16)> {
 }
 /// CE and R/W both low (`None` if either is X/Z).
 fn write_conditions(i: &PortInputs) -> Option<bool> {
-    Some(!(i.ce_n.bit()?) && !(i.rw_n.bit()?))
+    all_active(&[(i.ce_n, Level::L), (i.rw_n, Level::L)])
 }
 /// CE low, OE low, R/W high: the port drives its I/O pins.
 fn read_driving(i: &PortInputs) -> Option<bool> {
-    Some(!(i.ce_n.bit()?) && !(i.oe_n.bit()?) && i.rw_n.bit()?)
+    all_active(&[(i.ce_n, Level::L), (i.oe_n, Level::L), (i.rw_n, Level::H)])
+}
+/// Three-valued AND of "active" conditions: `Some(false)` as soon as any
+/// input is known inactive, `Some(true)` if all are known active, else `None`.
+pub(crate) fn all_active(conds: &[(Level, Level)]) -> Option<bool> {
+    let mut all = true;
+    for &(l, active) in conds {
+        match l {
+            x if x == active => {}
+            Level::L | Level::H => return Some(false),
+            _ => all = false,
+        }
+    }
+    if all { Some(true) } else { None }
 }
 
 /// The chip.
@@ -613,19 +630,59 @@ impl Cy7c131 {
             }
         }
 
-        // 2. Write termination / address-hold checks, using the arbitration
-        //    state as it was before this event (busy changes take effect later).
+        // 2. Write state machine per port, using the arbitration state as it
+        //    was before this event (busy changes take effect later).
         for (i, p) in [Port::Left, Port::Right].into_iter().enumerate() {
             let (o, n) = (old[i], new[i]);
-            let was_writing = self.ps(p).write_start.is_some();
-            let now_writing = self.ps(p).write_conditions();
-            if was_writing && now_writing != Some(true) {
-                let end_known = now_writing == Some(false);
-                self.finish_write(p, o, end_known);
+            let wc = write_conditions(&n);
+            let ps = self.ps(p);
+            match (ps.write_start, ps.write_x, ps.start_x, wc) {
+                (Some(_), None, _, Some(true)) => {}
+                (Some(_), None, _, None) => self.ps_mut(p).write_x = Some(t),
+                (Some(_), None, _, Some(false)) => {
+                    self.finish_write(p, o, t, t);
+                    self.end_write(p);
+                }
+                (Some(_), Some(tx), _, Some(false)) => {
+                    self.finish_write(p, o, tx, t);
+                    self.end_write(p);
+                }
+                (Some(_), Some(tx), _, Some(true)) => {
+                    self.finish_write(p, o, tx, t);
+                    self.end_write(p);
+                    self.begin_write(p);
+                }
+                (Some(_), Some(_), _, None) => {}
+                (None, _, None, Some(true)) => self.begin_write(p),
+                (None, _, None, None) => self.ps_mut(p).start_x = Some(t),
+                (None, _, None, Some(false)) => {}
+                (None, _, Some(sx), Some(true)) => {
+                    if self.ps(p).addr_since > sx {
+                        self.warn(p, WarningKind::AddrChangedDuringWrite);
+                        match levels_value(&o.addr) {
+                            Some(a) => self.mem[a as usize] = None,
+                            None => self.corrupt_all(),
+                        }
+                    }
+                    self.ps_mut(p).start_x = None;
+                    self.begin_write(p);
+                }
+                (None, _, Some(sx), Some(false)) => {
+                    // Unknown since power-up resolving to inactive is not a glitch.
+                    if sx > 0 {
+                        self.warn(p, WarningKind::GlitchWrite);
+                        match levels_value(&o.addr) {
+                            Some(a) => self.mem[a as usize] = None,
+                            None => self.corrupt_all(),
+                        }
+                    }
+                    self.ps_mut(p).start_x = None;
+                }
+                (None, _, Some(_), None) => {}
             }
             if addr_changed[i] {
-                if self.ps(p).write_start.is_some() && now_writing == Some(true) {
-                    // Address moved under an active write: old cell is garbage.
+                if self.ps(p).write_start.is_some_and(|ws| ws < t) && wc != Some(false) {
+                    // Address moved under a (possibly) active write.
                     self.warn(p, WarningKind::AddrChangedDuringWrite);
                     if let Some(a) = levels_value(&o.addr) {
                         self.mem[a as usize] = None;
@@ -633,34 +690,21 @@ impl Cy7c131 {
                         self.corrupt_all();
                     }
                 } else if let Some(we) = self.ps(p).write_end
-                    && t < we + self.t.tha {
-                        self.warn(p, WarningKind::AddrHold { have: t - we });
-                        if let Some(a) = levels_value(&o.addr) {
-                            self.mem[a as usize] = None;
-                        }
-                        if let Some(a) = levels_value(&n.addr) {
-                            self.mem[a as usize] = None;
-                        }
+                    && t < we + self.t.tha
+                {
+                    self.warn(p, WarningKind::AddrHold { have: t - we });
+                    if let Some(a) = levels_value(&o.addr) {
+                        self.mem[a as usize] = None;
                     }
-            }
-            // A write ends the moment either control leaves L; if it merely
-            // became unknown we already flagged it in finish_write.
-            if now_writing != Some(true) {
-                self.ps_mut(p).write_start = None;
-                self.ps_mut(p).int_set_pending = false;
+                    if let Some(a) = levels_value(&n.addr) {
+                        self.mem[a as usize] = None;
+                    }
+                }
             }
         }
 
         // 3. Arbitration.
         self.update_arbitration(old);
-
-        // 4. Write start.
-        for p in [Port::Left, Port::Right] {
-            if self.ps(p).write_conditions() == Some(true) && self.ps(p).write_start.is_none() {
-                self.ps_mut(p).write_start = Some(t);
-                self.ps_mut(p).write_end = None;
-            }
-        }
 
         // 5. Data outputs.
         for (i, p) in [Port::Left, Port::Right].into_iter().enumerate() {
@@ -700,8 +744,23 @@ impl Cy7c131 {
     /// Called when port `p`'s write conditions stop being true at `self.now`.
     /// `o` are the port's inputs just before the event.  `end_known` is false
     /// if the write ended because a control pin went X/Z.
-    fn finish_write(&mut self, p: Port, o: PortInputs, end_known: bool) {
-        let te = self.now;
+    fn begin_write(&mut self, p: Port) {
+        let t = self.now;
+        let ps = self.ps_mut(p);
+        ps.write_start = Some(t);
+        ps.write_end = None;
+    }
+    fn end_write(&mut self, p: Port) {
+        let ps = self.ps_mut(p);
+        ps.write_start = None;
+        ps.write_x = None;
+        ps.int_set_pending = false;
+    }
+
+    /// Port `p`'s write ended at some instant in `[tx, tr]` (`tx == tr` when
+    /// exact).  `o` are the port's inputs just before this event.
+    fn finish_write(&mut self, p: Port, o: PortInputs, tx: Time, tr: Time) {
+        let te = tx;
         let tm = self.t;
         let ps = self.ps(p);
         let start = ps.write_start.unwrap();
@@ -713,8 +772,8 @@ impl Cy7c131 {
         let data_since = ps.data_since;
         let busy_release_by = ps.busy_release_by;
         let busy_since = ps.busy_since;
-        let out_z = ps.data_out.is_const_over(te.saturating_sub(tm.tsd), te, DataOut::Z);
-        self.ps_mut(p).write_end = Some(te);
+        let out_z = ps.data_out.is_const_over(te.saturating_sub(tm.tsd), tr, DataOut::Z);
+        self.ps_mut(p).write_end = Some(tr);
 
         // Where did it go?
         let Some(addr) = addr else {
@@ -724,9 +783,10 @@ impl Cy7c131 {
         };
         let cell = addr as usize;
 
-        let mut ok = end_known;
-        if !end_known {
-            self.warn(p, WarningKind::ControlUnknown);
+        let mut ok = true;
+        if addr_since > te {
+            self.warn(p, WarningKind::AddrChangedDuringWrite);
+            ok = false;
         }
 
         // Busy / write inhibit.
@@ -770,7 +830,7 @@ impl Cy7c131 {
         }
 
         // Timing checks.
-        let width = te - eff_start;
+        let width = te.saturating_sub(eff_start);
         if width < min_width {
             if after_busy {
                 self.warn(p, WarningKind::WriteAfterBusyTooShort { width });
@@ -779,12 +839,12 @@ impl Cy7c131 {
             }
             ok = false;
         }
-        if te - ce_since < tm.tsce {
-            self.warn(p, WarningKind::CeSetup { have: te - ce_since });
+        if te.saturating_sub(ce_since) < tm.tsce {
+            self.warn(p, WarningKind::CeSetup { have: te.saturating_sub(ce_since) });
             ok = false;
         }
-        if te - addr_since < tm.taw {
-            self.warn(p, WarningKind::AddrSetup { have: te - addr_since });
+        if te.saturating_sub(addr_since) < tm.taw {
+            self.warn(p, WarningKind::AddrSetup { have: te.saturating_sub(addr_since) });
             ok = false;
         }
         let Some(data) = data else {
@@ -793,8 +853,8 @@ impl Cy7c131 {
             self.finish_int_set(p, int_pending, false);
             return;
         };
-        if te - data_since < tm.tsd {
-            self.warn(p, WarningKind::DataSetup { have: te - data_since });
+        if data_since > te || te - data_since < tm.tsd {
+            self.warn(p, WarningKind::DataSetup { have: te.saturating_sub(data_since) });
             ok = false;
         }
         if !out_z {

@@ -67,19 +67,95 @@ fn combinatorial_tpd_window() {
     b.no_warnings();
 }
 
-/// An input change that does not alter the function value still opens an X
-/// window (no hazard guarantee).
+/// An input change that cannot affect the output (AND with the other input
+/// low) opens no X window: two-level AND-OR has no static-0 hazards.
 #[test]
-fn combinatorial_unchanged_value_still_glitches() {
+fn combinatorial_unchanged_value_is_stable_when_hazard_free() {
     let mut b = Bench::new(and_gate());
     b.at(0.0, |e| {
         e[2] = L;
         e[3] = L;
     });
     assert_eq!(b.pin(23, 50.0), L);
-    b.at(50.0, |e| e[3] = H); // output stays L logically
-    assert_eq!(b.pin(23, 53.0), X);
-    assert_eq!(b.pin(23, 57.5), L);
+    b.at(50.0, |e| e[3] = H); // output stays L, provably
+    for t in [50.0, 53.0, 55.0, 57.5] {
+        assert_eq!(b.pin(23, t), L, "t={t}");
+    }
+    // A gated strobe: out = !gate + strobe.  With gate low the output is held
+    // by the first term while the strobe toggles.
+    let mut c = Config::empty();
+    c.olmc[0] = OlmcConfig::comb(vec![Term::new([Lit::npin(2)]), Term::new([Lit::pin(3)])]);
+    let mut b = Bench::new(c);
+    b.at(0.0, |e| {
+        e[2] = L;
+        e[3] = H;
+    });
+    b.at(20.0, |e| e[3] = L);
+    for t in [20.0, 23.0, 27.0] {
+        assert_eq!(b.pin(23, t), H, "t={t}");
+    }
+    b.at(30.0, |e| e[3] = H);
+    for t in [33.0, 40.0] {
+        assert_eq!(b.pin(23, t), H, "t={t}");
+    }
+    // With gate high the strobe passes through, X windows and all.
+    b.at(50.0, |e| e[2] = H);
+    assert_eq!(b.pin(23, 57.5), H);
+    b.at(60.0, |e| e[3] = L);
+    assert_eq!(b.pin(23, 63.0), X);
+    assert_eq!(b.pin(23, 67.5), L);
+}
+
+/// A real static-1 hazard: f = a&b + !a&c with b = c = 1 and a toggling.
+/// The value stays 1 but no single term covers both states, so X.
+#[test]
+fn static_1_hazard_is_reported() {
+    let mut c = Config::empty();
+    c.olmc[0] = OlmcConfig::comb(vec![Term::new([Lit::pin(2), Lit::pin(3)]), Term::new([Lit::npin(2), Lit::pin(4)])]);
+    let mut b = Bench::new(c);
+    b.at(0.0, |e| {
+        e[2] = L;
+        e[3] = H;
+        e[4] = H;
+    });
+    assert_eq!(b.pin(23, 20.0), H);
+    b.at(20.0, |e| e[2] = H);
+    assert_eq!(b.pin(23, 23.0), X);
+    assert_eq!(b.pin(23, 27.5), H);
+    // Simultaneous changes that pass through a 1 momentarily: f = a & !b,
+    // a: 0->1 and b: 0->1 together.  Output 0 before and after, but the
+    // intermediate (a=1, b=0) is 1.
+    let mut c = Config::empty();
+    c.olmc[0] = OlmcConfig::comb(vec![Term::new([Lit::pin(2), Lit::npin(3)])]);
+    let mut b = Bench::new(c);
+    b.at(0.0, |e| {
+        e[2] = L;
+        e[3] = L;
+    });
+    b.at(20.0, |e| {
+        e[2] = H;
+        e[3] = H;
+    });
+    assert_eq!(b.pin(23, 23.0), X);
+    assert_eq!(b.pin(23, 27.5), L);
+}
+
+/// A registered output whose D is provably unaffected by an input change
+/// does not see a setup violation from it.
+#[test]
+fn stable_d_input_needs_no_setup() {
+    let mut c = Config::empty();
+    c.olmc[0] = OlmcConfig::reg(vec![Term::new([Lit::pin(2), Lit::pin(3)])]);
+    let mut b = Bench::new(c);
+    b.at(0.0, |e| {
+        e[1] = L;
+        e[2] = L;
+        e[3] = L;
+    });
+    b.at(19.0, |e| e[3] = H); // D stays 0 since pin 2 is low
+    b.at(20.0, |e| e[1] = H);
+    assert_eq!(b.g.q(0), L);
+    b.no_warnings();
 }
 
 #[test]

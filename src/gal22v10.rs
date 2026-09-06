@@ -366,6 +366,9 @@ pub struct Gal22v10 {
     /// Array input values and when they last changed.
     arr: [Level; ARRAY_INPUTS],
     arr_since: [Time; ARRAY_INPUTS],
+    /// Value each array input had before its change at `arr_since` (used for
+    /// the hazard analysis of simultaneous changes).
+    arr_prev: [Level; ARRAY_INPUTS],
     /// Structural dependency: which OLMCs' SoP / OE, and AR / SP, use input i.
     sop_users: Vec<Vec<usize>>,
     oe_users: Vec<Vec<usize>>,
@@ -449,6 +452,7 @@ impl Gal22v10 {
             keeper: [Level::X; 25],
             arr: [Level::X; ARRAY_INPUTS],
             arr_since: [0; ARRAY_INPUTS],
+            arr_prev: [Level::X; ARRAY_INPUTS],
             sop_users,
             oe_users,
             ar_uses,
@@ -636,15 +640,65 @@ impl Gal22v10 {
     }
 
     /// An array input takes a new value at `self.now`; fan out.
+    /// Can the function `f` glitch as a consequence of the array inputs that
+    /// changed at `self.now`?  Every combination of old/new values of those
+    /// inputs is tried; the output is hazard-free if it is L for all of them,
+    /// or H for all of them with one product term true throughout.
+    fn hazard_free(&self, terms: &[Term]) -> bool {
+        let t = self.now;
+        let changed: Vec<usize> = (0..ARRAY_INPUTS).filter(|&j| self.arr_since[j] == t).collect();
+        if changed.len() > 6 {
+            return false;
+        }
+        let mut arr = self.arr;
+        let combos = 1usize << changed.len();
+        let (mut seen_l, mut seen_h) = (false, false);
+        let mut covering: Vec<bool> = vec![true; terms.len()];
+        for c in 0..combos {
+            for (b, &j) in changed.iter().enumerate() {
+                arr[j] = if c >> b & 1 == 1 { self.arr_prev[j] } else { self.arr[j] };
+            }
+            let mut any_h = false;
+            for (ti, term) in terms.iter().enumerate() {
+                let mut v = Level::H;
+                for l in &term.0 {
+                    let a = arr[l.input];
+                    v = and3(v, if l.neg { not3(a) } else { a });
+                }
+                match v {
+                    Level::H => any_h = true,
+                    Level::L => covering[ti] = false,
+                    _ => return false,
+                }
+            }
+            if any_h {
+                seen_h = true;
+            } else {
+                seen_l = true;
+            }
+            if seen_l && seen_h {
+                return false; // value differs between combinations
+            }
+        }
+        seen_l || covering.iter().any(|&c| c)
+    }
+
+    /// An array input takes a new value at `self.now`; fan out.
     fn set_array_input(&mut self, i: usize, v: Level) {
         if self.arr[i] == v {
             return;
+        }
+        if self.arr_since[i] != self.now {
+            self.arr_prev[i] = self.arr[i];
         }
         self.arr[i] = v;
         self.arr_since[i] = self.now;
         let t = self.now;
         let tm = self.tm;
         for &k in &self.sop_users[i].clone() {
+            if self.hazard_free(&self.cfg.olmc[k].terms) {
+                continue; // D / output provably unaffected
+            }
             self.olmc[k].cone_changed = t;
             if self.cfg.olmc[k].registered {
                 if let Some(e) = self.last_edge
@@ -661,12 +715,17 @@ impl Gal22v10 {
             }
         }
         for &k in &self.oe_users[i].clone() {
+            if let Oe::Term(term) = &self.cfg.olmc[k].oe
+                && self.hazard_free(std::slice::from_ref(term))
+            {
+                continue;
+            }
             let settle = t + tm.tea_max.max(tm.ter_max);
             self.olmc[k].oe_settle = settle;
             self.schedule(t + tm.tea_min.min(tm.ter_min), Ev::OeX(k));
             self.schedule(settle, Ev::OeSettle(k, settle));
         }
-        if self.ar_uses[i] {
+        if self.ar_uses[i] && !self.hazard_free(std::slice::from_ref(self.cfg.ar.as_ref().unwrap())) {
             self.ar_settle = t + tm.tap_max;
             self.schedule(t + tm.tap_min, Ev::ArX);
             self.schedule(t + tm.tap_max, Ev::ArSettle(t + tm.tap_max));

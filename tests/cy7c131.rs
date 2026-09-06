@@ -318,6 +318,24 @@ fn write_with_unknown_address_corrupts_everything() {
     assert!(b.warning_kinds().contains(&WarningKind::AddrUnknown));
 }
 
+/// R/W from a registered GAL output: X for a few ns after each edge, but
+/// with CE high that is not a write.  And a CE strobe whose end is an X
+/// window still gives a provable write.
+#[test]
+fn write_through_x_windows() {
+    let mut b = Bench::new();
+    b.at(0, |i| i.l = PortInputs::idle().with_ce(H).with_rw(Level::X).with_addr(0x300).with_data(0x66));
+    b.at(4, |i| i.l.rw_n = L);
+    b.at(14, |i| i.l.ce_n = L);
+    b.at(30, |i| i.l.ce_n = Level::X);
+    b.at(34, |i| i.l.ce_n = H);
+    assert_eq!(b.chip.peek(0x300), Some(0x66));
+    b.no_warnings();
+    b.at(36, |i| i.l.rw_n = Level::X); // next cycle's register update
+    b.at(40, |i| i.l.rw_n = H);
+    b.no_warnings();
+}
+
 // ---------------------------------------------------------------------------
 // Truth Table I: independent ports, no contention.
 
