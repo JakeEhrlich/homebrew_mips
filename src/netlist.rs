@@ -18,6 +18,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
+use crate::as7c164a::{self, As7c164a};
 use crate::cy7c131::{self, Bus, Cy7c131, Inputs, PortInputs};
 use crate::gal22v10::Gal22v10;
 pub use crate::cy7c131::{Level, Time, NS};
@@ -172,6 +173,101 @@ impl Chip for Cy7c131 {
     }
     fn warnings(&self) -> Vec<String> {
         Cy7c131::warnings(self).iter().map(|w| w.to_string()).collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Chip impl: AS7C164A (28-pin DIP/SOJ)
+
+/// Pin functions of the AS7C164A, from the datasheet pin configuration.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Sram8kPin {
+    A(u8),
+    Dq(u8),
+    CeN,
+    Ce2,
+    OeN,
+    WeN,
+    Nc,
+    Vss,
+    Vcc,
+}
+
+pub fn sram8k_pin(pin: usize) -> Sram8kPin {
+    match pin {
+        1 => Sram8kPin::Nc,
+        2 => Sram8kPin::A(12),
+        3..=10 => Sram8kPin::A((10 - pin) as u8),
+        11..=13 => Sram8kPin::Dq((pin - 11) as u8),
+        14 => Sram8kPin::Vss,
+        15..=19 => Sram8kPin::Dq((pin - 12) as u8),
+        20 => Sram8kPin::CeN,
+        21 => Sram8kPin::A(10),
+        22 => Sram8kPin::OeN,
+        23 => Sram8kPin::A(11),
+        24 => Sram8kPin::A(9),
+        25 => Sram8kPin::A(8),
+        26 => Sram8kPin::Ce2,
+        27 => Sram8kPin::WeN,
+        28 => Sram8kPin::Vcc,
+        _ => Sram8kPin::Nc,
+    }
+}
+
+pub fn sram8k_pin_of(f: Sram8kPin) -> usize {
+    (1..=28).find(|&p| sram8k_pin(p) == f).expect("no such pin")
+}
+
+impl Chip for As7c164a {
+    fn pin_count(&self) -> usize {
+        28
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        match sram8k_pin(pin) {
+            Sram8kPin::A(i) => format!("A{i}"),
+            Sram8kPin::Dq(i) => format!("DQ{i}"),
+            Sram8kPin::CeN => "CE#".into(),
+            Sram8kPin::Ce2 => "CE2".into(),
+            Sram8kPin::OeN => "OE#".into(),
+            Sram8kPin::WeN => "WE#".into(),
+            Sram8kPin::Nc => "NC".into(),
+            Sram8kPin::Vss => "VSS".into(),
+            Sram8kPin::Vcc => "VCC".into(),
+        }
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        let mut inp = as7c164a::Inputs::default();
+        for (pin, &v) in ext.iter().enumerate().take(29).skip(1) {
+            match sram8k_pin(pin) {
+                Sram8kPin::A(i) => inp.addr[i as usize] = v,
+                Sram8kPin::Dq(i) => inp.data[i as usize] = v,
+                Sram8kPin::CeN => inp.ce_n = v,
+                Sram8kPin::Ce2 => inp.ce2 = v,
+                Sram8kPin::OeN => inp.oe_n = v,
+                Sram8kPin::WeN => inp.we_n = v,
+                _ => {}
+            }
+        }
+        As7c164a::set_inputs(self, t, inp);
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        let o = self.output(t);
+        for (pin, slot) in out.iter_mut().enumerate().take(29).skip(1) {
+            *slot = match sram8k_pin(pin) {
+                Sram8kPin::Dq(i) => match o {
+                    Bus::Z => Level::Z,
+                    Bus::X => Level::X,
+                    Bus::V(v) => Level::from_bit(v >> i & 1 == 1),
+                },
+                _ => Level::Z,
+            };
+        }
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        As7c164a::next_event(self, t)
+    }
+    fn warnings(&self) -> Vec<String> {
+        As7c164a::warnings(self).iter().map(|w| w.to_string()).collect()
     }
 }
 

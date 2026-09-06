@@ -356,21 +356,21 @@ impl fmt::Display for Warning {
 // Timeline: a piecewise-constant signal, editable only in the future.
 
 #[derive(Clone, Debug)]
-struct Timeline<T: Copy + PartialEq> {
+pub(crate) struct Timeline<T: Copy + PartialEq> {
     segs: Vec<(Time, T)>, // sorted; segs[0].0 == 0
 }
 
 impl<T: Copy + PartialEq> Timeline<T> {
-    fn new(init: T) -> Self {
+    pub(crate) fn new(init: T) -> Self {
         Timeline { segs: vec![(0, init)] }
     }
-    fn at(&self, t: Time) -> T {
+    pub(crate) fn at(&self, t: Time) -> T {
         let i = self.segs.partition_point(|s| s.0 <= t);
         self.segs[i - 1].1
     }
     /// From `t` onward the value is `v` (discarding anything scheduled at or
     /// after `t`).
-    fn set_from(&mut self, t: Time, v: T) {
+    pub(crate) fn set_from(&mut self, t: Time, v: T) {
         while self.segs.len() > 1 && self.segs.last().unwrap().0 >= t {
             self.segs.pop();
         }
@@ -378,15 +378,15 @@ impl<T: Copy + PartialEq> Timeline<T> {
             self.segs.push((t, v));
         }
     }
-    fn next_change_after(&self, t: Time) -> Option<Time> {
+    pub(crate) fn next_change_after(&self, t: Time) -> Option<Time> {
         self.segs.iter().map(|s| s.0).find(|&s| s > t)
     }
     /// True iff the value equals `v` throughout the closed interval [a, b].
-    fn is_const_over(&self, a: Time, b: Time, v: T) -> bool {
+    pub(crate) fn is_const_over(&self, a: Time, b: Time, v: T) -> bool {
         self.at(a) == v && self.segs.iter().all(|s| s.0 <= a || s.0 > b || s.1 == v)
     }
     /// Drop history older than `t` (keeps the value at `t`).
-    fn forget_before(&mut self, t: Time) {
+    pub(crate) fn forget_before(&mut self, t: Time) {
         let i = self.segs.partition_point(|s| s.0 <= t);
         if i > 1 {
             let cur = self.segs[i - 1].1;
@@ -925,22 +925,22 @@ impl Cy7c131 {
                 let mut x_start = t;
                 let mut valid = vnb;
                 if was_driving != Some(true) {
-                    // Coming out of high-Z.
-                    let mut lz = Time::MAX;
+                    // Coming out of high-Z.  Every enabling path that just
+                    // switched must propagate before the outputs can turn
+                    // on, so the earliest low-Z is the slowest of their
+                    // minimums.
+                    let mut lz = 0;
                     if o.ce_n != n.ce_n {
-                        lz = lz.min(tm.tlzce);
+                        lz = lz.max(tm.tlzce);
                         valid = valid.max(t + tm.tace);
                     }
                     if o.oe_n != n.oe_n {
-                        lz = lz.min(tm.tlzoe);
+                        lz = lz.max(tm.tlzoe);
                         valid = valid.max(t + tm.tdoe);
                     }
                     if o.rw_n != n.rw_n {
-                        lz = lz.min(tm.tlzwe);
+                        lz = lz.max(tm.tlzwe);
                         valid = valid.max(t + tm.taa);
-                    }
-                    if lz == Time::MAX {
-                        lz = 0; // was X for some other reason
                     }
                     x_start = t + lz;
                     if cur != DataOut::Z {
