@@ -731,7 +731,7 @@ fn exmem_result_block() -> Vec<Eq> {
                 t.extend(extra);
                 t
             };
-            let mut terms = vec![
+            let terms = vec![
                 vec![l("XSH"), l(&n("SH", i))],
                 with(0, vec![l(&c), l(&s1)]),
                 with(0, vec![nl_(&c), l(&s0)]),
@@ -1225,6 +1225,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "fb" => ("Forward B", "EX"),
         "alu" => ("ALU slices + carries", "EX"),
         "sh" => ("Shifter", "EX"),
+        "shm" => ("Shifter", "EX"),
         "cmp" => ("Compare", "EX"),
         "nxt" => ("Next PC", "EX"),
         "mr" => ("EX/MEM result (ALU last level)", "EX/MEM"),

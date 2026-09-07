@@ -57,7 +57,7 @@ dd .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12p
   <span class="meta">Logical units and the data that moves between them. Control signals are omitted except the one branch decision. Hover a wire to trace it; click to keep it lit.</span>
 </header>
 <figure>
-<svg id="svg" viewBox="0 0 1560 700" role="img" aria-label="The five-stage datapath: PC mux and PC, PC+4, instruction memory, IF/ID, register file, branch target adder, three ID/EX operand muxes, three EX forwarding muxes, ALU and compare, EX/MEM, data memory, MEM/WB mux, and write-back returning over the top"></svg>
+<svg id="svg" viewBox="0 0 1560 700" role="img" aria-label="The five-stage datapath: PC mux and PC, PC+4, instruction memory, IF/ID, register file, branch target adder, three ID/EX operand muxes, three EX forwarding muxes, ALU, shifter and compare, EX/MEM, data memory, MEM/WB mux, and write-back returning over the top"></svg>
 <figcaption>Orange: data flowing forward. Blue: data returning to an earlier point in the pipe, drawn over the top corridor. Grey dashed: the only control signal shown, the branch decision. Widths in bits are marked on the wires; the PC is 13 bits because code lives in a 32 KB space.</figcaption>
 </figure>
 <div id="info">Hover a wire or a unit.</div>
@@ -70,12 +70,13 @@ dd .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12p
 <dt>ID/EX store data</dt><dd>2:1. rt from the file or steered write-back. Exists because SW needs rt as data while B carries the address offset.</dd>
 <dt>Forward A, B, store data</dt><dd>3:1 each. The ID/EX value; the EX/MEM result when the writer is the instruction one ahead; MEM/WB data when it is two ahead. Three ahead was already handled by steer. B is also inverted here for subtraction.</dd>
 <dt>MEM/WB</dt><dd>2:1. Load data from memory, or the ALU result, whichever this instruction produced.</dd>
+<dt>Shifter</dt><dd>32-bit barrel shifter for SLL, SRL, SRA and their variable forms. B is the value shifted and the low five bits of A are the amount (the shamt field is steered into A for constant shifts). Two levels: rotate by the low three bits, then by multiples of eight with the mask and sign fill folded in.</dd>
 </dl>
 <h2>Units with no mux</h2>
 <dl>
 <dt>PC+4</dt><dd>13-bit incrementer on the word address.</dd>
 <dt>Branch target adder</dt><dd>13-bit add of PC+4 and the branch offset, in ID, so the target is ready when the branch is decided in EX.</dd>
-<dt>ALU</dt><dd>32-bit add, subtract (B inverted, carry-in 1), and, or, xor, nor, slt, sltu, and pass-B for links. The compare beside it decides BEQ and BNE from the same forwarded operands; BLEZ, BGTZ, BLTZ and BGEZ use the sign bit of A and the compare against r0.</dd>
+<dt>ALU</dt><dd>32-bit add, subtract (B inverted, carry-in 1), and, or, xor, nor, slt, sltu, and pass-B for links. The result mux beside it picks the shifter instead for shift instructions; in the chips that mux is folded into the EX/MEM register. The compare beside it decides BEQ and BNE from the same forwarded operands; BLEZ, BGTZ, BLTZ and BGEZ use the sign bit of A and the compare against r0.</dd>
 <dt>Register file</dt><dd>Two read ports (rs, rt) and one write port, fed by the write-back wire: data, destination and enable travel together.</dd>
 <dt>Instruction and data memory</dt><dd>32 KB each. Instruction memory only reads; data memory reads for loads and writes store data for SW.</dd>
 </dl>
@@ -123,7 +124,9 @@ mux(640, 495, 50, 'SD');
 mux(870, 290, 70, 'fwd A');
 mux(870, 392, 70, 'fwd B');
 mux(870, 495, 50, 'fwd SD');
-unit(980, 300, 80, 150, 'ALU', '32-bit');
+unit(980, 290, 80, 120, 'ALU', '32-bit');
+unit(980, 425, 80, 55, 'Shifter', 'barrel');
+mux(1085, 336, 80, 'res');
 unit(980, 200, 80, 50, 'A = B ?', 'compare');
 unit(1220, 320, 110, 130, 'Data memory', '32 KB');
 mux(1360, 340, 70, 'WB');
@@ -172,7 +175,11 @@ wire('FA', '', [[950,325],[950,215],[980,215]]);
 wire('FB', '', [[960,427],[960,235],[980,235]]);
 wire('FA', 'back', [[940,325],[940,72],[54,72],[54,395],[60,395]], 'rs forwarded (JR target, from EX)', 60, 68);
 wire('TAKEN', 'ctl', [[1060,225],[1080,225],[1080,120],[85,120],[85,272]], 'branch taken?', 90, 116);
-wire('RESULT', '', [[1060,376],[1152,376]], 'result 32', 1070, 370);
+wire('FA', '', [[965,325],[965,437],[980,437]], 'amount 5', 940, 448);
+wire('FB', '', [[960,427],[960,465],[980,465]]);
+wire('ALUR', '', [[1060,360],[1085,360]]);
+wire('SHR', '', [[1060,452],[1072,452],[1072,398],[1085,398]]);
+wire('RESULT', '', [[1135,376],[1152,376]], 'result 32', 1100, 328);
 wire('FSD', '', [[920,520],[1152,520]], 'store data', 960, 514);
 // --- MEM ---
 wire('RESULT', '', [[1174,376],[1220,376]], 'addr', 1180, 370);
@@ -201,10 +208,11 @@ const DESC = {
   BT: 'Branch target, computed in ID and registered, so it is ready the moment the branch is decided in EX.',
   RA: 'Register rs as read from the file.', RB: 'Register rt as read from the file; also the store data for SW.',
   XA: 'Operand A entering EX.', XB: 'Operand B entering EX.', XSD: 'Store data entering EX.',
-  FA: 'Operand A after forwarding. Also the JR target.', FB: 'Operand B after forwarding (inverted for subtract).',
+  FA: 'Operand A after forwarding. Also the JR target, and its low five bits are the shift amount.', FB: 'Operand B after forwarding (inverted for subtract).',
   TAKEN: 'The branch decision: with a conditional branch in EX, the compare result (or the sign of rs) picks the branch target as next PC and kills the instruction being fetched.',
   LINK: 'PC+8 of the jump in ID, taken from the incrementer, on its way to become the link register value.',
-  RESULT: 'The ALU result. Written back, used as the memory address, and forwarded to the next instruction.',
+  ALUR: 'The ALU output.', SHR: 'The shifter output.',
+  RESULT: 'The EX result: ALU or shifter output. Written back, used as the memory address, and forwarded to the next instruction.',
   FSD: 'Store data after forwarding, written to memory during SW.',
   DQ: 'Data read from memory for a load.',
   WD: 'Write-back: the value this instruction produced (result or load data) with its destination register and write enable. Written to the file, steered into the ID muxes, and forwarded to the EX muxes.',
