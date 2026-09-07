@@ -77,8 +77,8 @@ dd .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12p
 <dt>PC+4</dt><dd>13-bit incrementer on the word address.</dd>
 <dt>Branch target adder</dt><dd>13-bit add of PC+4 and the branch offset, in ID, so the target is ready when the branch is decided in EX.</dd>
 <dt>ALU</dt><dd>32-bit add, subtract (B inverted, carry-in 1), and, or, xor, nor, slt, sltu, and pass-B for links. The result mux beside it picks the shifter instead for shift instructions; in the chips that mux is folded into the EX/MEM register. The compare beside it decides BEQ and BNE from the same forwarded operands; BLEZ, BGTZ, BLTZ and BGEZ use the sign bit of A and the compare against r0.</dd>
-<dt>Register file</dt><dd>Two read ports (rs, rt) and one write port, fed by the write-back wire: data, destination and enable travel together.</dd>
-<dt>Instruction and data memory</dt><dd>32 KB each. Instruction memory only reads; data memory reads for loads and writes store data for SW.</dd>
+<dt>Register file</dt><dd>Two read ports (rs, rt) and one write port. The write port's data is the write-back wire; its address and enable are a copy delayed by two delay-line taps so they hold past the clock edge that ends the write.</dd>
+<dt>Instruction and data memory</dt><dd>Instruction memory is 32 KB of single-port SRAM and only reads. Data memory is 64 KB of dual-port SRAM: loads read through one port during their MEM cycle; a store's write goes through the other port one cycle later, in the store's WB cycle, from copies of its address and data. Both write ports (data memory and register file) are enabled by the clock itself, so the write is the clock's low half and ends exactly at the edge. See docs/memory-timing.md.</dd>
 </dl>
 <p style="color:var(--ink-2);max-width:90ch">Not drawn: decode, which turns the instruction into the select and enable signals that steer every unit above, and the forwarding and steer comparators that compute those selects one stage early.</p>
 </section>
@@ -128,7 +128,7 @@ unit(980, 290, 80, 120, 'ALU', '32-bit');
 unit(980, 425, 80, 70, 'Shifter', 'B by A[4:0]');
 mux(1085, 336, 80, 'res');
 unit(980, 200, 80, 50, 'A = B ?', 'compare');
-unit(1220, 320, 110, 130, 'Data memory', '32 KB');
+unit(1220, 320, 110, 130, 'Data memory', 'dual-port 64 KB');
 mux(1360, 340, 70, 'WB');
 // wires: name, class, points, label position
 const wires = [];
