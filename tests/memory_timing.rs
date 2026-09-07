@@ -105,12 +105,12 @@ fn part_tap_period_sweep() {
 /// (0..70 C) delay-line grades; industrial is reported only.
 #[test]
 fn documented_operating_points() {
-    for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 37.0)] {
+    for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 38.0)] {
         let (w, rw, ok) = run_with(period, Build { grade: Grade::Industrial, dmem, ..Build::default() });
         eprintln!("{name} industrial grade at {period} ns: {}", if w.is_empty() && rw.is_empty() && ok { "clean" } else { "not clean" });
     }
     for grade in [Grade::Room, Grade::Commercial] {
-        for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 37.0)] {
+        for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 38.0)] {
             let opt = Build { grade, dmem, ..Build::default() };
             let (w, rw, ok) = run_with(period, opt);
             assert!(rw.is_empty(), "{name} {grade:?} {period}: reset warnings {rw:?}");

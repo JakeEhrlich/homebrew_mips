@@ -1030,13 +1030,14 @@ pub struct Build {
     /// Tap for the write-enable gate: (DS1100 total, tap index 0..5).  A
     /// total other than [`DELAY_LINE_TOTAL`] adds a second delay line.
     pub gate_tap: (u32, usize),
-    /// Fast gate propagation delay range (ps).
+    /// Fast gate propagation delay range (ps).  Default: Diodes 74LVC1G00Q
+    /// at 5 V, 0.5 to 5.5 ns over -40..+125 C (datasheet June 2020).
     pub gate_tpd: (Time, Time),
 }
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (NS, 4500) }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500) }
     }
 }
 

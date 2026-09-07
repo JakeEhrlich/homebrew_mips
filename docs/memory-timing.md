@@ -7,9 +7,9 @@ called out as PCB requirements with the margin they must fit into.
 
 Status: simulated clean with every CPU test program (`cargo test --release`,
 `tests/memory_timing.rs`, `tests/cpu.rs`) at commercial-grade delay-line
-tolerance (0..70 C): from 33 ns with the CY7C1041G-10 data SRAM (also with
-the IS61C256AH-12), from 37 ns with the AS7C164A-15. The register file is
-clean from 32 ns.
+tolerance (0..70 C) and the 74LVC1G00Q's full 0.5 to 5.5 ns range: from
+33 ns with the CY7C1041G-10 data SRAM, from 37 ns with the IS61C256AH-12,
+from 38 ns with the AS7C164A-15. The register file is clean from 32 ns.
 
 ## 1. The problem this solves
 
@@ -62,7 +62,7 @@ are off.
 | Instruction memory | 4 x IS61C64AL-10 (8K x 8, 5 V, 10 ns) | read only, no strobes; fetch data at 15.5 ns instead of 20.5. Timing modelled with the IS61C256AH-10 column (same ISSI family); confirm against the 61C64AL datasheet |
 | Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# tied low for now (word access), available for SB / SH later. Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
-| Write gate | 1 x 2-input NAND, 74LVC1G00 or NC7SZ00 class, SOT-23-5 | **new**; modelled as 1.0 to 4.5 ns propagation, confirm against the part's 5 V datasheet |
+| Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
 | Logic | 136 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
 
 Total 152 chips plus the gate.
@@ -179,14 +179,17 @@ always selected with both byte enables low. Pins:
 
 Nominal: WE# falls at 8 ns plus the gate delay, rises at 25 ns (the tap's
 falling edge, half a period after its rising edge) plus the gate delay.
-Windows at commercial grade (tap +-3 ns, gate 1.0 to 4.5 ns), 34 ns period:
+Windows at commercial grade (tap +-3 ns, gate 0.5 to 5.5 ns), 34 ns period:
 
 | Event | Window | Constraint | Margin |
 |---|---|---|---|
-| Write start | 6 to 15.5 | address (MR) valid at 5.5, tAS 0; data (msd) valid at 5.5 | 0.5 |
-| Write end | 23 to 32.5 | before MR changes at 36 (tHA 0) | 3.5 - skew |
-| Pulse width | >= 23 - 15.5 = 7.5 at 34 ns; grows by half the period increase | tPWE 7 (CY7C1041G-10), 8 (IS61C256AH-12), 10 (AS7C164A-15) | met at 33 / 33 / 37 ns |
-| Data setup to write end | msd valid 5.5, end >= 23 | tSD 5 / 7 / 8 | 12.5 |
+| Write start | 5.5 to 16.5 | address (MR) valid at 5.5, tAS 0; data (msd) valid at 5.5 | 0 (the simulator accepts coincidence; an early SRAM-side clock helps here) |
+| Write end | 22.5 to 33.5 | before MR changes at 36 (tHA 0) | 2.5 - skew |
+| Pulse width | >= 22.5 - 16.5 = 6 at 34 ns; grows by half the period increase | tPWE 7 (CY7C1041G-10), 8 (IS61C256AH-12), 10 (AS7C164A-15) | the simulator's model of the pulse is finer than this arithmetic (the two edges share the tap's drift direction is *not* assumed; the write-end check uses the SRAM's own rules): clean from 33 / 37 / 38 ns |
+| Data setup to write end | msd valid 5.5, end >= 22.5 | tSD 5 / 7 / 8 | 12 |
+
+A gate with a narrower delay range buys clock period directly: every
+nanosecond of range costs half a nanosecond of pulse.
 
 The pulse width is the binding constraint and the reason the two parts have
 different operating points: half a period minus twice the tap tolerance minus
@@ -278,8 +281,8 @@ Not covered:
 - Clock skew and trace delay. All margins above are quoted "minus skew"; the
   board has to meet section 4.1. A clock-buffer model with per-net delays is
   the planned next step so the simulator can check this from the layout.
-- The gate: modelled as 1.0 to 4.5 ns at 5 V; enter the chosen part's
-  datasheet min/max (`Build::gate_tpd`) and re-run `tests/memory_timing.rs`.
+- The gate: Diodes 74LVC1G00Q, 0.5 to 5.5 ns at 5 V from its datasheet
+  (`Build::gate_tpd`).  A different vendor's part needs its own numbers.
 - Oscillator duty cycle: the simulator uses exactly 50 %. The data-memory
   write pulse is half a period wide before tolerances, so a short high half
   eats directly into it (see 4).
@@ -300,6 +303,5 @@ Not covered:
 - [ ] BUSY and INT pins of the register-file chips pulled up.
 - [ ] Data SRAM byte enables tied low (or driven, once SB / SH exist).
 - [ ] IS61C64AL datasheet numbers entered and simulation re-run.
-- [ ] Gate datasheet numbers entered and simulation re-run.
 - [ ] Bench: scope CLK at one SRAM enable pin and one GAL clock pin of each
       group in section 4.1, record skew and edge rate, set the tap jumper.

@@ -352,10 +352,9 @@ pub struct FastGate {
 }
 
 impl FastGate {
-    /// 74LVC1G00-class at 5 V: 1.0 to 4.5 ns (to be confirmed against the
-    /// chosen part's datasheet).
+    /// Diodes 74LVC1G00Q at 5 V: 0.5 to 5.5 ns over -40..+125 C.
     pub fn nand_5v() -> FastGate {
-        FastGate::new(NS, 4500)
+        FastGate::new(500, 5500)
     }
     pub fn new(tpd_min: Time, tpd_max: Time) -> FastGate {
         FastGate { tpd_min, tpd_max, a: Level::X, b: Level::X, out: Level::X, pending: None, now: 0 }
