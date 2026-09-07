@@ -342,3 +342,57 @@ fn jal_jalr_links() {
         34.0,
     );
 }
+
+#[test]
+fn shifts_constant_and_variable() {
+    check(
+        "
+        li   $t0, 0x80000001
+        li   $t1, 4
+        sll  $t2, $t0, 1
+        srl  $t3, $t0, 1
+        sra  $t4, $t0, 1
+        sllv $t5, $t0, $t1
+        srlv $t6, $t0, $t1
+        srav $t7, $t0, $t1
+        sra  $s0, $t0, 31
+        sll  $s1, $t0, 0
+        srl  $s2, $t0, 0
+        sra  $s3, $t0, 0
+        srl  $s4, $t0, 31
+        sll  $s5, $t0, 31
+        li   $t1, 7          # forwarded amount at distance 1
+        srav $s6, $t0, $t1
+        addiu $t0, $t0, 0x1234 # forwarded operand at distance 1
+        sll  $s7, $t0, 12
+        nop
+        nop
+        nop
+    stop:
+        nop
+        nop
+        nop
+        nop
+        ",
+        34.0,
+    );
+}
+
+#[test]
+fn shifts_random_against_reference() {
+    // 24 shifts with mixed amounts and both directions, results chained.
+    let mut src = String::from("        li $t0, 0xDEADBEEF\n        li $t1, 0x7\n        li $t2, 0x13\n");
+    let ops = ["sll", "srl", "sra", "sllv", "srlv", "srav"];
+    for k in 0..24 {
+        let op = ops[k % 6];
+        let dst = 16 + (k % 8); // s0..s7
+        if k % 6 < 3 {
+            src += &format!("        {op} ${dst}, $t0, {}\n", (k * 7 + 3) % 32);
+        } else {
+            src += &format!("        {op} ${dst}, $t0, ${}\n", if k % 2 == 0 { 9 } else { 10 });
+        }
+        src += &format!("        xor $t0, $t0, ${dst}\n");
+    }
+    src += "        nop\n        nop\n        nop\n    stop:\n        nop\n        nop\n        nop\n        nop\n";
+    check(&src, 34.0);
+}

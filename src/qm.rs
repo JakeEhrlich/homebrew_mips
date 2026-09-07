@@ -16,7 +16,7 @@ struct Imp {
 /// `Some(true)` for minterms, `Some(false)` for maxterms, `None` for don't
 /// cares (input bit `i` of `m` is input `i`).
 pub fn minimize(n: usize, f: impl Fn(u32) -> Option<bool>) -> Vec<Cube> {
-    assert!(n <= 16, "too many inputs for exhaustive minimisation");
+    assert!(n <= 17, "too many inputs for exhaustive minimisation");
     let full = (1u32 << n) - 1;
     let mut ones = Vec::new();
     let mut cares = Vec::new();
