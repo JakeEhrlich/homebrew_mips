@@ -224,10 +224,9 @@ const COLS = [
   {title:'', w:240, blocks:['ID/EX control','Forwarding control','ID/EX A','ID/EX B','ID/EX store data','ID/EX branch target'], reg:true},
   {title:'EX', w:330, blocks:['Forward A','Forward B','ALU slices + carries','Shifter','Compare','Next PC']},
   {title:'', w:240, blocks:['EX/MEM result (ALU last level)','EX/MEM store data','EX/MEM control','Stall'], reg:true},
-  {title:'MEM', w:240, blocks:['Data memory','Write gate']},
+  {title:'MEM', w:240, blocks:['Data memory','Write gate','Delay line']},
   {title:'', w:240, blocks:['MEM/WB','Write copies'], reg:true},
   {title:'WB', w:170, blocks:[]},
-  {title:'CLK', w:170, blocks:['Delay line']},
 ];
 const colOf = new Map(), rowOf = new Map();
 COLS.forEach((c, i) => c.blocks.forEach((b, r) => { colOf.set(b, i); rowOf.set(b, r); }));
@@ -323,7 +322,7 @@ for (const [name, L] of layout) {
   const g = el('g', {class:'block' + (L.reg ? ' register' : '')}, gBlocks);
   el('rect', {x:L.x, y:L.y, width:L.w, height:L.h, rx:2, class:'body'}, g);
   el('text', {x:L.x+8, y:L.y+15, class:'title'}, g).textContent = name;
-  el('text', {x:L.x+L.w-8, y:L.y+15, 'text-anchor':'end', class:'count'}, g).textContent = b.chips.length + (b.chips[0].kind === 'ATF22V10C' ? ' GAL' : ' SRAM');
+  el('text', {x:L.x+L.w-8, y:L.y+15, 'text-anchor':'end', class:'count'}, g).textContent = b.chips.length + (b.chips[0].kind === 'ATF22V10C' ? ' GAL' : b.chips[0].kind.startsWith('DS1100') ? ' delay line' : b.chips[0].kind.startsWith('74') ? ' gate' : ' SRAM');
   g.addEventListener('click', ev => { if (ev.target.classList.contains('body') || ev.target.classList.contains('title')) select({type:'block', name}); });
   const cx0 = L.x + RAILW + 8, cy0 = L.y + TITLEH + 10;
   b.chips.forEach((c, i) => {
