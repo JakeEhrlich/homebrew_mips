@@ -28,7 +28,7 @@ use crate::cy7c131::{Cy7c131, Port};
 use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of, sram16_pin_of};
+use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, ResetSupervisor, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of, sram16_pin_of};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -808,6 +808,19 @@ fn exmem_sd_block() -> Vec<Eq> {
         .collect()
 }
 
+/// Reset synchroniser: two GAL registers on CLK turn the supervisor's
+/// asynchronous release (RST_n, active low) into RESET, the active-high
+/// asynchronous reset of every pipeline register, released 2 to 5.5 ns
+/// after a clock edge.  Both stages are active-low so that the GAL's
+/// power-up register clear leaves RESET asserted before the first clock.
+/// The first stage is the synchroniser (`Eq::sync`).
+fn rsync_block() -> Vec<Eq> {
+    vec![
+        Eq::sop("RS1", Mode::Reg, vec![vec![l("RST_n")]]).active_low().sync(),
+        Eq::sop("RESET", Mode::Reg, vec![vec![nl_("RS1")]]).active_low(),
+    ]
+}
+
 /// Data memory interlocks and output enable.
 fn stall_block() -> Vec<Eq> {
     vec![
@@ -1006,6 +1019,7 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("msd", clk, None, exmem_sd_block()));
     v.extend(pack("mctl", clk, rst, exmem_ctrl_block()));
     v.extend(pack("stl", clk, rst, stall_block()));
+    v.extend(pack("rsync", clk, None, rsync_block()));
     v.extend(pack("cmp", None, None, cmp_block()));
     v.extend(pack("nxt", None, None, taken_block()));
     v.extend(pack("wb", clk, rst, memwb_block()));
@@ -1033,11 +1047,14 @@ pub struct Build {
     /// Fast gate propagation delay range (ps).  Default: Diodes 74LVC1G00Q
     /// at 5 V, 0.5 to 5.5 ns over -40..+125 C (datasheet June 2020).
     pub gate_tpd: (Time, Time),
+    /// Where in a clock cycle the reset supervisor releases (ns after a
+    /// rising edge).  Any value must work; the tests sweep it.
+    pub reset_phase_ns: f64,
 }
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500) }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0 }
     }
 }
 
@@ -1112,6 +1129,13 @@ impl Cpu {
             }
             nl.net(&format!("U{}", gt_k + 1))
         };
+        // Reset supervisor: releases RST_n after the power-up settle and
+        // RESET_CYCLES clocks, at the requested phase.
+        let period = (period_ns * NS as f64).round() as Time;
+        let release = (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns);
+        let sup = nl.add_chip("rst0", ResetSupervisor { release });
+        let rst_n = nl.net("RST_n");
+        nl.connect(rst_n, sup, 2);
         let gate = nl.add_chip("gate0", FastGate::new(opt.gate_tpd.0, opt.gate_tpd.1));
         nl.connect(tap_net, gate, 1);
         let mmw = nl.net("MMW");
@@ -1251,26 +1275,34 @@ impl Cpu {
             grade,
             reset_release: 0,
         };
-        // Power-on: RESET asserted from the start (a supervisor holds it
-        // through power-up), clock low.
-        let reset = cpu.sim.net_id("RESET");
-        cpu.sim.schedule(0, reset, Level::H);
+        // Power-on: the supervisor holds RST_n low, the synchroniser's
+        // registers power up with RESET asserted, clock low.  Let every
+        // combinational chain settle, then run the clock under reset (the
+        // pipeline registers stay cleared; the write-back stage writes
+        // r0 = 0).  The supervisor releases at `reset_phase_ns` into a
+        // cycle; the synchroniser passes that on 2 to 5.5 ns after an edge
+        // one or two cycles later.
         cpu.sim.schedule(0, cpu.clk, Level::L);
-        // Power-up: let every combinational chain settle, then hold RESET
-        // with the clock running (the pipeline registers stay
-        // cleared; the write-back stage writes r0 = 0), and release RESET
-        // just after an edge so the reset path settles and recovers before
-        // the next edge and before the tap-clocked copies sample it.
         cpu.sim.run_until(3 * cpu.period);
-        for _ in 0..RESET_CYCLES {
+        let reset = cpu.sim.net_id("RESET");
+        for _ in 0..RESET_CYCLES + 4 {
             cpu.step();
+            if cpu.sim.value(reset) == Level::L {
+                break;
+            }
         }
-        // Release as a clock-synchronised reset would: a registered
-        // output's latest clock-to-output after an edge.
-        let release = cpu.sim.now() + Self::ns(5.5);
-        cpu.sim.schedule(release, reset, Level::L);
+        assert_eq!(cpu.sim.value(reset), Level::L, "reset never released");
+        cpu.reset_release = cpu
+            .sim
+            .history(reset)
+            .iter()
+            .rev()
+            .find(|(_, l)| *l == Level::L)
+            .map(|(t, _)| *t)
+            .expect("reset release time");
+        // One more cycle so the first instruction is in flight before the
+        // caller starts counting.
         cpu.step();
-        cpu.reset_release = release;
         cpu.cycles = 0;
         cpu.pc_trace.clear();
         cpu
@@ -1416,6 +1448,8 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "dl" => ("Delay line", "CLK"),
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
+        "rsync" => ("Reset sync", "IF"),
+        "rst" => ("Reset supervisor", "IF"),
         "gate" => ("Write gate", "MEM"),
         _ => ("?", "?"),
     }
@@ -1469,6 +1503,9 @@ pub fn chip_infos() -> Vec<ChipInfo> {
         }
         let (block, stage) = block_of("dl");
         out.push(ChipInfo { name: "dl0".into(), kind: "DS1100-30", block, stage, pins });
+        let (block, stage) = block_of("rst");
+        out.push(ChipInfo { name: "rst0".into(), kind: "MAX811-class", block, stage, pins: vec![(2, "RST_n".to_string(), true)] });
+        let (block, stage) = block_of("dl");
         let (gt_total, gt_k) = Build::default().gate_tap;
         if gt_total != DELAY_LINE_TOTAL {
             let mut pins = vec![(DS1100_IN, "CLK".to_string(), false)];

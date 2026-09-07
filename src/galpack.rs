@@ -32,6 +32,8 @@ pub struct Eq {
     pub terms: Vec<Vec<SLit>>,
     /// Output-enable product term (`None` = always enabled).
     pub oe: Option<Vec<SLit>>,
+    /// Synchroniser stage (see `gal22v10::OlmcConfig::sync`).
+    pub sync: bool,
 }
 
 pub fn lit(net: &str) -> SLit {
@@ -44,7 +46,7 @@ pub fn nlit(net: &str) -> SLit {
 impl Eq {
     /// Direct sum of products, active high.
     pub fn sop(out: &str, mode: Mode, terms: Vec<Vec<SLit>>) -> Eq {
-        Eq { out: out.to_string(), mode, active_low: false, terms, oe: None }
+        Eq { out: out.to_string(), mode, active_low: false, terms, oe: None, sync: false }
     }
     /// From a truth table over `inputs` (bit `i` of the argument is input
     /// `i`).  Picks whichever of f / !f needs fewer terms.
@@ -57,7 +59,12 @@ impl Eq {
             .into_iter()
             .map(|c| c.into_iter().map(|(i, p)| (inputs[i].to_string(), p)).collect())
             .collect();
-        Eq { out: out.to_string(), mode, active_low, terms, oe: None }
+        Eq { out: out.to_string(), mode, active_low, terms, oe: None, sync: false }
+    }
+    /// Mark as a synchroniser stage.
+    pub fn sync(mut self) -> Eq {
+        self.sync = true;
+        self
     }
     pub fn with_oe(mut self, oe: Vec<SLit>) -> Eq {
         self.oe = Some(oe);
@@ -204,6 +211,7 @@ pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, Str
             active_low: eq.active_low,
             oe: Oe::Always,
             terms: vec![],
+            sync: eq.sync,
         };
     }
     let resolve = |cfg: &Config, l: &SLit| -> Lit {

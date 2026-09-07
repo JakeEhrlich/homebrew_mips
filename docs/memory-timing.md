@@ -63,9 +63,10 @@ are off.
 | Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# tied low for now (word access), available for SB / SH later. Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
 | Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
-| Logic | 136 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
+| Reset supervisor | 1 x MAX811 / DS1233 class | **new** |
+| Logic | 137 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
 
-Total 152 chips plus the gate.
+Total 154 chips plus the gate.
 
 ## 4. The clock
 
@@ -232,22 +233,37 @@ This is also the machinery a bus-wait for slow peripherals will reuse.
 
 ## 7. Reset
 
-- RESET is asserted from power-on (a supervisor) and released synchronously:
-  the board needs a one-flop synchroniser on the main clock, so the release
-  lands 2 to 5.5 ns after an edge. The simulator models the release at 5.5 ns.
-- Every pipeline register with a reset uses it asynchronously (GAL AR).
-  Recovery: release + AR path + 5 ns must precede the next edge; at 34 ns it
-  does with about 13 ns to spare.
-- The copy registers have **no** asynchronous reset: their sources are held at
-  zero by the pipeline's reset, the ATF22V10C powers up cleared, and RESET
-  enters the write-flag copy as ordinary synchronous data
-  (`WC1W_n = !MRW & !RESET`). This avoids any recovery-time relation between
-  the reset release and the tap clocks. Setup of RESET at stage 1: 6 ns.
-- r0: while RESET is held the MEM/WB destination is 0, the data is 0, and the
-  write flag reads "write" (polarity chosen for that), so the register file's
-  r0 is written with zero on every clock during reset. The simulator preloads
-  r0 with garbage to prove it. Hold RESET for at least four clocks after the
-  clock is stable.
+Modelled as chips now, not stimulus:
+
+- **Supervisor** (`rst0`, MAX811 / DS1233 class, active-low RESET#): holds
+  RST_n low from power-on for its reset timeout, then releases at an
+  instant unrelated to the clock. The board part's timeout (hundreds of ms)
+  only has to exceed the oscillator's start-up time; enter the chosen part's
+  number in the parts list.
+- **Synchroniser** (`rsync0`, one GAL on CLK, no async reset of its own):
+  two registers in series, RST_n -> RS1 -> RESET. Both are active-low
+  outputs of registers that the ATF22V10C clears at power-up, so RESET is
+  asserted before the first clock edge without any help. RESET falls 2 to
+  5.5 ns after a clock edge, one or two cycles after the supervisor
+  releases. Every other register with a reset uses RESET asynchronously,
+  and its recovery (release + AR path + 5 ns) precedes the next edge with
+  about 13 ns to spare at 34 ns. The tap-clocked copies take RESET as
+  synchronous data (`WC1W_n = !MRW & !RESET`), setup margin 6 ns.
+- **The one non-datasheet assumption**, flagged in the model
+  (`gal22v10::OlmcConfig::sync`, `Eq::sync`): the first synchroniser stage,
+  when RST_n moves inside its setup window, captures one of its two legal
+  values rather than an unknown, settling within the clock-to-output time.
+  That is what a flip-flop's metastability MTBF certifies, and it is the
+  reason a two-stage synchroniser is used at all. The model takes the old
+  value, which is the pessimistic outcome (release one edge later).
+- **Test**: `tests/reset.rs` sweeps the supervisor's release across every
+  nanosecond of a clock period and checks, for each phase, that RESET
+  falls 2 to 5.5 ns after an edge, that no chip warns during or after
+  reset, and that a program runs with r0 = 0 and correct results.
+- r0: while RESET is held the MEM/WB destination is 0, the data is 0, and
+  the write flag reads "write" (polarity chosen for that), so the register
+  file's r0 is written with zero on every clock during reset. The simulator
+  preloads r0 with garbage to prove it.
 
 ## 8. Delay line
 
@@ -295,7 +311,8 @@ Not covered:
       nets; SRAM side never longer.
 - [ ] Jumper for the GAL clock-tree tap (0 / 6 / 12 ns).
 - [ ] Oscillator socket; 45/55 duty or divide-by-two.
-- [ ] Reset supervisor plus one-flop synchroniser on CLK.
+- [ ] Reset supervisor (active-low output) into the rsync GAL's RST_n pin;
+      its reset timeout longer than the oscillator start-up.
 - [ ] DS1100-30 and DS1100-40 with local decoupling; T1 / T3 to the copy
       chips, U1 to the gate.
 - [ ] Gate placed next to the delay line and the SRAMs; WEN to all four WE#.

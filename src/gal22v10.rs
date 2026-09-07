@@ -134,18 +134,27 @@ pub struct OlmcConfig {
     pub oe: Oe,
     /// Sum of products.  Empty = constant false.
     pub terms: Vec<Term>,
+    /// Synchroniser stage: a setup or hold violation captures the *old*
+    /// value instead of unknown.  This is the one place the model assumes
+    /// something the datasheet does not state outright: that a flip-flop
+    /// whose input moves inside its setup window settles to one of its two
+    /// legal values within the clock-to-output time (the metastability
+    /// MTBF argument).  Taking the old value is the pessimistic choice for
+    /// a reset release (it lands one edge later).  Only for inputs that are
+    /// asynchronous by nature, e.g. the reset supervisor's output.
+    pub sync: bool,
 }
 
 impl OlmcConfig {
     /// Unused OLMC: output disabled, so the pin is an input.
     pub fn input() -> OlmcConfig {
-        OlmcConfig { registered: false, active_low: false, oe: Oe::Never, terms: vec![] }
+        OlmcConfig { registered: false, active_low: false, oe: Oe::Never, terms: vec![], sync: false }
     }
     pub fn comb(terms: Vec<Term>) -> OlmcConfig {
-        OlmcConfig { registered: false, active_low: false, oe: Oe::Always, terms }
+        OlmcConfig { registered: false, active_low: false, oe: Oe::Always, terms, sync: false }
     }
     pub fn reg(terms: Vec<Term>) -> OlmcConfig {
-        OlmcConfig { registered: true, active_low: false, oe: Oe::Always, terms }
+        OlmcConfig { registered: true, active_low: false, oe: Oe::Always, terms, sync: false }
     }
     pub fn active_low(mut self) -> OlmcConfig {
         self.active_low = true;
@@ -750,6 +759,7 @@ impl Gal22v10 {
                 if let Some(e) = self.last_edge
                     && t >= self.edge_start
                     && t <= e + tm.th
+                    && !self.cfg.olmc[k].sync
                 {
                     self.warn(WarningKind::Hold { olmc: k, changed_at: t });
                     self.set_q(k, Level::X);
@@ -1090,7 +1100,9 @@ impl Gal22v10 {
                 self.eval_sop(&c.terms)
             };
             let setup_bad = cone_changed + tm.ts > t && cone_changed > 0;
-            if setup_bad {
+            if setup_bad && c.sync {
+                v = self.olmc[k].q; // synchroniser: keeps the old value
+            } else if setup_bad {
                 self.warn(WarningKind::Setup { olmc: k, changed_at: cone_changed });
                 v = Level::X;
             } else if v == Level::X && !ar_bad && sp != Level::X {
