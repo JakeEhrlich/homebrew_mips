@@ -64,9 +64,10 @@ are off.
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
 | Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
 | Reset supervisor | 1 x MAX811 / DS1233 class | **new** |
-| Logic | 137 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
+| Boot ROM | 4 x SST39SF040 class (512K x 8, 5 V) | **new**; see docs/boot.md |
+| Logic | 144 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble |
 
-Total 154 chips plus the gate.
+Total 165 chips plus the gate.
 
 ## 4. The clock
 

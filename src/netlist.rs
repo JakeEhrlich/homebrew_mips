@@ -608,6 +608,186 @@ impl Chip for ResetSupervisor {
 }
 
 // ---------------------------------------------------------------------------
+// Chip impl: 512K x 8 parallel flash / EEPROM used as a read-only boot ROM
+// (SST39SF040 class, DIP-32 / PLCC-32 JEDEC pinout).  Read timing only:
+// data unknown from an address change until tACC, from OE#/CE# low until
+// tOE, and for tDF after they go high, then high impedance.  Writes are
+// not modelled (WE# tied high on the board).
+
+pub struct Rom {
+    pub tacc: Time,
+    pub toe: Time,
+    pub tdf: Time,
+    image: Vec<Option<u8>>,
+    addr: [Level; 19],
+    addr_since: Time,
+    enabled: Level,
+    en_since: Time,
+    now: Time,
+}
+
+/// DIP-32 pin of a JEDEC 512K x 8 part: 1 A18, 2 A16, 3 A15, 4 A12, 5 A7,
+/// 6 A6, 7 A5, 8 A4, 9 A3, 10 A2, 11 A1, 12 A0, 13 DQ0, 14 DQ1, 15 DQ2,
+/// 16 GND, 17 DQ3, 18 DQ4, 19 DQ5, 20 DQ6, 21 DQ7, 22 CE#, 23 A10, 24 OE#,
+/// 25 A11, 26 A9, 27 A8, 28 A13, 29 A14, 30 A17, 31 WE#, 32 VCC.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RomPin {
+    A(u8),
+    Dq(u8),
+    CeN,
+    OeN,
+    WeN,
+    Gnd,
+    Vcc,
+    Nc,
+}
+pub fn rom_pin(pin: usize) -> RomPin {
+    match pin {
+        1 => RomPin::A(18),
+        2 => RomPin::A(16),
+        3 => RomPin::A(15),
+        4 => RomPin::A(12),
+        5..=12 => RomPin::A((12 - pin) as u8),
+        13..=15 => RomPin::Dq((pin - 13) as u8),
+        16 => RomPin::Gnd,
+        17..=21 => RomPin::Dq((pin - 17 + 3) as u8),
+        22 => RomPin::CeN,
+        23 => RomPin::A(10),
+        24 => RomPin::OeN,
+        25 => RomPin::A(11),
+        26 => RomPin::A(9),
+        27 => RomPin::A(8),
+        28 => RomPin::A(13),
+        29 => RomPin::A(14),
+        30 => RomPin::A(17),
+        31 => RomPin::WeN,
+        32 => RomPin::Vcc,
+        _ => RomPin::Nc,
+    }
+}
+pub fn rom_pin_of(f: RomPin) -> usize {
+    (1..=32).find(|&p| rom_pin(p) == f).expect("no such pin")
+}
+
+impl Rom {
+    /// SST39SF040-70: tACC 70, tOE 35, tDF 25 ns (datasheet values to be
+    /// confirmed; conservative for any 70 ns part).
+    pub fn sst39sf040_70() -> Rom {
+        Rom::new(70 * NS, 35 * NS, 25 * NS)
+    }
+    pub fn new(tacc: Time, toe: Time, tdf: Time) -> Rom {
+        Rom { tacc, toe, tdf, image: vec![None; 1 << 19], addr: [Level::Z; 19], addr_since: 0, enabled: Level::X, en_since: 0, now: 0 }
+    }
+    pub fn preload(&mut self, addr: u32, v: u8) {
+        self.image[addr as usize & 0x7FFFF] = Some(v);
+    }
+    fn addr_value(&self) -> Option<u32> {
+        let mut v = 0u32;
+        for (i, l) in self.addr.iter().enumerate() {
+            v |= (l.bit()? as u32) << i;
+        }
+        Some(v)
+    }
+    fn out(&self, t: Time) -> Level_bus {
+        match self.enabled {
+            Level::L => {
+                if t < self.en_since + self.toe || t < self.addr_since + self.tacc {
+                    return Level_bus::X;
+                }
+                match self.addr_value().and_then(|a| self.image[a as usize]) {
+                    Some(v) => Level_bus::V(v),
+                    None => Level_bus::X,
+                }
+            }
+            Level::H => {
+                if t < self.en_since + self.tdf {
+                    Level_bus::X
+                } else {
+                    Level_bus::Z
+                }
+            }
+            _ => Level_bus::X,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[allow(non_camel_case_types)]
+pub enum Level_bus {
+    Z,
+    X,
+    V(u8),
+}
+
+impl Chip for Rom {
+    fn pin_count(&self) -> usize {
+        32
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        match rom_pin(pin) {
+            RomPin::A(i) => format!("A{i}"),
+            RomPin::Dq(i) => format!("DQ{i}"),
+            RomPin::CeN => "CE#".into(),
+            RomPin::OeN => "OE#".into(),
+            RomPin::WeN => "WE#".into(),
+            RomPin::Gnd => "GND".into(),
+            RomPin::Vcc => "VCC".into(),
+            RomPin::Nc => "NC".into(),
+        }
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        self.now = t;
+        let mut addr = [Level::Z; 19];
+        let (mut ce, mut oe) = (Level::Z, Level::Z);
+        for (pin, &v) in ext.iter().enumerate().take(33).skip(1) {
+            match rom_pin(pin) {
+                RomPin::A(i) => addr[i as usize] = v,
+                RomPin::CeN => ce = v,
+                RomPin::OeN => oe = v,
+                _ => {}
+            }
+        }
+        if addr != self.addr {
+            self.addr = addr;
+            self.addr_since = t;
+        }
+        // Enabled when both CE# and OE# are low.
+        let en = match (ce, oe) {
+            (Level::L, Level::L) => Level::L,
+            (Level::H, _) | (_, Level::H) => Level::H,
+            _ => Level::X,
+        };
+        if en != self.enabled {
+            self.enabled = en;
+            self.en_since = t;
+        }
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        self.now = t;
+        let o = self.out(t);
+        for (pin, slot) in out.iter_mut().enumerate().take(33).skip(1) {
+            *slot = match rom_pin(pin) {
+                RomPin::Dq(i) => match o {
+                    Level_bus::Z => Level::Z,
+                    Level_bus::X => Level::X,
+                    Level_bus::V(v) => Level::from_bit(v >> i & 1 == 1),
+                },
+                _ => Level::Z,
+            };
+        }
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        [self.addr_since + self.tacc, self.en_since + self.toe, self.en_since + self.tdf].into_iter().filter(|&e| e > t).min()
+    }
+    fn warnings(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Chip impl: AS7C164A (28-pin DIP/SOJ)
 
 /// Pin functions of the AS7C164A, from the datasheet pin configuration.
@@ -751,6 +931,24 @@ impl Netlist {
         self.nets.push(Net { name: name.to_string(), pins: vec![], tie: Level::Z, pull: Level::Z });
         self.by_name.insert(name.to_string(), id);
         id
+    }
+    /// Join net `b` into net `a`: every pin of `b` moves to `a`, and the
+    /// name of `b` resolves to `a` from now on.  For wiring choices made
+    /// after the chips were instantiated by name.
+    pub fn merge(&mut self, a: NetId, b: NetId) {
+        if a == b {
+            return;
+        }
+        let pins = std::mem::take(&mut self.nets[b].pins);
+        self.nets[a].pins.extend(pins);
+        if self.nets[b].tie != Level::Z {
+            self.nets[a].tie = self.nets[b].tie;
+        }
+        if self.nets[b].pull != Level::Z {
+            self.nets[a].pull = self.nets[b].pull;
+        }
+        let bname = self.nets[b].name.clone();
+        self.by_name.insert(bname, a);
     }
     /// Create `width` nets named `prefix0`, `prefix1`, ...
     pub fn bus(&mut self, prefix: &str, width: usize) -> Vec<NetId> {

@@ -28,7 +28,7 @@ use crate::cy7c131::{Cy7c131, Port};
 use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, ResetSupervisor, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of, sram16_pin_of};
+use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -228,7 +228,7 @@ fn dec_table(out: &str, mode: Mode, f: impl Fn(&Dec) -> bool) -> Eq {
 
 /// PC register (13 bits) with 4:1 mux: INC / JT / BT / AF, async reset.
 fn pc_block() -> Vec<Eq> {
-    (2..=14)
+    let mut eqs: Vec<Eq> = (2..=14)
         .map(|i| {
             Eq::sop(
                 &n("PC", i),
@@ -241,7 +241,12 @@ fn pc_block() -> Vec<Eq> {
                 ],
             )
         })
-        .collect()
+        .collect();
+    // Bit 15: the incrementer's carry out.  Not an address; it is the boot
+    // copier's WRAP flag (the PC has run past 8K words), set for one
+    // increment.
+    eqs.push(Eq::sop("PC15", Mode::Reg, vec![vec![l("SELINC"), l("INC15")]]));
+    eqs
 }
 
 /// PC + 1 (13 bits): two slices, the second taking the first's group
@@ -265,6 +270,7 @@ fn inc_block() -> Vec<Eq> {
             Some(((m & 0xF) + cin) >> bit & 1 == 1)
         }));
     }
+    eqs.push(Eq::table("INC15", Mode::Comb, &strs(&ins1), |m| Some(m == 0x1F)));
     eqs
 }
 
@@ -782,8 +788,13 @@ fn exmem_result_block() -> Vec<Eq> {
                     })
                 };
                 return Eq::table(&n("MR", i), Mode::Reg, &ins, f);
+                // (bit 0 is not a data-memory address pin: no OE)
             }
-            Eq::sop(&n("MR", i), Mode::Reg, terms)
+            let eq = Eq::sop(&n("MR", i), Mode::Reg, terms);
+            // Bits on the data-memory address pins give way to the boot
+            // address buffers while the copier counts (off one cycle before
+            // the buffers come on, back one cycle after they go off).
+            if (2..20).contains(&i) { eq.with_oe(vec![nl_("BOOTCNT"), nl_("BOOTCNTD")]) } else { eq }
         })
         .collect()
 }
@@ -817,8 +828,99 @@ fn exmem_sd_block() -> Vec<Eq> {
 fn rsync_block() -> Vec<Eq> {
     vec![
         Eq::sop("RS1", Mode::Reg, vec![vec![l("RST_n")]]).active_low().sync(),
-        Eq::sop("RESET", Mode::Reg, vec![vec![nl_("RS1")]]).active_low(),
+        Eq::sop("RESET", Mode::Reg, vec![vec![nl_("RS1"), l("DONE")]]).active_low(),
     ]
+}
+
+/// Boot copier sequencer (see docs/boot.md).  While the CPU is held in
+/// reset, copies the boot ROMs into instruction memory (the code phase)
+/// and then into data memory region by region, one word every five
+/// clocks: steps 0-2 let the ROM's access time pass after the address
+/// changed, step 3 is the write cycle, step 4 holds the address past the
+/// write end, and the PC (the address counter, released from reset early
+/// through RESET_PC and otherwise held through HOLD) advances at the end
+/// of step 4.  Instruction memory is written with a full-cycle pulse from
+/// its registered CE2 (IMEN) and WE# (BOOTWI_n); data memory through the
+/// store gate (MMWB) like a store.  WRAP is the PC bit just above the
+/// region size and marks the end of a phase, which clears the PC (PCCLR).
+/// PHASE counts data regions down from NPH (wired constant) to 0.  DONE
+/// lets the reset synchroniser release the CPU.  SKIP (wired) ends the
+/// copy at once for a preloaded machine.
+///
+/// Registers that must read "asserted" from the GAL's power-up clear are
+/// active-low outputs (BOOT, CODE, BOOTWI_n).
+fn bseq_block() -> Vec<Eq> {
+    let run = |t: Vec<SLit>| -> Vec<SLit> {
+        let mut v = vec![nl_("RS1"), l("BOOTCNT"), nl_("WRAP")];
+        v.extend(t);
+        v
+    };
+    // Step decode helpers (3-bit counter 0..4).
+    let step = |v: u32| -> Vec<SLit> { (0..3).map(|b| if v >> b & 1 == 1 { l(&format!("STEP{b}")) } else { nl_(&format!("STEP{b}")) }).collect() };
+    let mut eqs = vec![
+        Eq::sop("BOOTCNT", Mode::Reg, vec![vec![nl_("RS1"), nl_("SKIP"), nl_("DONE"), nl_("WRAP")], vec![nl_("RS1"), nl_("SKIP"), nl_("DONE"), l("CODE")], vec![nl_("RS1"), nl_("SKIP"), nl_("DONE"), nl_("LAST")]]),
+    ];
+    // STEP next = STEP + 1 mod 5 while running and not wrapping, else 0.
+    for b in 0..3 {
+        let terms: Vec<Vec<SLit>> = (0..5u32).filter(|&v| ((v + 1) % 5) >> b & 1 == 1).map(|v| run(step(v))).collect();
+        eqs.push(Eq::sop(&format!("STEP{b}"), Mode::Reg, terms));
+    }
+    let mut write_next = run(step(2)); // next cycle is step 3
+    eqs.push(Eq::sop("MMWB", Mode::Reg, vec![vec![l("XMW")], { write_next.push(nl_("CODE")); write_next.clone() }]));
+    let mut wi = run(step(2));
+    wi.push(l("CODE"));
+    eqs.push(Eq::sop("BOOTWI_n", Mode::Reg, vec![wi.clone()]).active_low());
+    eqs.push(Eq::sop("IMEN", Mode::Reg, vec![vec![l("DONE")], wi]));
+    eqs.push(Eq::sop("PCCLR", Mode::Reg, vec![vec![nl_("RS1"), l("BOOTCNT"), l("WRAP")]]));
+    eqs.push(Eq::sop("DONE", Mode::Reg, vec![vec![nl_("RS1"), l("DONE")], vec![nl_("RS1"), l("SKIP")], vec![nl_("RS1"), l("BOOTCNT"), l("WRAP"), nl_("CODE"), l("LAST")]]));
+    eqs.push(Eq::sop("BOOT", Mode::Reg, vec![vec![l("DONE")]]).active_low());
+    // ROM output enable (active low): off from DONE, a cycle before BOOT
+    // lets instruction memory drive the bus, so the ROM's 25 ns turn-off
+    // is over before the first fetch.
+    eqs.push(Eq::sop("ROMOE_n", Mode::Comb, vec![vec![l("DONE")]]));
+    eqs.push(Eq::sop("RESET_PC", Mode::Comb, vec![vec![l("RESET"), nl_("BOOTCNT")], vec![l("PCCLR")]]));
+    // Phase state.  CODE is 1 from power-up (active-low register) until
+    // the first wrap; PHASE loads NPH at that wrap and counts down.
+    eqs.push(Eq::sop("CODE", Mode::Reg, vec![vec![nl_("RS1"), nl_("CODE")], vec![nl_("RS1"), l("BOOTCNT"), l("WRAP")]]).active_low());
+    for i in 0..5 {
+        let mut ins: Vec<String> = (0..5).map(|j| n("PHASE", j)).collect();
+        ins.extend(["WRAP", "BOOTCNT", "CODE", "RS1", &n("NPH", i)].map(String::from));
+        eqs.push(Eq::table(&n("PHASE", i), Mode::Reg, &strs(&ins), move |m| {
+            let phase = m & 31;
+            let (wrap, cnt, code, rs1, nph_i) = (m >> 5 & 1 == 1, m >> 6 & 1 == 1, m >> 7 & 1 == 1, m >> 8 & 1 == 1, m >> 9 & 1 == 1);
+            if rs1 {
+                return Some(false);
+            }
+            if cnt && wrap && code {
+                return Some(nph_i);
+            }
+            let next = if cnt && wrap { phase.wrapping_sub(1) & 31 } else { phase };
+            Some(next >> i & 1 == 1)
+        }));
+    }
+    eqs.push(Eq::sop("LAST", Mode::Comb, vec![vec![nl_("CODE"), nl_("PHASE0"), nl_("PHASE1"), nl_("PHASE2"), nl_("PHASE3"), nl_("PHASE4")]]));
+    eqs.push(Eq::sop("BOOTD", Mode::Comb, vec![vec![l("BOOTCNT"), nl_("CODE")]]));
+    // BOOTCNT delayed one cycle: sequences the address-net hand-over.
+    eqs.push(Eq::sop("BOOTCNTD", Mode::Reg, vec![vec![l("BOOTCNT")]]));
+    eqs
+}
+
+/// Boot address buffers: the PC (word counter) and the region number onto
+/// the data-memory address nets while BOOT.  Which BA bit lands on which
+/// MR net is wiring (see `Cpu::build`).
+fn badr_block() -> Vec<Eq> {
+    // Enabled from one cycle after the copier starts counting until it
+    // stops; the EX/MEM chips release the nets a cycle earlier and take
+    // them back a cycle later, so the two never drive them together.
+    let mut eqs: Vec<Eq> = (0..13).map(|j| Eq::sop(&n("BA", j), Mode::Comb, vec![vec![l(&n("PC", j + 2))]]).with_oe(vec![l("BOOTCNT"), l("BOOTCNTD")])).collect();
+    eqs.extend((0..5).map(|i| Eq::sop(&n("BA", 13 + i), Mode::Comb, vec![vec![l(&n("PHASE", i))]]).with_oe(vec![l("BOOTCNT"), l("BOOTCNTD")])));
+    eqs
+}
+
+/// Boot data buffers: ROM data (on the instruction bus) onto the data bus
+/// during the data phases.
+fn bdat_block() -> Vec<Eq> {
+    (0..32).map(|i| Eq::sop(&n("DQ", i), Mode::Comb, vec![vec![l(&n("IM", i))]]).with_oe(vec![l("BOOTD")])).collect()
 }
 
 /// Data memory interlocks and output enable.
@@ -831,13 +933,20 @@ fn stall_block() -> Vec<Eq> {
         // them).  PC and IF/ID keep their values, ID/EX takes a bubble;
         // EX, MEM and WB proceed, so no forwarding state is disturbed.  The
         // pair separates by one cycle, which ends the hold by itself.
-        Eq::sop("HOLD", Mode::Comb, vec![vec![l("STORE"), l("XMR")], vec![l("LOAD"), l("XMW")]]),
+        // ... and the boot copier holds the PC except in step 4.
+        Eq::sop("HOLD", Mode::Comb, vec![vec![l("STORE"), l("XMR")], vec![l("LOAD"), l("XMW")], vec![l("BOOTCNT"), nl_("STEP2")], vec![l("BOOTCNT"), l("STEP1")], vec![l("BOOTCNT"), l("STEP0")]]),
         // Data memory OE#, registered so it cannot glitch: high during a
         // store's EX cycle (set from the decode of a store in ID, unless a
         // load is in EX and still needs the outputs next cycle), its MEM
         // cycle (the write) and the cycle after (until the store-data
         // drivers have released the bus).
-        Eq::sop("OEN", Mode::Reg, vec![vec![l("STORE"), nl_("XMR")], vec![l("XMW")], vec![l("MMW")]]),
+        // Written as the complement (active-low register) so that the
+        // asynchronous reset leaves OE# high: the memory must not drive
+        // the bus while the boot copier does.
+        Eq::sop("OEN", Mode::Reg, vec![vec![nl_("STORE"), nl_("XMW"), nl_("MMW"), nl_("BOOT")], vec![l("XMR"), nl_("XMW"), nl_("MMW"), nl_("BOOT")]]).active_low(),
+
+        // Data memory CE# (low = selected): off during the boot code phase.
+        Eq::sop("DMEN_n", Mode::Comb, vec![vec![l("BOOTCNT"), l("CODE")]]),
     ]
 }
 
@@ -995,13 +1104,17 @@ fn build_gal_specs() -> Vec<GalSpec> {
     let (fa, fb) = fwd_mux_block();
     let mut v = Vec::new();
     let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLD");
-    v.extend(pack("pc", clk, rst, h(pc_block())));
+    v.extend(pack("pc", clk, Some("RESET_PC"), h(pc_block())));
     v.extend(pack("inc", None, None, inc_block()));
     v.extend(pack("ifid", clk, rst, h(ifid_block())));
     v.extend(pack("dec", None, None, dec_block()));
     v.extend(pack("ctl", clk, rst, with_bubble(ctrl_block(), "HOLD")));
     v.extend(pack("steer", None, None, steer_block()));
-    v.extend(pack("fwdc", clk, rst, fwdctl_block()));
+    // No async reset: under reset the write flags are 0, so these settle
+    // to "no hit" from their inputs after one clock.  An async reset would
+    // leave them at "hit" (they are written active-low), which selects the
+    // EX/MEM result, undriven during the boot copy, into the ALU.
+    v.extend(pack("fwdc", clk, None, fwdctl_block()));
     v.extend(pack("xa", clk, None, idex_a_block()));
     v.extend(pack("xb", clk, None, idex_b_block()));
     v.extend(pack("xsd", clk, None, idex_sd_block()));
@@ -1020,6 +1133,9 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("mctl", clk, rst, exmem_ctrl_block()));
     v.extend(pack("stl", clk, rst, stall_block()));
     v.extend(pack("rsync", clk, None, rsync_block()));
+    v.extend(pack("bseq", clk, None, bseq_block()));
+    v.extend(pack("badr", None, None, badr_block()));
+    v.extend(pack("bdat", None, None, bdat_block()));
     v.extend(pack("cmp", None, None, cmp_block()));
     v.extend(pack("nxt", None, None, taken_block()));
     v.extend(pack("wb", clk, rst, memwb_block()));
@@ -1035,7 +1151,18 @@ fn build_gal_specs() -> Vec<GalSpec> {
 pub const DELAY_LINE_TOTAL: u32 = 30;
 
 /// Build options.
-#[derive(Clone, Copy, Debug)]
+/// How the memories get their contents.
+#[derive(Clone, Debug)]
+pub enum Boot {
+    /// Preloaded (the copier is skipped; the ROMs are present but idle).
+    Preload,
+    /// The boot copier fills them from the ROMs.  `code_words_log2` is the
+    /// region size (13 on the board: 8K words; smaller in tests), and
+    /// `data` is the data image, `data_regions` regions of that size.
+    Copy { code_words_log2: u32, data_regions: u32, data: Vec<u32> },
+}
+
+#[derive(Clone, Debug)]
 pub struct Build {
     /// Delay-line tolerance grade.
     pub grade: Grade,
@@ -1050,11 +1177,12 @@ pub struct Build {
     /// Where in a clock cycle the reset supervisor releases (ns after a
     /// rising edge).  Any value must work; the tests sweep it.
     pub reset_phase_ns: f64,
+    pub boot: Boot,
 }
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0 }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload }
     }
 }
 
@@ -1138,8 +1266,8 @@ impl Cpu {
         nl.connect(rst_n, sup, 2);
         let gate = nl.add_chip("gate0", FastGate::new(opt.gate_tpd.0, opt.gate_tpd.1));
         nl.connect(tap_net, gate, 1);
-        let mmw = nl.net("MMW");
-        nl.connect(mmw, gate, 2);
+        let mmwb = nl.net("MMWB");
+        nl.connect(mmwb, gate, 2);
         let wen = nl.net("WEN");
         nl.connect(wen, gate, 4);
 
@@ -1148,15 +1276,25 @@ impl Cpu {
         nl.tie(gnd, Level::L);
         nl.tie(vcc, Level::H);
 
-        // Instruction memory: 4 lanes, address = PC[14:2].
+        // Boot: region size and wiring of the copier.
+        let (k, nph, skip, data_regions, data_image): (u32, u32, bool, u32, Vec<u32>) = match &opt.boot {
+            Boot::Preload => (13, 0, true, 0, Vec::new()),
+            Boot::Copy { code_words_log2, data_regions, data } => (*code_words_log2, data_regions.saturating_sub(1), false, *data_regions, data.clone()),
+        };
+        let words = 1usize << k;
+
+        // Instruction memory: 4 lanes, address = PC[14:2].  Preloaded, or
+        // left unknown for the copier to fill.
         let mut imem = Vec::new();
         for lane in 0..4 {
             let mut chip = As7c164a::with_timing(as7c164a::Timing::is61c64al_10());
-            for (w, &word) in program.iter().enumerate() {
-                chip.preload(w as u32, (word >> (8 * lane)) as u8);
-            }
-            for w in program.len()..8192 {
-                chip.preload(w as u32, 0);
+            if skip {
+                for (w, &word) in program.iter().enumerate() {
+                    chip.preload(w as u32, (word >> (8 * lane)) as u8);
+                }
+                for w in program.len()..8192 {
+                    chip.preload(w as u32, 0);
+                }
             }
             let c = nl.add_chip(&format!("imem{lane}"), chip);
             imem.push(c);
@@ -1169,9 +1307,79 @@ impl Cpu {
                 nl.connect(net, c, sram8k_pin_of(Sram8kPin::Dq(b as u8)));
             }
             nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::CeN));
-            nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::Ce2));
-            nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::OeN));
-            nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::WeN));
+            let imen = nl.net("IMEN");
+            nl.connect(imen, c, sram8k_pin_of(Sram8kPin::Ce2));
+            let boot = nl.net("BOOT");
+            nl.connect(boot, c, sram8k_pin_of(Sram8kPin::OeN));
+            let wei = nl.net("BOOTWI_n");
+            nl.connect(wei, c, sram8k_pin_of(Sram8kPin::WeN));
+        }
+        // Boot ROMs: one per byte lane on the instruction bus.  Address:
+        // word index from the PC (k bits), then the region number, then
+        // CODE on A18; the rest grounded.  Image: code at A18 = 1, data
+        // region p at p << k.
+        for lane in 0..4 {
+            let mut rom = Rom::sst39sf040_70();
+            for (w, &word) in program.iter().enumerate() {
+                assert!(w < words, "program longer than the boot code region");
+                rom.preload((1 << 18) | w as u32, (word >> (8 * lane)) as u8);
+            }
+            for w in program.len()..words {
+                rom.preload((1 << 18) | w as u32, 0);
+            }
+            for p in 0..data_regions {
+                for w in 0..words {
+                    let v = data_image.get(p as usize * words + w).copied().unwrap_or(0);
+                    rom.preload((p << k) | w as u32, (v >> (8 * lane)) as u8);
+                }
+            }
+            let c = nl.add_chip(&format!("rom{lane}"), rom);
+            for j in 0..19u32 {
+                let net = if j < k {
+                    nl.net(&n("PC", j as usize + 2))
+                } else if j < k + 5 {
+                    nl.net(&n("PHASE", (j - k) as usize))
+                } else if j == 18 {
+                    nl.net("CODE")
+                } else {
+                    gnd
+                };
+                nl.connect(net, c, rom_pin_of(RomPin::A(j as u8)));
+            }
+            for b in 0..8 {
+                let net = nl.net(&n("IM", 8 * lane + b));
+                nl.connect(net, c, rom_pin_of(RomPin::Dq(b as u8)));
+            }
+            nl.connect(gnd, c, rom_pin_of(RomPin::CeN));
+            let romoe = nl.net("ROMOE_n");
+            nl.connect(romoe, c, rom_pin_of(RomPin::OeN));
+            nl.connect(vcc, c, rom_pin_of(RomPin::WeN));
+        }
+        // Copier wiring: WRAP is the PC bit above the region; the boot
+        // address buffers land on the data-memory address nets (PC bits
+        // below the region size, then the region number, then the PC's
+        // always-zero upper bits); NPH and SKIP are wired constants.
+        {
+            let wrap = nl.net("WRAP");
+            let pc_k = nl.net(&n("PC", k as usize + 2));
+            nl.merge(pc_k, wrap);
+            let mut target: Vec<usize> = (0..k as usize).map(|j| j + 2).collect();
+            target.extend((0..5).map(|i| k as usize + 2 + i));
+            target.extend((k as usize..13).map(|m| k as usize + 7 + (m - k as usize)));
+            let mut ba_order: Vec<usize> = (0..k as usize).collect();
+            ba_order.extend(13..18);
+            ba_order.extend(k as usize..13);
+            for (ba, mr) in ba_order.into_iter().zip(target) {
+                let ba_net = nl.net(&n("BA", ba));
+                let mr_net = nl.net(&n("MR", mr));
+                nl.merge(mr_net, ba_net);
+            }
+            for i in 0..5 {
+                let net = nl.net(&n("NPH", i));
+                nl.tie(net, Level::from_bit(nph >> i & 1 == 1));
+            }
+            let sk = nl.net("SKIP");
+            nl.tie(sk, Level::from_bit(skip));
         }
         // Data memory: two 256K x 16 chips (low / high half-word), always
         // selected with both byte enables on (word access only for now),
@@ -1195,7 +1403,8 @@ impl Cpu {
                 let net = nl.net(&n("DQ", 16 * half + b));
                 nl.connect(net, c, sram16_pin_of(Sram16Pin::Io(b as u8)));
             }
-            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::CeN));
+            let dmen = nl.net("DMEN_n");
+            nl.connect(dmen, c, sram16_pin_of(Sram16Pin::CeN));
             nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BheN));
             nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BleN));
             let oen = nl.net("OEN");
@@ -1285,7 +1494,8 @@ impl Cpu {
         cpu.sim.schedule(0, cpu.clk, Level::L);
         cpu.sim.run_until(3 * cpu.period);
         let reset = cpu.sim.net_id("RESET");
-        for _ in 0..RESET_CYCLES + 4 {
+        let budget = RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) };
+        for _ in 0..budget {
             cpu.step();
             if cpu.sim.value(reset) == Level::L {
                 break;
@@ -1320,10 +1530,13 @@ impl Cpu {
     /// real problem in the reset sequence (a glitch write, a bus conflict,
     /// a timing violation).
     pub fn reset_warnings(&self) -> Vec<String> {
+        // The first three periods are the power-up settle: every input is
+        // unknown until the chips have driven their pins once.
+        let settle = 3 * self.period;
         self.sim
             .warnings()
             .into_iter()
-            .filter(|w| warning_time(w).is_some_and(|t| t < self.reset_release))
+            .filter(|w| warning_time(w).is_some_and(|t| t >= settle && t < self.reset_release))
             .filter(|w| !w.contains("CapturedX") && !w.contains("AddrUnknown"))
             .collect()
     }
@@ -1386,6 +1599,15 @@ impl Cpu {
         (0..32).map(|r| self.reg(r)).collect()
     }
     /// Data memory word.
+    /// Instruction memory word.
+    pub fn imem_word(&self, addr: u32) -> Option<u32> {
+        let mut w = 0u32;
+        for lane in 0..4 {
+            let chip = self.sim.chip(self.imem[lane]).downcast_ref::<As7c164a>().unwrap();
+            w |= (chip.peek(addr >> 2)? as u32) << (8 * lane);
+        }
+        Some(w)
+    }
     pub fn dmem_word(&self, addr: u32) -> Option<u32> {
         let mut w = 0u32;
         for half in 0..2 {
@@ -1449,6 +1671,10 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
         "rsync" => ("Reset sync", "IF"),
+        "bseq" => ("Boot sequencer", "IF"),
+        "badr" => ("Boot address", "IF"),
+        "bdat" => ("Boot data", "MEM"),
+        "rom" => ("Boot ROM", "IF"),
         "rst" => ("Reset supervisor", "IF"),
         "gate" => ("Write gate", "MEM"),
         _ => ("?", "?"),
@@ -1505,6 +1731,20 @@ pub fn chip_infos() -> Vec<ChipInfo> {
         out.push(ChipInfo { name: "dl0".into(), kind: "DS1100-30", block, stage, pins });
         let (block, stage) = block_of("rst");
         out.push(ChipInfo { name: "rst0".into(), kind: "MAX811-class", block, stage, pins: vec![(2, "RST_n".to_string(), true)] });
+        // Boot ROMs, wired for the board's 8K-word regions.
+        for lane in 0..4 {
+            let mut pins = Vec::new();
+            for j in 0..19u32 {
+                let net = if j < 13 { n("PC", j as usize + 2) } else if j < 18 { n("PHASE", (j - 13) as usize) } else { "CODE".to_string() };
+                pins.push((rom_pin_of(RomPin::A(j as u8)), net, false));
+            }
+            for b in 0..8 {
+                pins.push((rom_pin_of(RomPin::Dq(b as u8)), n("IM", 8 * lane + b), true));
+            }
+            pins.push((rom_pin_of(RomPin::OeN), "ROMOE_n".to_string(), false));
+            let (block, stage) = block_of("rom");
+            out.push(ChipInfo { name: format!("rom{lane}"), kind: "SST39SF040", block, stage, pins });
+        }
         let (block, stage) = block_of("dl");
         let (gt_total, gt_k) = Build::default().gate_tap;
         if gt_total != DELAY_LINE_TOTAL {
@@ -1515,9 +1755,9 @@ pub fn chip_infos() -> Vec<ChipInfo> {
             out.push(ChipInfo { name: "dl1".into(), kind: "DS1100-40", block, stage, pins });
         }
         let tap = if gt_total == DELAY_LINE_TOTAL { format!("T{}", gt_k + 1) } else { format!("U{}", gt_k + 1) };
-        let pins = vec![(1, tap, false), (2, "MMW".to_string(), false), (4, "WEN".to_string(), true)];
+        let pins = vec![(1, tap, false), (2, "MMWB".to_string(), false), (4, "WEN".to_string(), true)];
         let (block, stage) = block_of("gate");
-        out.push(ChipInfo { name: "gate0".into(), kind: "74LVC1G00", block, stage, pins });
+        out.push(ChipInfo { name: "gate0".into(), kind: "74LVC1G00Q", block, stage, pins });
     }
     for bank in 0..2 {
         for lane in 0..4 {
