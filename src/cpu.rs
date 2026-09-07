@@ -1130,7 +1130,11 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("sh2", None, None, shift2_block()));
     v.extend(pack("mr", clk, None, exmem_result_block()));
     v.extend(pack("msd", clk, None, exmem_sd_block()));
-    v.extend(pack("mctl", clk, rst, exmem_ctrl_block()));
+    // EX/MEM control feeds the tap-clocked write copies (wc1 reads MDEST
+    // and MRW inside its 15 to 21 ns window).  An asynchronous clear
+    // would land there when RESET is asserted mid-run (button press), so
+    // this block resets synchronously: its outputs only ever move at CLK.
+    v.extend(pack("mctl", clk, None, with_bubble(exmem_ctrl_block(), "RESET")));
     v.extend(pack("stl", clk, rst, stall_block()));
     v.extend(pack("rsync", clk, None, rsync_block()));
     v.extend(pack("bseq", clk, None, bseq_block()));
@@ -1196,6 +1200,9 @@ pub struct Cpu {
     /// When RESET was released (ps).
     pub reset_release: Time,
     clk: NetId,
+    mr_n: NetId,
+    /// Cycles a full reset (boot copy included) may take.
+    boot_budget: usize,
     pc: Vec<NetId>,
     imem: Vec<usize>,
     dmem: Vec<usize>,
@@ -1213,6 +1220,10 @@ fn warning_time(w: &str) -> Option<Time> {
 
 /// Clock cycles RESET is held with the clock running.
 pub const RESET_CYCLES: usize = 4;
+/// How long the modelled supervisor keeps RESET# low after the button is
+/// released (the MAX811L's 140 ms would be 4 million cycles; the length
+/// does not matter, the release phase does).
+pub const MR_TIMEOUT_NS: f64 = 100.0;
 
 pub const PH_RF: usize = 0;
 pub const PH_CE: usize = 1;
@@ -1261,13 +1272,14 @@ impl Cpu {
         // RESET_CYCLES clocks, at the requested phase.
         let period = (period_ns * NS as f64).round() as Time;
         let release = (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns);
-        let sup = nl.add_chip("rst0", ResetSupervisor::new(release));
+        let sup = nl.add_chip("rst0", ResetSupervisor::new(release, Self::ns(MR_TIMEOUT_NS)));
         let rst_n = nl.net("RST_n");
         nl.connect(rst_n, sup, 2);
-        // MR#: the reset button, to ground; released (high) here.
+        // MR#: the reset button, to ground, pulled up inside the part.
+        // [`Cpu::press_reset`] pulls it low.
         let mr_n = nl.net("MR_n");
         nl.connect(mr_n, sup, 3);
-        nl.tie(mr_n, Level::H);
+        nl.pull(mr_n, Level::H);
         let gate = nl.add_chip("gate0", FastGate::new(opt.gate_tpd.0, opt.gate_tpd.1));
         nl.connect(tap_net, gate, 1);
         let mmwb = nl.net("MMWB");
@@ -1473,6 +1485,7 @@ impl Cpu {
             }
         }
         let sim = nl.build();
+        let mr_n = sim.net_id("MR_n");
         let pc = (2..=14).map(|i| sim.net_id(&n("PC", i))).collect();
         let mut cpu = Cpu {
             sim,
@@ -1487,6 +1500,8 @@ impl Cpu {
             gal_count,
             grade,
             reset_release: 0,
+            mr_n,
+            boot_budget: RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) },
         };
         // Power-on: the supervisor holds RST_n low, the synchroniser's
         // registers power up with RESET asserted, clock low.  Let every
@@ -1497,16 +1512,23 @@ impl Cpu {
         // one or two cycles later.
         cpu.sim.schedule(0, cpu.clk, Level::L);
         cpu.sim.run_until(3 * cpu.period);
-        let reset = cpu.sim.net_id("RESET");
-        let budget = RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) };
-        for _ in 0..budget {
-            cpu.step();
-            if cpu.sim.value(reset) == Level::L {
+        cpu.wait_reset_release();
+        cpu
+    }
+
+    /// Clock until RESET has been released (the boot copy, if any, has
+    /// run), record the release time, then one more cycle so the first
+    /// instruction is in flight before the caller starts counting.
+    fn wait_reset_release(&mut self) {
+        let reset = self.sim.net_id("RESET");
+        for _ in 0..self.boot_budget {
+            self.step();
+            if self.sim.value(reset) == Level::L {
                 break;
             }
         }
-        assert_eq!(cpu.sim.value(reset), Level::L, "reset never released");
-        cpu.reset_release = cpu
+        assert_eq!(self.sim.value(reset), Level::L, "reset never released");
+        self.reset_release = self
             .sim
             .history(reset)
             .iter()
@@ -1514,12 +1536,31 @@ impl Cpu {
             .find(|(_, l)| *l == Level::L)
             .map(|(t, _)| *t)
             .expect("reset release time");
-        // One more cycle so the first instruction is in flight before the
-        // caller starts counting.
-        cpu.step();
-        cpu.cycles = 0;
-        cpu.pc_trace.clear();
-        cpu
+        self.step();
+        self.cycles = 0;
+        self.pc_trace.clear();
+    }
+
+    /// Press the reset button: MR_n low from `phase_ns` into the current
+    /// cycle for `hold_ns`, then run through the supervisor's timeout and
+    /// the boot copy until RESET is released again.  Warnings are counted
+    /// from the new release ([`Cpu::warnings`]); the ones before it go
+    /// through [`Cpu::reset_warnings`].
+    pub fn press_reset(&mut self, phase_ns: f64, hold_ns: f64) {
+        let down = self.sim.now() + Self::ns(phase_ns);
+        self.sim.schedule(down, self.mr_n, Level::L);
+        self.sim.schedule(down + Self::ns(hold_ns), self.mr_n, Level::Z);
+        let reset = self.sim.net_id("RESET");
+        // Clock until the press has been seen (RESET asserted) ...
+        for _ in 0..8 {
+            self.step();
+            if self.sim.value(reset) == Level::H {
+                break;
+            }
+        }
+        assert_eq!(self.sim.value(reset), Level::H, "button press not seen");
+        // ... then until it is over.
+        self.wait_reset_release();
     }
 
     /// Chip warnings from RESET release onwards.  Before that, registers

@@ -248,6 +248,22 @@ Modelled as chips now, not stimulus:
   another timeout after release. The model takes MR# as an input (wired
   high) and folds the post-release timeout into `release`; a manual reset
   restarts the boot copier, so its length is immaterial.
+- **Reset asserted mid-run** (the button) is the one case where an
+  asynchronous clear happens while clocks are running. The pipeline
+  registers clear about 10 ns after RESET rises, 15 ns into the cycle,
+  which is inside the T3 window of the first write-copy chip (wc1 reads
+  MDEST and MRW). So the EX/MEM control chips (`mctl`) reset
+  synchronously instead: every term is gated with `!RESET`, and their
+  outputs only ever move at a CLK edge. The write-back stage sees the
+  clear one cycle later, which the reset sequence does not care about.
+  Every other AR-cleared register feeds CLK-clocked chips only, where the
+  clear has 18 ns of setup to the next edge.
+- **Test**: `tests/boot.rs` `reset_button_recopies_and_reruns` presses
+  the button at three phases of a cycle while the program is running,
+  checks no chip warns through the reset, that both memories are
+  recopied (a data word the program had overwritten is restored, one
+  outside the copied regions is kept), and that the program runs again
+  to the reference result.
 - **Synchroniser** (`rsync0`, one GAL on CLK, no async reset of its own):
   two registers in series, RST_n -> RS1 -> RESET. Both are active-low
   outputs of registers that the ATF22V10C clears at power-up, so RESET is

@@ -96,3 +96,33 @@ fn boot_from_three_phases() {
         }
     }
 }
+
+/// The reset button (MR# on the MAX811L) mid-run: the supervisor asserts
+/// RESET#, the synchroniser follows, the copier restarts and refills both
+/// memories (the program's own store to data word 2 is undone), and the
+/// program runs again to the same result.  The press lands at three
+/// phases of the cycle so the asynchronous edge is exercised.
+#[test]
+fn reset_button_recopies_and_reruns() {
+    let (mut cpu, iss, data) = run(11.0);
+    let p = assemble(PROG, 0).unwrap();
+    let stop = p.labels["stop"];
+    assert_eq!(cpu.dmem_word(8), Some(0x77));
+    for (i, phase) in [5.0, 20.0, 31.0].into_iter().enumerate() {
+        cpu.press_reset(phase, 200.0);
+        // Straight out of reset: the copy has restored word 2, and the
+        // words beyond the copied regions keep what the program stored.
+        assert_eq!(cpu.dmem_word(8), Some(data[2]), "press {i}: data word 2 not recopied");
+        assert_eq!(cpu.dmem_word(512), Some(iss.load_word(512)), "press {i}");
+        let rw = cpu.reset_warnings();
+        assert!(rw.is_empty(), "press {i}: during reset: {:?}", rw.iter().take(6).collect::<Vec<_>>());
+        assert!(cpu.run_until_pc(stop, 400), "press {i}: did not reach stop; pc {:?}", cpu.pc_trace);
+        let w = cpu.warnings();
+        assert!(w.is_empty(), "press {i}: {} warnings, e.g. {:?}", w.len(), w.iter().take(6).collect::<Vec<_>>());
+        for r in 1..32 {
+            assert_eq!(cpu.reg(r), Some(iss.regs[r as usize]), "press {i}: register {r}");
+        }
+        assert_eq!(cpu.reg(0), Some(0));
+        assert_eq!(cpu.dmem_word(8), Some(0x77), "press {i}");
+    }
+}

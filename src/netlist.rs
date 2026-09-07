@@ -580,18 +580,20 @@ impl Chip for Sram16 {
 // minimum on the real part), then releases it at a time that has nothing
 // to do with the clock.  `release` is that instant; the tests sweep it
 // across a clock period.  MR# is the debounced manual-reset input (the
-// board's button, to ground): RESET# is low whenever MR# is low, and for
-// another timeout after it rises, which the model folds into `release`
-// (a manual reset simply restarts the copier, so its length is immaterial).
+// board's button, to ground, pulled up inside the part): RESET# is low
+// whenever MR# is low, and for another `mr_timeout` after it rises (140 ms
+// minimum on the real part; the simulator uses a short one, since a manual
+// reset simply restarts the copier and only the release phase matters).
 
 pub struct ResetSupervisor {
     pub release: Time,
+    pub mr_timeout: Time,
     mr: Level,
 }
 
 impl ResetSupervisor {
-    pub fn new(release: Time) -> Self {
-        Self { release, mr: Level::H }
+    pub fn new(release: Time, mr_timeout: Time) -> Self {
+        Self { release, mr_timeout, mr: Level::H }
     }
 }
 
@@ -602,7 +604,10 @@ impl Chip for ResetSupervisor {
     fn pin_name(&self, pin: usize) -> String {
         ["?", "GND", "RESET#", "MR#", "VCC"][pin.min(4)].into()
     }
-    fn set_inputs(&mut self, _t: Time, ext: &[Level]) {
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        if self.mr != Level::H && ext[3] == Level::H {
+            self.release = self.release.max(t + self.mr_timeout);
+        }
         self.mr = ext[3];
     }
     fn drive(&mut self, t: Time, out: &mut [Level]) {
