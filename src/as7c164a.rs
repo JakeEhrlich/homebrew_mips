@@ -161,7 +161,7 @@ impl Timing {
             taw: 10 * NS,
             tcw: 10 * NS,
             tas: 0,
-            twp: 8 * NS,
+            twp: 9 * NS,
             twr: 0,
             tdw: 7 * NS,
             tdh: 0,
@@ -200,11 +200,15 @@ impl Timing {
     /// IS61C64AL-10 (ISSI 8K x 8, 5 V, 10 ns).  Numbers are the -10 column
     /// of the IS61C256AH datasheet on disk, the same family and generation;
     /// confirm against the 61C64AL datasheet before layout.
+    /// IS61C64AL-10 (ISSI datasheet Rev. B2, 09/2024, -10 column):
+    /// tAA 10, tACS 10, tDOE 6, tLZCS 2, tLZOE 0, tHZCS 5, tHZOE 5,
+    /// tOHA 2, tAW 9, tSCS 9, tSA 0, tPWE 9 (OE low) / 8 (OE high),
+    /// tSD 7, tHD 0, tHZWE 6, tLZWE 0.  Confirmed against the datasheet.
     pub const fn is61c64al_10() -> Timing {
         Timing {
             taa: 10 * NS,
             tace: 10 * NS,
-            toe: 5 * NS,
+            toe: 6 * NS,
             tclz: 2 * NS,
             tolz: 0,
             tchz: 5 * NS,
@@ -213,7 +217,7 @@ impl Timing {
             taw: 9 * NS,
             tcw: 9 * NS,
             tas: 0,
-            twp: 8 * NS,
+            twp: 9 * NS,
             twr: 0,
             tdw: 7 * NS,
             tdh: 0,

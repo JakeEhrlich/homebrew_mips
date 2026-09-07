@@ -11,3 +11,4 @@ pub mod asm;
 pub mod qm;
 pub mod galpack;
 pub mod cpu;
+pub mod uart16550;

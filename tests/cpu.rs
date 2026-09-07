@@ -46,7 +46,7 @@ fn chip_count() {
         }
     }
     eprintln!("GALs: {} total: {:?}", specs.len(), by_prefix);
-    assert!(specs.len() < 150, "{}", specs.len());
+    assert!(specs.len() < 160, "{}", specs.len());
 }
 
 #[test]

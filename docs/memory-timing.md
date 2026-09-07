@@ -65,9 +65,10 @@ are off.
 | Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
 | Reset supervisor | 1 x MAX811LEUS+T (SOT-143, 4.63 V threshold, 140 ms minimum timeout, debounced MR# input) | **new**; reset button from MR# to ground. The 4.75 V minimum of the GALs and delay lines sits above the threshold: that only matters for a brownout that stalls between 4.63 and 4.75 V, which ends in a hang, not damage. Set the 5 V rail to about 5.1 V and sense the supervisor at the far end of the plane |
 | Boot ROM | 4 x SST39SF040 class (512K x 8, 5 V) | **new**; see docs/boot.md |
-| Logic | 144 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble |
+| UART | 1 x TL16C550D (LQFP-48) with SP3232 RS-232 transceiver and 14.7456 MHz crystal | **new**; see docs/uart.md |
+| Logic | 151 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble, +1 bus wait sequencer, +6 from the wait's hold inputs (forwarding control +2, operand B +1, branch target +1, stall +1, MEM/WB +1) |
 
-Total 165 chips plus the gate.
+Total 173 chips plus the gate and the RS-232 transceiver.
 
 ## 4. The clock
 

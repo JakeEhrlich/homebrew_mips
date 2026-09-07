@@ -1058,6 +1058,10 @@ impl Sim {
     pub fn now(&self) -> Time {
         self.now
     }
+    /// Every net name (for debugging dumps).
+    pub fn net_names(&self) -> Vec<String> {
+        self.by_name.keys().cloned().collect()
+    }
     pub fn net_id(&self, name: &str) -> NetId {
         *self.by_name.get(name).unwrap_or_else(|| panic!("no net {name}"))
     }

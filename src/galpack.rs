@@ -61,6 +61,16 @@ impl Eq {
             .collect();
         Eq { out: out.to_string(), mode, active_low, terms, oe: None, sync: false }
     }
+    /// From a truth table, as the positive sum of products (the pin is
+    /// `f`, and a cleared register reads as `f = 0`).  Use for registers
+    /// whose reset value matters, and before `.active_low()`.
+    pub fn table_pos(out: &str, mode: Mode, inputs: &[&str], f: impl Fn(u32) -> Option<bool>) -> Eq {
+        let terms = qm::minimize(inputs.len(), &f)
+            .into_iter()
+            .map(|c| c.into_iter().map(|(i, p)| (inputs[i].to_string(), p)).collect())
+            .collect();
+        Eq { out: out.to_string(), mode, active_low: false, terms, oe: None, sync: false }
+    }
     /// Mark as a synchroniser stage.
     pub fn sync(mut self) -> Eq {
         self.sync = true;

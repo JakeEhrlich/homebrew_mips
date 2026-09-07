@@ -30,6 +30,17 @@ pub struct Cpu {
     branch: Option<u32>,
     /// Instructions retired.
     pub count: u64,
+    /// The UART, at every address whose base register has bit 31 set
+    /// (I/O space, see docs/uart.md).  Register select = address bits 4:2.
+    pub uart: crate::uart16550::Core,
+}
+
+/// I/O space: an access is I/O when the *base register* (not the sum)
+/// has bit 31 set.  The board decides it from the forwarded operand in
+/// EX, before the address is known, so the store write gate can be
+/// held off in time.
+pub fn is_io(base: u32) -> bool {
+    base & 0x8000_0000 != 0
 }
 
 impl Cpu {
@@ -42,6 +53,7 @@ impl Cpu {
             load_delay: None,
             branch: None,
             count: 0,
+            uart: Default::default(),
         }
     }
 
@@ -142,10 +154,25 @@ impl Cpu {
                     Op::Sltiu => self.set_reg(rt_n, (rs < sext) as u32),
                     Op::Lui => self.set_reg(rt_n, zext << 16),
                     Op::Lw => {
-                        let v = self.load_word(rs.wrapping_add(sext));
+                        let addr = rs.wrapping_add(sext);
+                        let v = if is_io(rs) {
+                            let v = self.uart.read((addr >> 2 & 7) as u8) as u32;
+                            self.uart.drain();
+                            v
+                        } else {
+                            self.load_word(addr)
+                        };
                         self.load_delay = Some((rt_n, v));
                     }
-                    Op::Sw => self.store_word(rs.wrapping_add(sext), rt),
+                    Op::Sw => {
+                        let addr = rs.wrapping_add(sext);
+                        if is_io(rs) {
+                            self.uart.write((addr >> 2 & 7) as u8, rt as u8);
+                            self.uart.drain();
+                        } else {
+                            self.store_word(addr, rt);
+                        }
+                    }
                     Op::Beq | Op::Bne | Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez => {
                         let s = rs as i32;
                         let taken = match op {

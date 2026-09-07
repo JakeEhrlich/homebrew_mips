@@ -392,6 +392,12 @@ pub struct Gal22v10 {
     /// inside it.
     clk_x_since: Time,
     clk_before_x: Level,
+    /// While a rising-edge window is open: the registered feedbacks as
+    /// they were before the window's speculative unknown.  The chip's own
+    /// registers all see the same physical edge, so a register fed from
+    /// another's feedback (or its own) captures the pre-edge value; the
+    /// speculative unknown is for the combinational paths only.
+    fb_spec: Option<[Level; OLMCS]>,
     /// Last rising edge as `(earliest, latest)`: the same instant for a
     /// definite edge, the X window for an uncertain one.
     last_edge: Option<Time>,
@@ -480,6 +486,7 @@ impl Gal22v10 {
             clk_since: 0,
             clk_x_since: 0,
             clk_before_x: Level::X,
+            fb_spec: None,
             last_edge: None,
             edge_start: 0,
             ar: Level::L,
@@ -740,6 +747,12 @@ impl Gal22v10 {
 
     /// An array input takes a new value at `self.now`; fan out.
     fn set_array_input(&mut self, i: usize, v: Level) {
+        self.set_array_input_ext(i, v, false);
+    }
+
+    /// `quiet`: registered users do not count it as a data change (a
+    /// feedback going unknown for the edge window that clocks them too).
+    fn set_array_input_ext(&mut self, i: usize, v: Level, quiet: bool) {
         if self.arr[i] == v {
             return;
         }
@@ -753,6 +766,9 @@ impl Gal22v10 {
         for &k in &self.sop_users[i].clone() {
             if self.hazard_free(&self.cfg.olmc[k].terms) {
                 continue; // D / output provably unaffected
+            }
+            if quiet && self.cfg.olmc[k].registered {
+                continue;
             }
             self.olmc[k].cone_changed = t;
             if self.cfg.olmc[k].registered {
@@ -909,7 +925,11 @@ impl Gal22v10 {
             Ev::RegPin(k, v) => self.set_out(k, v),
             Ev::RegFb(k, v) => {
                 self.olmc[k].fb = v;
-                self.set_array_input(fb_array_input(k), v);
+                // The window's speculative unknown on a feedback is not a
+                // data change for the registers (same edge); it is for the
+                // combinational users.
+                let quiet = v == Level::X && self.fb_spec.is_some();
+                self.set_array_input_ext(fb_array_input(k), v, quiet);
             }
         }
     }
@@ -1005,6 +1025,11 @@ impl Gal22v10 {
                     // are unknown from tCO(min) after the window opens
                     // until the capture (below) settles them.  (Under
                     // reset nothing moves.)
+                    let mut pre = [Level::X; OLMCS];
+                    for k in 0..OLMCS {
+                        pre[k] = self.olmc[k].fb;
+                    }
+                    self.fb_spec = Some(pre);
                     for k in 0..OLMCS {
                         if self.cfg.olmc[k].registered {
                             self.schedule(t + tm.tco_min, Ev::RegPin(k, Level::X));
@@ -1021,6 +1046,7 @@ impl Gal22v10 {
             (Level::X, Level::L) if self.clk_before_x == Level::H => {}
             (Level::X, Level::L) if self.clk_before_x == Level::L => {
                 // No edge after all: the speculative unknowns resolve back.
+                self.fb_spec = None;
                 for k in 0..OLMCS {
                     let c = &self.cfg.olmc[k];
                     if c.registered {
@@ -1058,6 +1084,27 @@ impl Gal22v10 {
     /// (`end` is now).  Setup is measured to `start`, hold from `end`,
     /// outputs are unknown from `start + tCO(min)` to `end + tCO(max)`.
     fn rising_edge(&mut self, start: Time, end: Time) {
+        // The registers capture the feedbacks as they were before this
+        // window's speculative unknown (one physical edge); the array is
+        // put back afterwards, the post-capture events settle it.
+        let spec = self.fb_spec.take();
+        let saved: [Level; OLMCS] = std::array::from_fn(|k| self.arr[fb_array_input(k)]);
+        if let Some(pre) = spec {
+            for k in 0..OLMCS {
+                if self.cfg.olmc[k].registered {
+                    self.arr[fb_array_input(k)] = pre[k];
+                }
+            }
+        }
+        self.rising_edge_inner(start, end);
+        if spec.is_some() {
+            for k in 0..OLMCS {
+                self.arr[fb_array_input(k)] = saved[k];
+            }
+        }
+    }
+
+    fn rising_edge_inner(&mut self, start: Time, end: Time) {
         let t = start;
         let tm = self.tm;
         self.last_edge = Some(end);
