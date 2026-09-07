@@ -6144,6 +6144,36 @@
                   "IR31",
                   false
                 ]
+              ],
+              [
+                [
+                  "IR31",
+                  false
+                ],
+                [
+                  "IR30",
+                  false
+                ],
+                [
+                  "IR29",
+                  false
+                ],
+                [
+                  "IR28",
+                  false
+                ],
+                [
+                  "IR27",
+                  false
+                ],
+                [
+                  "IR26",
+                  true
+                ],
+                [
+                  "IR20",
+                  true
+                ]
               ]
             ]
           },
@@ -6357,6 +6387,36 @@
                   "IR5",
                   false
                 ]
+              ],
+              [
+                [
+                  "IR31",
+                  false
+                ],
+                [
+                  "IR30",
+                  false
+                ],
+                [
+                  "IR29",
+                  false
+                ],
+                [
+                  "IR28",
+                  false
+                ],
+                [
+                  "IR27",
+                  false
+                ],
+                [
+                  "IR26",
+                  true
+                ],
+                [
+                  "IR20",
+                  true
+                ]
               ]
             ]
           }
@@ -6368,30 +6428,38 @@
           ],
           [
             2,
-            "IR26"
+            "IR20"
           ],
           [
             3,
-            "IR27"
+            "IR26"
           ],
           [
             4,
-            "IR28"
+            "IR27"
           ],
           [
             5,
-            "IR29"
+            "IR28"
           ],
           [
             6,
-            "IR3"
+            "IR29"
           ],
           [
             7,
-            "IR31"
+            "IR3"
           ],
           [
             8,
+            "IR30"
+          ],
+          [
+            9,
+            "IR31"
+          ],
+          [
+            10,
             "IR5"
           ],
           [
@@ -6399,11 +6467,11 @@
             "RTYPERW"
           ],
           [
-            20,
+            17,
             "ITYPERW"
           ],
           [
-            16,
+            21,
             "JAL"
           ],
           [
@@ -6411,7 +6479,7 @@
             "SELIMM"
           ],
           [
-            17,
+            16,
             "SEXT"
           ],
           [
@@ -6431,7 +6499,7 @@
             "STORE"
           ],
           [
-            21,
+            20,
             "LINK"
           ]
         ]
@@ -6445,42 +6513,54 @@
         },
         {
           "pin": 2,
+          "name": "IR20",
+          "net": "IR20",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
           "name": "IR26",
           "net": "IR26",
           "kind": "in"
         },
         {
-          "pin": 3,
+          "pin": 4,
           "name": "IR27",
           "net": "IR27",
           "kind": "in"
         },
         {
-          "pin": 4,
+          "pin": 5,
           "name": "IR28",
           "net": "IR28",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 6,
           "name": "IR29",
           "net": "IR29",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 7,
           "name": "IR3",
           "net": "IR3",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 8,
+          "name": "IR30",
+          "net": "IR30",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
           "name": "IR31",
           "net": "IR31",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 10,
           "name": "IR5",
           "net": "IR5",
           "kind": "in"
@@ -6505,14 +6585,14 @@
         },
         {
           "pin": 16,
-          "name": "JAL",
-          "net": "JAL",
+          "name": "SEXT",
+          "net": "SEXT",
           "kind": "out"
         },
         {
           "pin": 17,
-          "name": "SEXT",
-          "net": "SEXT",
+          "name": "ITYPERW",
+          "net": "ITYPERW",
           "kind": "out"
         },
         {
@@ -6529,14 +6609,14 @@
         },
         {
           "pin": 20,
-          "name": "ITYPERW",
-          "net": "ITYPERW",
+          "name": "LINK",
+          "net": "LINK",
           "kind": "out"
         },
         {
           "pin": 21,
-          "name": "LINK",
-          "net": "LINK",
+          "name": "JAL",
+          "net": "JAL",
           "kind": "out"
         },
         {
@@ -6869,6 +6949,44 @@
                 ],
                 [
                   "IR3",
+                  true
+                ],
+                [
+                  "HOLD",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "IR31",
+                  false
+                ],
+                [
+                  "IR30",
+                  false
+                ],
+                [
+                  "IR29",
+                  false
+                ],
+                [
+                  "IR28",
+                  false
+                ],
+                [
+                  "IR27",
+                  false
+                ],
+                [
+                  "IR26",
+                  true
+                ],
+                [
+                  "IR20",
                   true
                 ],
                 [
@@ -7343,7 +7461,257 @@
                 ]
               ]
             ]
-          },
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "HOLD"
+          ],
+          [
+            3,
+            "IR0"
+          ],
+          [
+            4,
+            "IR1"
+          ],
+          [
+            5,
+            "IR2"
+          ],
+          [
+            6,
+            "IR20"
+          ],
+          [
+            7,
+            "IR26"
+          ],
+          [
+            8,
+            "IR27"
+          ],
+          [
+            9,
+            "IR28"
+          ],
+          [
+            10,
+            "IR29"
+          ],
+          [
+            11,
+            "IR3"
+          ],
+          [
+            13,
+            "IR30"
+          ],
+          [
+            23,
+            "IR31"
+          ],
+          [
+            14,
+            "IR5"
+          ],
+          [
+            22,
+            "RESET"
+          ],
+          [
+            15,
+            "WAIT"
+          ],
+          [
+            19,
+            "XOP0"
+          ],
+          [
+            18,
+            "XOP1"
+          ],
+          [
+            20,
+            "XOP2"
+          ],
+          [
+            17,
+            "XSUB"
+          ],
+          [
+            21,
+            "XSH"
+          ],
+          [
+            16,
+            "XSHR"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "HOLD",
+          "net": "HOLD",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "IR0",
+          "net": "IR0",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "IR1",
+          "net": "IR1",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "IR2",
+          "net": "IR2",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "IR20",
+          "net": "IR20",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "IR26",
+          "net": "IR26",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "IR27",
+          "net": "IR27",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "IR28",
+          "net": "IR28",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "IR29",
+          "net": "IR29",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "IR3",
+          "net": "IR3",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 13,
+          "name": "IR30",
+          "net": "IR30",
+          "kind": "in"
+        },
+        {
+          "pin": 14,
+          "name": "IR5",
+          "net": "IR5",
+          "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "WAIT",
+          "net": "WAIT",
+          "kind": "in"
+        },
+        {
+          "pin": 16,
+          "name": "XSHR",
+          "net": "XSHR",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "XSUB",
+          "net": "XSUB",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "XOP0",
+          "net": "XOP0",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "XOP2",
+          "net": "XOP2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 23,
+          "name": "IR31",
+          "net": "IR31",
+          "kind": "in"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "ctl1",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "ID/EX control",
+      "stage": "ID/EX",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": "RESET",
+        "eqs": [
           {
             "out": "XSRA",
             "mode": "reg",
@@ -7439,257 +7807,7 @@
                 ]
               ]
             ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "HOLD"
-          ],
-          [
-            3,
-            "IR0"
-          ],
-          [
-            4,
-            "IR1"
-          ],
-          [
-            5,
-            "IR2"
-          ],
-          [
-            6,
-            "IR26"
-          ],
-          [
-            7,
-            "IR27"
-          ],
-          [
-            8,
-            "IR28"
-          ],
-          [
-            9,
-            "IR29"
-          ],
-          [
-            10,
-            "IR3"
-          ],
-          [
-            11,
-            "IR31"
-          ],
-          [
-            13,
-            "IR5"
-          ],
-          [
-            23,
-            "RESET"
-          ],
-          [
-            14,
-            "WAIT"
-          ],
-          [
-            19,
-            "XOP0"
-          ],
-          [
-            18,
-            "XOP1"
-          ],
-          [
-            20,
-            "XOP2"
-          ],
-          [
-            17,
-            "XSUB"
-          ],
-          [
-            21,
-            "XSH"
-          ],
-          [
-            16,
-            "XSHR"
-          ],
-          [
-            22,
-            "XSRA"
-          ],
-          [
-            15,
-            "XBEQ"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "HOLD",
-          "net": "HOLD",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "IR0",
-          "net": "IR0",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "IR1",
-          "net": "IR1",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "IR2",
-          "net": "IR2",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "IR26",
-          "net": "IR26",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "IR27",
-          "net": "IR27",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "IR28",
-          "net": "IR28",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "IR29",
-          "net": "IR29",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "IR3",
-          "net": "IR3",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "IR31",
-          "net": "IR31",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "IR5",
-          "net": "IR5",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "WAIT",
-          "net": "WAIT",
-          "kind": "in"
-        },
-        {
-          "pin": 15,
-          "name": "XBEQ",
-          "net": "XBEQ",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "XSHR",
-          "net": "XSHR",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "XSUB",
-          "net": "XSUB",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "XOP1",
-          "net": "XOP1",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "XOP0",
-          "net": "XOP0",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "XOP2",
-          "net": "XOP2",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "XSH",
-          "net": "XSH",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "XSRA",
-          "net": "XSRA",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "ctl1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "ID/EX control",
-      "stage": "ID/EX",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": "RESET",
-        "eqs": [
+          },
           {
             "out": "XBNE",
             "mode": "reg",
@@ -8005,7 +8123,257 @@
                 ]
               ]
             ]
-          },
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "HOLD"
+          ],
+          [
+            3,
+            "IR0"
+          ],
+          [
+            4,
+            "IR16"
+          ],
+          [
+            5,
+            "IR26"
+          ],
+          [
+            6,
+            "IR27"
+          ],
+          [
+            7,
+            "IR28"
+          ],
+          [
+            8,
+            "IR29"
+          ],
+          [
+            9,
+            "IR3"
+          ],
+          [
+            10,
+            "IR30"
+          ],
+          [
+            11,
+            "IR31"
+          ],
+          [
+            13,
+            "IR5"
+          ],
+          [
+            23,
+            "RESET"
+          ],
+          [
+            14,
+            "WAIT"
+          ],
+          [
+            20,
+            "XSRA"
+          ],
+          [
+            17,
+            "XBEQ"
+          ],
+          [
+            21,
+            "XBNE"
+          ],
+          [
+            19,
+            "XBRS"
+          ],
+          [
+            16,
+            "XBZ"
+          ],
+          [
+            18,
+            "XBINV"
+          ],
+          [
+            22,
+            "XJR"
+          ],
+          [
+            15,
+            "XMR"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "HOLD",
+          "net": "HOLD",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "IR0",
+          "net": "IR0",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "IR16",
+          "net": "IR16",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "IR26",
+          "net": "IR26",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "IR27",
+          "net": "IR27",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "IR28",
+          "net": "IR28",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "IR29",
+          "net": "IR29",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "IR3",
+          "net": "IR3",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "IR30",
+          "net": "IR30",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "IR31",
+          "net": "IR31",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 13,
+          "name": "IR5",
+          "net": "IR5",
+          "kind": "in"
+        },
+        {
+          "pin": 14,
+          "name": "WAIT",
+          "net": "WAIT",
+          "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "XMR",
+          "net": "XMR",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "XBZ",
+          "net": "XBZ",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "XBEQ",
+          "net": "XBEQ",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "XBINV",
+          "net": "XBINV",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "XBRS",
+          "net": "XBRS",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "XSRA",
+          "net": "XSRA",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "XBNE",
+          "net": "XBNE",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "XJR",
+          "net": "XJR",
+          "kind": "out"
+        },
+        {
+          "pin": 23,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "ctl2",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "ID/EX control",
+      "stage": "ID/EX",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": "RESET",
+        "eqs": [
           {
             "out": "XMW",
             "mode": "reg",
@@ -8039,237 +8407,7 @@
                 ]
               ]
             ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "HOLD"
-          ],
-          [
-            3,
-            "IR16"
-          ],
-          [
-            4,
-            "IR26"
-          ],
-          [
-            5,
-            "IR27"
-          ],
-          [
-            6,
-            "IR28"
-          ],
-          [
-            7,
-            "IR29"
-          ],
-          [
-            8,
-            "IR3"
-          ],
-          [
-            9,
-            "IR30"
-          ],
-          [
-            10,
-            "IR31"
-          ],
-          [
-            11,
-            "IR5"
-          ],
-          [
-            13,
-            "RESET"
-          ],
-          [
-            23,
-            "WAIT"
-          ],
-          [
-            20,
-            "XBNE"
-          ],
-          [
-            19,
-            "XBRS"
-          ],
-          [
-            17,
-            "XBZ"
-          ],
-          [
-            18,
-            "XBINV"
-          ],
-          [
-            21,
-            "XJR"
-          ],
-          [
-            16,
-            "XMR"
-          ],
-          [
-            22,
-            "XMW"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "HOLD",
-          "net": "HOLD",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "IR16",
-          "net": "IR16",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "IR26",
-          "net": "IR26",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "IR27",
-          "net": "IR27",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "IR28",
-          "net": "IR28",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "IR29",
-          "net": "IR29",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "IR3",
-          "net": "IR3",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "IR30",
-          "net": "IR30",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "IR31",
-          "net": "IR31",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "IR5",
-          "net": "IR5",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 16,
-          "name": "XMR",
-          "net": "XMR",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "XBZ",
-          "net": "XBZ",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "XBINV",
-          "net": "XBINV",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "XBRS",
-          "net": "XBRS",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "XBNE",
-          "net": "XBNE",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "XJR",
-          "net": "XJR",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "XMW",
-          "net": "XMW",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "WAIT",
-          "net": "WAIT",
-          "kind": "in"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "ctl2",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "ID/EX control",
-      "stage": "ID/EX",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": "RESET",
-        "eqs": [
+          },
           {
             "out": "XDEST0",
             "mode": "reg",
@@ -8533,7 +8671,257 @@
                 ]
               ]
             ]
-          },
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "HOLD"
+          ],
+          [
+            3,
+            "IR11"
+          ],
+          [
+            4,
+            "IR12"
+          ],
+          [
+            5,
+            "IR13"
+          ],
+          [
+            6,
+            "IR14"
+          ],
+          [
+            7,
+            "IR16"
+          ],
+          [
+            8,
+            "IR17"
+          ],
+          [
+            9,
+            "IR18"
+          ],
+          [
+            10,
+            "IR19"
+          ],
+          [
+            11,
+            "IR29"
+          ],
+          [
+            13,
+            "IR31"
+          ],
+          [
+            23,
+            "ITYPERW"
+          ],
+          [
+            14,
+            "JAL"
+          ],
+          [
+            22,
+            "RESET"
+          ],
+          [
+            15,
+            "RTYPERW"
+          ],
+          [
+            16,
+            "WAIT"
+          ],
+          [
+            21,
+            "XMW"
+          ],
+          [
+            19,
+            "XDEST0"
+          ],
+          [
+            18,
+            "XDEST1"
+          ],
+          [
+            20,
+            "XDEST2"
+          ],
+          [
+            17,
+            "XDEST3"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "HOLD",
+          "net": "HOLD",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "IR11",
+          "net": "IR11",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "IR12",
+          "net": "IR12",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "IR13",
+          "net": "IR13",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "IR14",
+          "net": "IR14",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "IR16",
+          "net": "IR16",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "IR17",
+          "net": "IR17",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "IR18",
+          "net": "IR18",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "IR19",
+          "net": "IR19",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "IR29",
+          "net": "IR29",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 13,
+          "name": "IR31",
+          "net": "IR31",
+          "kind": "in"
+        },
+        {
+          "pin": 14,
+          "name": "JAL",
+          "net": "JAL",
+          "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "RTYPERW",
+          "net": "RTYPERW",
+          "kind": "in"
+        },
+        {
+          "pin": 16,
+          "name": "WAIT",
+          "net": "WAIT",
+          "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "XDEST3",
+          "net": "XDEST3",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "XDEST1",
+          "net": "XDEST1",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "XDEST0",
+          "net": "XDEST0",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "XDEST2",
+          "net": "XDEST2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "XMW",
+          "net": "XMW",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 23,
+          "name": "ITYPERW",
+          "net": "ITYPERW",
+          "kind": "in"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "ctl3",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "ID/EX control",
+      "stage": "ID/EX",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": "RESET",
+        "eqs": [
           {
             "out": "XDEST4",
             "mode": "reg",
@@ -8599,257 +8987,7 @@
                 ]
               ]
             ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "HOLD"
-          ],
-          [
-            3,
-            "IR11"
-          ],
-          [
-            4,
-            "IR12"
-          ],
-          [
-            5,
-            "IR13"
-          ],
-          [
-            6,
-            "IR14"
-          ],
-          [
-            7,
-            "IR15"
-          ],
-          [
-            8,
-            "IR16"
-          ],
-          [
-            9,
-            "IR17"
-          ],
-          [
-            10,
-            "IR18"
-          ],
-          [
-            11,
-            "IR19"
-          ],
-          [
-            13,
-            "IR20"
-          ],
-          [
-            23,
-            "ITYPERW"
-          ],
-          [
-            14,
-            "JAL"
-          ],
-          [
-            22,
-            "RESET"
-          ],
-          [
-            15,
-            "RTYPERW"
-          ],
-          [
-            16,
-            "WAIT"
-          ],
-          [
-            19,
-            "XDEST0"
-          ],
-          [
-            18,
-            "XDEST1"
-          ],
-          [
-            20,
-            "XDEST2"
-          ],
-          [
-            17,
-            "XDEST3"
-          ],
-          [
-            21,
-            "XDEST4"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "HOLD",
-          "net": "HOLD",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "IR11",
-          "net": "IR11",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "IR12",
-          "net": "IR12",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "IR13",
-          "net": "IR13",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "IR14",
-          "net": "IR14",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "IR15",
-          "net": "IR15",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "IR16",
-          "net": "IR16",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "IR17",
-          "net": "IR17",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "IR18",
-          "net": "IR18",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "IR19",
-          "net": "IR19",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "IR20",
-          "net": "IR20",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "JAL",
-          "net": "JAL",
-          "kind": "in"
-        },
-        {
-          "pin": 15,
-          "name": "RTYPERW",
-          "net": "RTYPERW",
-          "kind": "in"
-        },
-        {
-          "pin": 16,
-          "name": "WAIT",
-          "net": "WAIT",
-          "kind": "in"
-        },
-        {
-          "pin": 17,
-          "name": "XDEST3",
-          "net": "XDEST3",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "XDEST1",
-          "net": "XDEST1",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "XDEST0",
-          "net": "XDEST0",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "XDEST2",
-          "net": "XDEST2",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "XDEST4",
-          "net": "XDEST4",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 23,
-          "name": "ITYPERW",
-          "net": "ITYPERW",
-          "kind": "in"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "ctl3",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "ID/EX control",
-      "stage": "ID/EX",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": "RESET",
-        "eqs": [
+          },
           {
             "out": "XRW",
             "mode": "reg",
@@ -9131,6 +9269,10 @@
             "WAIT"
           ],
           [
+            18,
+            "XDEST4"
+          ],
+          [
             19,
             "XRW"
           ]
@@ -9226,6 +9368,12 @@
           "name": "RTYPERW",
           "net": "RTYPERW",
           "kind": "in"
+        },
+        {
+          "pin": 18,
+          "name": "XDEST4",
+          "net": "XDEST4",
+          "kind": "out"
         },
         {
           "pin": 19,

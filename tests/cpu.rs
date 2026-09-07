@@ -305,6 +305,51 @@ fn rs_conditioned_branches() {
     );
 }
 
+/// BLTZAL / BGEZAL: the branch of BLTZ / BGEZ with JAL's link.  The link
+/// is written whether or not the branch is taken, is visible to the
+/// delay slot and to the target, and the return goes through JR.
+#[test]
+fn link_branches() {
+    check(
+        "
+        li     $t0, -3
+        li     $t1, 4
+        li     $s0, 0
+        li     $s1, 0
+        li     $s2, 0
+        bltzal $t0, sub1        # taken, links
+        addiu  $s0, $ra, 0      # delay slot sees the link
+        li     $s1, 1           # runs after the return
+        bgezal $t0, sub2        # not taken, still links
+        nop
+        addiu  $s2, $ra, 0      # the link of the untaken branch
+        bgezal $t1, sub2        # taken
+        nop
+        li     $s3, 7
+        j      done
+        nop
+    sub1:
+        addiu  $t2, $ra, 0      # target sees the link
+        jr     $ra
+        nop
+    sub2:
+        addiu  $t3, $t3, 1
+        jr     $ra
+        nop
+    done:
+        nop
+        nop
+        nop
+    stop:
+        nop
+        nop
+        nop
+        nop
+        ",
+        34.0,
+    );
+}
+
 /// JAL and JALR link through the ALU's pass-B path; the link is visible to
 /// the delay slot (distance 1) and to the callee (distance 2).
 #[test]

@@ -171,6 +171,12 @@ fn decode(word: u32) -> Option<Dec> {
         }
         Beq | Bne | Blez | Bgtz => d.uses_rt = true,
         Bltz | Bgez => {}
+        // Link branches: the branch of BLTZ / BGEZ plus the link of JAL
+        // (r31 <- PC + 8 through operand B and the pass-B ALU op).
+        Bltzal | Bgezal => {
+            d.jal = true;
+            d.link = true;
+        }
         J => d.seljt = true,
         Jal => {
             d.seljt = true;
@@ -178,9 +184,9 @@ fn decode(word: u32) -> Option<Dec> {
             d.link = true;
         }
     }
-    d.brs = matches!(op, Blez | Bgtz | Bltz | Bgez);
+    d.brs = matches!(op, Blez | Bgtz | Bltz | Bgez | Bltzal | Bgezal);
     d.bz = matches!(op, Blez | Bgtz);
-    d.binv = matches!(op, Bgtz | Bgez);
+    d.binv = matches!(op, Bgtz | Bgez | Bgezal);
     d.sext = matches!(op, Addiu | Slti | Sltiu | Lw | Sw);
     d.lui = op == Lui;
     // XADD: the result is the adder output (SLT/SLTU use the adder but
@@ -224,6 +230,16 @@ fn op_lits(code: u32) -> Vec<SLit> {
 fn dec_table(out: &str, mode: Mode, f: impl Fn(&Dec) -> bool) -> Eq {
     let ins = dec_inputs();
     Eq::table(out, mode, &strs(&ins), |m| decode(dec_word(m)).map(|d| f(&d)))
+}
+
+/// A decode signal that is also set by the REGIMM link branches (BLTZAL
+/// / BGEZAL: opcode 1 with IR20), which the opcode / funct tables cannot
+/// see.  The table part is kept positive so the extra term can be OR'd.
+fn dec_table_or_regimm_link(out: &str, mode: Mode, f: impl Fn(&Dec) -> bool) -> Eq {
+    let ins = dec_inputs();
+    let mut eq = Eq::table_pos(out, mode, &strs(&ins), |m| decode(dec_word(m)).map(|d| f(&d)));
+    eq.terms.push(vec![nl_(&ir(31)), nl_(&ir(30)), nl_(&ir(29)), nl_(&ir(28)), nl_(&ir(27)), l(&ir(26)), l(&ir(20))]);
+    eq
 }
 
 // ---------------------------------------------------------------------------
@@ -294,14 +310,14 @@ fn dec_block() -> Vec<Eq> {
     vec![
         dec_table("RTYPERW", Mode::Comb, |d| d.rtype_rw),
         dec_table("ITYPERW", Mode::Comb, |d| d.itype_rw),
-        dec_table("JAL", Mode::Comb, |d| d.jal),
+        dec_table_or_regimm_link("JAL", Mode::Comb, |d| d.jal),
         dec_table("SELIMM", Mode::Comb, |d| d.selimm),
         dec_table("SEXT", Mode::Comb, |d| d.sext),
         dec_table("LUI", Mode::Comb, |d| d.lui),
         dec_table("DSELJT", Mode::Comb, |d| d.seljt),
         dec_table("USESRT", Mode::Comb, |d| d.uses_rt),
         dec_table("STORE", Mode::Comb, |d| d.store),
-        dec_table("LINK", Mode::Comb, |d| d.link),
+        dec_table_or_regimm_link("LINK", Mode::Comb, |d| d.link),
         dec_table("SHIMM", Mode::Comb, |d| d.shimm),
         dec_table("LOAD", Mode::Comb, |d| d.load),
     ]
@@ -312,7 +328,8 @@ fn dec_block() -> Vec<Eq> {
 /// enable, memory bits.
 fn ctrl_block() -> Vec<Eq> {
     let mut eqs = vec![
-        dec_table("XOP0", Mode::Reg, |d| alu_op(d) & 1 == 1),
+        // XOP0 is also set by the link branches (pass-B op code 1).
+        dec_table_or_regimm_link("XOP0", Mode::Reg, |d| alu_op(d) & 1 == 1),
         dec_table("XOP1", Mode::Reg, |d| alu_op(d) >> 1 & 1 == 1),
         dec_table("XOP2", Mode::Reg, |d| alu_op(d) >> 2 & 1 == 1),
         dec_table("XSUB", Mode::Reg, |d| d.sub),

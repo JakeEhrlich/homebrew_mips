@@ -201,8 +201,8 @@ pub fn assemble(src: &str, base: u32) -> Result<Program, AsmError> {
                 // rd, rt, rs
                 words.push(Instr::R { op, rd: reg(a(0)?, line)?, rt: reg(a(1)?, line)?, rs: reg(a(2)?, line)? }.encode());
             }
-            "blez" | "bgtz" | "bltz" | "bgez" => {
-                let op = match it.mnemonic { "blez" => Op::Blez, "bgtz" => Op::Bgtz, "bltz" => Op::Bltz, _ => Op::Bgez };
+            "blez" | "bgtz" | "bltz" | "bgez" | "bltzal" | "bgezal" => {
+                let op = match it.mnemonic { "blez" => Op::Blez, "bgtz" => Op::Bgtz, "bltz" => Op::Bltz, "bgez" => Op::Bgez, "bltzal" => Op::Bltzal, _ => Op::Bgezal };
                 words.push(Instr::I { op, rs: reg(a(0)?, line)?, rt: 0, imm: branch_off(a(1)?)? }.encode());
             }
             "addiu" | "addi" => words.push(i3(Op::Addiu)?),

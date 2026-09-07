@@ -173,16 +173,20 @@ impl Cpu {
                             self.store_word(addr, rt);
                         }
                     }
-                    Op::Beq | Op::Bne | Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez => {
+                    Op::Beq | Op::Bne | Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez | Op::Bltzal | Op::Bgezal => {
                         let s = rs as i32;
                         let taken = match op {
                             Op::Beq => rs == rt,
                             Op::Bne => rs != rt,
                             Op::Blez => s <= 0,
                             Op::Bgtz => s > 0,
-                            Op::Bltz => s < 0,
+                            Op::Bltz | Op::Bltzal => s < 0,
                             _ => s >= 0,
                         };
+                        // The link is written whether or not the branch is taken.
+                        if matches!(op, Op::Bltzal | Op::Bgezal) {
+                            self.set_reg(31, pc.wrapping_add(8));
+                        }
                         if taken {
                             self.branch = Some(next_pc.wrapping_add(sext << 2));
                         }

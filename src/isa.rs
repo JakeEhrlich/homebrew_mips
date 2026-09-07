@@ -44,6 +44,8 @@ pub enum Op {
     Bgtz,
     Bltz,
     Bgez,
+    Bltzal,
+    Bgezal,
     // J-type
     J,
     Jal,
@@ -104,7 +106,7 @@ impl Instr {
                     Op::Bne => 0x05,
                     Op::Blez => 0x06,
                     Op::Bgtz => 0x07,
-                    Op::Bltz | Op::Bgez => 0x01,
+                    Op::Bltz | Op::Bgez | Op::Bltzal | Op::Bgezal => 0x01,
                     Op::Addiu => 0x09,
                     Op::Slti => 0x0A,
                     Op::Sltiu => 0x0B,
@@ -120,6 +122,8 @@ impl Instr {
                 let rt = match op {
                     Op::Bltz => 0,
                     Op::Bgez => 1,
+                    Op::Bltzal => 0x10,
+                    Op::Bgezal => 0x11,
                     _ => rt,
                 };
                 opcode << 26 | (rs as u32) << 21 | (rt as u32) << 16 | imm as u32
@@ -182,6 +186,8 @@ impl Instr {
                 let op = match rt {
                     0 => Op::Bltz,
                     1 => Op::Bgez,
+                    0x10 => Op::Bltzal,
+                    0x11 => Op::Bgezal,
                     _ => return None,
                 };
                 Some(Instr::I { op, rt, rs, imm })
@@ -224,7 +230,7 @@ impl fmt::Display for Instr {
             Instr::R { op: Op::Jalr, rd, rs, .. } => write!(f, "jalr {}, {}", r(rd), r(rs)),
             Instr::R { op: Op::Sllv | Op::Srlv | Op::Srav, rd, rs, rt } => write!(f, "{name} {}, {}, {}", r(rd), r(rt), r(rs)),
             Instr::Sh { rd, rt, shamt, .. } => write!(f, "{name} {}, {}, {shamt}", r(rd), r(rt)),
-            Instr::I { op: Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez, rs, imm, .. } => write!(f, "{name} {}, {}", r(rs), imm as i16),
+            Instr::I { op: Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez | Op::Bltzal | Op::Bgezal, rs, imm, .. } => write!(f, "{name} {}, {}", r(rs), imm as i16),
             Instr::R { rd, rs, rt, .. } => write!(f, "{name} {}, {}, {}", r(rd), r(rs), r(rt)),
             Instr::I { op: Op::Lui, rt, imm, .. } => write!(f, "lui {}, 0x{imm:x}", r(rt)),
             Instr::I { op: Op::Lw | Op::Sw, rt, rs, imm } => write!(f, "{name} {}, {}({})", r(rt), imm as i16, r(rs)),
