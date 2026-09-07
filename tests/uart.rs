@@ -5,12 +5,11 @@
 //! (no warnings), and the transmitted characters against the expected
 //! ones.
 use mips32::asm::assemble;
-use mips32::cpu::{Boot, Build, Cpu, IO_CYCLES};
+use mips32::cpu::{Boot, Build, Cpu};
 use mips32::iss::Cpu as Iss;
 
 const PROG: &str = "
-        lui   $s0, 0xFFFF
-        ori   $s0, $s0, 0x8000     # I/O base: bit 31 set
+        lui   $s0, 0x8000          # I/O base: bit 31 set, slot 0 (the UART)
         li    $t0, 0x83
         sw    $t0, 12($s0)         # LCR: DLAB, 8 bits
         li    $t0, 1
@@ -102,9 +101,9 @@ fn echo_three_characters() {
     // A fast crystal keeps the character time at a handful of cycles.
     let (cpu, iss) = run(34.0, 1.0e9);
     check(&cpu, &iss);
-    // Every I/O access held the pipeline for IO_CYCLES clocks: the
-    // program makes at least 6 + 3 * 4 accesses.
-    assert!(cpu.cycles > (18 * IO_CYCLES) as u64, "only {} cycles", cpu.cycles);
+    // Every UART read holds the pipeline for 14 clocks and every write
+    // for 6: the program makes at least 6 writes and 3 * 3 reads.
+    assert!(cpu.cycles > (6 * 6 + 9 * 14) as u64, "only {} cycles", cpu.cycles);
 }
 
 /// The same at the board crystal: the transmitter takes 1 / 921600 s

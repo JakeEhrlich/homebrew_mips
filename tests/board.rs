@@ -78,7 +78,33 @@ fn board_is_complete() {
         .filter(|n| count.get(n.name.as_str()).copied().unwrap_or(0) == 1 && n.tie.is_none() && n.pull.is_none())
         .map(|n| n.name.as_str())
         .collect();
-    let allowed = |n: &str| n.starts_with("T2") || n.starts_with("T4") || n.starts_with("T5") || n.starts_with("U2") || n.starts_with("U3") || n.starts_with("U4") || n.starts_with("U5") || n == "RS232_TX" || n == "RS232_RX";
+    // A GAL output used only inside its own chip (a counter bit, a state
+    // flag) is a legitimate single connection: the chip reads it through
+    // its internal feedback.
+    let mut internal: BTreeSet<String> = BTreeSet::new();
+    for c in &b.chips {
+        if let Model::Gal { pins, eqs, .. } = &c.model {
+            let reads: BTreeSet<&str> = eqs.iter().flat_map(|e| e.terms.iter().flatten().map(|(l, _)| l.as_str())).collect();
+            for e in eqs {
+                if reads.contains(e.out.as_str()) {
+                    if let Some((p, _)) = pins.iter().find(|(_, sname)| *sname == e.out) {
+                        if let Some(pr) = c.pins.iter().find(|pr| pr.pin == *p) {
+                            internal.insert(pr.net.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Bus signals no on-board device uses yet, the unused delay-line
+    // taps, and the serial lines to the connector.
+    let allowed = |n: &str| {
+        internal.contains(n)
+            || n == "BACK"
+            || n.starts_with("T2") || n.starts_with("T4") || n.starts_with("T5")
+            || n.starts_with("U2") || n.starts_with("U3") || n.starts_with("U4") || n.starts_with("U5")
+            || n == "RS232_TX" || n == "RS232_RX"
+    };
     let stray: Vec<&str> = singles.iter().copied().filter(|n| !allowed(n)).collect();
     assert!(stray.is_empty(), "nets with a single connection: {stray:?}");
 }

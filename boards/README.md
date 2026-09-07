@@ -22,7 +22,7 @@ description of that board, and a `chipmap.html` rendered from it.
   each pin carries; the pin list holds the board net, which differs
   where nets were merged after packing.
 - **nets**: name, tie to a rail, pull resistor, role (`clk`, `reset`,
-  `reset_button`).
+  `reset_button`, `bus:brdy`, `bus:bb8`).
 - **params**: the design parameters the wiring depends on (boot region
   size, data regions, SKIP, the write-gate tap).
 - **layout**: the chip map's columns.

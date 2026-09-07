@@ -94,7 +94,8 @@
         "Boot data",
         "Write gate",
         "Delay line",
-        "Bus wait",
+        "Bus controller",
+        "UART adapter",
         "UART",
         "Serial port"
       ],
@@ -86711,6 +86712,32 @@
                 ]
               ]
             ]
+          },
+          {
+            "out": "WAIT",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  true
+                ]
+              ],
+              [
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "RDYS",
+                  false
+                ]
+              ]
+            ]
           }
         ],
         "pins": [
@@ -86744,38 +86771,46 @@
           ],
           [
             8,
-            "RESET"
+            "RDYS"
           ],
           [
             9,
-            "SFE"
+            "RESET"
           ],
           [
             10,
-            "SFM"
+            "SFE"
           ],
           [
             11,
-            "STEP0"
+            "SFM"
           ],
           [
             13,
-            "STEP1"
+            "STEP0"
           ],
           [
             23,
-            "STEP2"
+            "STEP1"
           ],
           [
             14,
-            "STORE"
+            "STEP2"
           ],
           [
             22,
-            "XMR"
+            "STORE"
           ],
           [
             15,
+            "T"
+          ],
+          [
+            21,
+            "XMR"
+          ],
+          [
+            16,
             "XMW"
           ],
           [
@@ -86789,6 +86824,10 @@
           [
             20,
             "DMEN_n"
+          ],
+          [
+            17,
+            "WAIT"
           ]
         ]
       },
@@ -86837,26 +86876,26 @@
         },
         {
           "pin": 8,
+          "name": "RDYS",
+          "net": "RDYS",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
           "name": "RESET",
           "net": "RESET",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 10,
           "name": "SFE",
           "net": "SFE",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 11,
           "name": "SFM",
           "net": "SFM",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "STEP0",
-          "net": "STEP0",
           "kind": "in"
         },
         {
@@ -86867,21 +86906,33 @@
         },
         {
           "pin": 13,
-          "name": "STEP1",
-          "net": "STEP1",
+          "name": "STEP0",
+          "net": "STEP0",
           "kind": "in"
         },
         {
           "pin": 14,
-          "name": "STORE",
-          "net": "STORE",
+          "name": "STEP2",
+          "net": "STEP2",
           "kind": "in"
         },
         {
           "pin": 15,
+          "name": "T",
+          "net": "T",
+          "kind": "in"
+        },
+        {
+          "pin": 16,
           "name": "XMW",
           "net": "XMW",
           "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "WAIT",
+          "net": "WAIT",
+          "kind": "out"
         },
         {
           "pin": 18,
@@ -86902,15 +86953,21 @@
           "kind": "out"
         },
         {
-          "pin": 22,
+          "pin": 21,
           "name": "XMR",
           "net": "XMR",
           "kind": "in"
         },
         {
+          "pin": 22,
+          "name": "STORE",
+          "net": "STORE",
+          "kind": "in"
+        },
+        {
           "pin": 23,
-          "name": "STEP2",
-          "net": "STEP2",
+          "name": "STEP1",
+          "net": "STEP1",
           "kind": "in"
         },
         {
@@ -86932,52 +86989,6 @@
         "clk": null,
         "ar": null,
         "eqs": [
-          {
-            "out": "WAIT",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT0",
-                  false
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT1",
-                  false
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
-                  false
-                ]
-              ]
-            ]
-          },
           {
             "out": "HOLDW",
             "mode": "comb",
@@ -87050,8 +87061,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ]
               ],
               [
@@ -87060,27 +87071,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ]
               ]
@@ -87094,63 +87085,51 @@
           ],
           [
             2,
-            "CNT0"
-          ],
-          [
-            3,
-            "CNT1"
-          ],
-          [
-            4,
-            "CNT2"
-          ],
-          [
-            5,
-            "CNT3"
-          ],
-          [
-            6,
             "LOAD"
           ],
           [
-            7,
+            3,
             "MIO"
           ],
           [
-            8,
+            4,
+            "RDYS"
+          ],
+          [
+            5,
             "SFE"
           ],
           [
-            9,
+            6,
             "SFM"
           ],
           [
-            10,
+            7,
             "STEP0"
           ],
           [
-            11,
+            8,
             "STEP1"
           ],
           [
-            13,
+            9,
             "STEP2"
           ],
           [
-            23,
+            10,
             "STORE"
           ],
           [
-            14,
+            11,
+            "T"
+          ],
+          [
+            13,
             "XMR"
           ],
           [
-            22,
+            23,
             "XMW"
-          ],
-          [
-            18,
-            "WAIT"
           ],
           [
             19,
@@ -87167,62 +87146,62 @@
         },
         {
           "pin": 2,
-          "name": "CNT0",
-          "net": "CNT0",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "CNT1",
-          "net": "CNT1",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "CNT2",
-          "net": "CNT2",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "CNT3",
-          "net": "CNT3",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
           "name": "LOAD",
           "net": "LOAD",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 3,
           "name": "MIO",
           "net": "MIO",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 4,
+          "name": "RDYS",
+          "net": "RDYS",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
           "name": "SFE",
           "net": "SFE",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 6,
           "name": "SFM",
           "net": "SFM",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 7,
           "name": "STEP0",
           "net": "STEP0",
           "kind": "in"
         },
         {
-          "pin": 11,
+          "pin": 8,
           "name": "STEP1",
           "net": "STEP1",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "STEP2",
+          "net": "STEP2",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "STORE",
+          "net": "STORE",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "T",
+          "net": "T",
           "kind": "in"
         },
         {
@@ -87233,21 +87212,9 @@
         },
         {
           "pin": 13,
-          "name": "STEP2",
-          "net": "STEP2",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
           "name": "XMR",
           "net": "XMR",
           "kind": "in"
-        },
-        {
-          "pin": 18,
-          "name": "WAIT",
-          "net": "WAIT",
-          "kind": "out"
         },
         {
           "pin": 19,
@@ -87256,15 +87223,9 @@
           "kind": "out"
         },
         {
-          "pin": 22,
+          "pin": 23,
           "name": "XMW",
           "net": "XMW",
-          "kind": "in"
-        },
-        {
-          "pin": 23,
-          "name": "STORE",
-          "net": "STORE",
           "kind": "in"
         },
         {
@@ -98538,6 +98499,10 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98556,6 +98521,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98574,6 +98543,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98587,6 +98560,20 @@
                 ],
                 [
                   "S0_1",
+                  true
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MBE0_n",
                   true
                 ]
               ]
@@ -98612,6 +98599,10 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98630,6 +98621,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98648,6 +98643,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98661,6 +98660,20 @@
                 ],
                 [
                   "S0_1",
+                  true
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MBE1_n",
                   true
                 ]
               ]
@@ -98686,6 +98699,10 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98703,6 +98720,10 @@
                 ],
                 [
                   "S0_1",
+                  false
+                ],
+                [
+                  "WAIT",
                   false
                 ]
               ],
@@ -98722,6 +98743,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98736,6 +98761,20 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MBE2_n",
+                  true
                 ]
               ]
             ]
@@ -98760,6 +98799,10 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98777,6 +98820,10 @@
                 ],
                 [
                   "S0_1",
+                  false
+                ],
+                [
+                  "WAIT",
                   false
                 ]
               ],
@@ -98796,6 +98843,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -98810,6 +98861,20 @@
                 [
                   "S0_1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MBE3_n",
+                  true
                 ]
               ]
             ]
@@ -98824,8 +98889,18 @@
                   true
                 ],
                 [
-                  "FA31",
+                  "WAIT",
                   false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MSZB",
+                  true
                 ]
               ]
             ]
@@ -98840,8 +98915,18 @@
                   true
                 ],
                 [
-                  "FA31",
+                  "WAIT",
                   false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MSZH",
+                  true
                 ]
               ]
             ]
@@ -98856,40 +98941,18 @@
                   true
                 ],
                 [
-                  "FA31",
+                  "WAIT",
                   false
                 ]
-              ]
-            ]
-          },
-          {
-            "out": "MA0",
-            "mode": "reg",
-            "terms": [
+              ],
               [
                 [
-                  "SUM0",
+                  "WAIT",
                   true
                 ],
                 [
-                  "FA31",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "MA1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "S0_1",
+                  "MLSX",
                   true
-                ],
-                [
-                  "FA31",
-                  false
                 ]
               ]
             ]
@@ -98904,11 +98967,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   false
                 ],
                 [
@@ -98922,11 +98985,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   true
                 ],
                 [
@@ -98940,11 +99003,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   false
                 ],
                 [
@@ -98958,11 +99021,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   true
                 ],
                 [
@@ -98976,7 +99039,7 @@
                   false
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ],
                 [
@@ -98990,7 +99053,7 @@
                   false
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ],
                 [
@@ -99024,30 +99087,38 @@
           ],
           [
             6,
-            "FA31"
+            "MR0"
           ],
           [
             7,
-            "S0_1"
+            "MR1"
           ],
           [
             8,
-            "SUM0"
+            "S0_1"
           ],
           [
             9,
-            "XLSX"
+            "SUM0"
           ],
           [
             10,
-            "XMW"
+            "WAIT"
           ],
           [
             11,
-            "XSZB"
+            "XLSX"
           ],
           [
             13,
+            "XMW"
+          ],
+          [
+            23,
+            "XSZB"
+          ],
+          [
+            14,
             "XSZH"
           ],
           [
@@ -99077,14 +99148,6 @@
           [
             15,
             "MLSX"
-          ],
-          [
-            23,
-            "MA0"
-          ],
-          [
-            14,
-            "MA1"
           ],
           [
             19,
@@ -99125,38 +99188,38 @@
         },
         {
           "pin": 6,
-          "name": "FA31",
-          "net": "FA31",
+          "name": "MR0",
+          "net": "MR0",
           "kind": "in"
         },
         {
           "pin": 7,
+          "name": "MR1",
+          "net": "MR1",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
           "name": "S0_1",
           "net": "S0_1",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 9,
           "name": "SUM0",
           "net": "SUM0",
           "kind": "in"
         },
         {
-          "pin": 9,
-          "name": "XLSX",
-          "net": "XLSX",
-          "kind": "in"
-        },
-        {
           "pin": 10,
-          "name": "XMW",
-          "net": "XMW",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 11,
-          "name": "XSZB",
-          "net": "XSZB",
+          "name": "XLSX",
+          "net": "XLSX",
           "kind": "in"
         },
         {
@@ -99167,15 +99230,15 @@
         },
         {
           "pin": 13,
-          "name": "XSZH",
-          "net": "XSZH",
+          "name": "XMW",
+          "net": "XMW",
           "kind": "in"
         },
         {
           "pin": 14,
-          "name": "MA1",
-          "net": "MA1",
-          "kind": "out"
+          "name": "XSZH",
+          "net": "XSZH",
+          "kind": "in"
         },
         {
           "pin": 15,
@@ -99227,9 +99290,9 @@
         },
         {
           "pin": 23,
-          "name": "MA0",
-          "net": "MA0",
-          "kind": "out"
+          "name": "XSZB",
+          "net": "XSZB",
+          "kind": "in"
         },
         {
           "pin": 24,
@@ -99302,7 +99365,7 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ]
               ],
@@ -99320,11 +99383,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   false
                 ]
               ]
@@ -99348,11 +99411,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   true
                 ]
               ]
@@ -99376,7 +99439,7 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ]
               ],
@@ -99394,11 +99457,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   false
                 ]
               ]
@@ -99422,11 +99485,11 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ],
                 [
-                  "MA0",
+                  "MR0",
                   true
                 ]
               ]
@@ -99454,7 +99517,7 @@
                   false
                 ],
                 [
-                  "MIO",
+                  "BB8",
                   false
                 ]
               ],
@@ -99472,7 +99535,7 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   false
                 ]
               ]
@@ -99496,7 +99559,7 @@
                   true
                 ],
                 [
-                  "MA1",
+                  "MR1",
                   true
                 ]
               ]
@@ -99548,7 +99611,7 @@
                   false
                 ],
                 [
-                  "MIO",
+                  "BB8",
                   false
                 ]
               ]
@@ -99600,23 +99663,23 @@
         "pins": [
           [
             1,
-            "MA0"
+            "BB8"
           ],
           [
             2,
-            "MA1"
-          ],
-          [
-            3,
-            "MIO"
-          ],
-          [
-            4,
             "MLSX"
           ],
           [
-            5,
+            3,
             "MMR"
+          ],
+          [
+            4,
+            "MR0"
+          ],
+          [
+            5,
+            "MR1"
           ],
           [
             6,
@@ -99675,32 +99738,32 @@
       "pins": [
         {
           "pin": 1,
-          "name": "MA0",
-          "net": "MA0",
+          "name": "BB8",
+          "net": "BB8",
           "kind": "in"
         },
         {
           "pin": 2,
-          "name": "MA1",
-          "net": "MA1",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "MIO",
-          "net": "MIO",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
           "name": "MLSX",
           "net": "MLSX",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 3,
           "name": "MMR",
           "net": "MMR",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "MR0",
+          "net": "MR0",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "MR1",
+          "net": "MR1",
           "kind": "in"
         },
         {
@@ -100264,16 +100327,160 @@
       ]
     },
     {
-      "name": "wseq0",
+      "name": "bus0",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "Bus wait",
+      "block": "Bus controller",
       "stage": "MEM",
       "model": {
         "kind": "gal",
         "clk": "CLK",
         "ar": null,
         "eqs": [
+          {
+            "out": "RDYS",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "BRDY",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT0",
+                  true
+                ],
+                [
+                  "CNT1",
+                  true
+                ],
+                [
+                  "CNT2",
+                  true
+                ],
+                [
+                  "CNT3",
+                  true
+                ],
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "T",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "RDYS",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "BRD_n",
+            "mode": "comb",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "MMR",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "BWR_n",
+            "mode": "comb",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "MMW",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "BACK",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "RDYS",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ]
+              ]
+            ]
+          },
           {
             "out": "CNT0",
             "mode": "reg",
@@ -100286,6 +100493,48 @@
                 [
                   "MIO",
                   true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT1",
+                  true
+                ],
+                [
+                  "CNT2",
+                  true
+                ],
+                [
+                  "CNT3",
+                  true
+                ],
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
                 ],
                 [
                   "RESET",
@@ -100312,6 +100561,14 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100328,6 +100585,48 @@
                 [
                   "MIO",
                   true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT1",
+                  true
+                ],
+                [
+                  "CNT2",
+                  true
+                ],
+                [
+                  "CNT3",
+                  true
+                ],
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
                 ],
                 [
                   "RESET",
@@ -100358,6 +100657,14 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100376,6 +100683,14 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100392,6 +100707,44 @@
                 [
                   "MIO",
                   true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT2",
+                  true
+                ],
+                [
+                  "CNT3",
+                  true
+                ],
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
                 ],
                 [
                   "RESET",
@@ -100426,6 +100779,14 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100442,6 +100803,14 @@
                 [
                   "MIO",
                   true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
                 ],
                 [
                   "RESET",
@@ -100462,6 +100831,14 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100480,6 +100857,40 @@
                   true
                 ],
                 [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT3",
+                  true
+                ],
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
                   "RESET",
                   false
                 ]
@@ -100487,13 +100898,668 @@
             ]
           },
           {
-            "out": "UCS_n",
+            "out": "CNT4",
             "mode": "reg",
-            "active_low": true,
             "terms": [
               [
                 [
+                  "CNT0",
+                  true
+                ],
+                [
+                  "CNT1",
+                  true
+                ],
+                [
+                  "CNT2",
+                  true
+                ],
+                [
+                  "CNT3",
+                  true
+                ],
+                [
                   "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "CNT4",
+                  true
+                ],
+                [
+                  "MIO",
+                  true
+                ],
+                [
+                  "T",
+                  false
+                ],
+                [
+                  "RDYS",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "BRDY"
+          ],
+          [
+            3,
+            "MIO"
+          ],
+          [
+            4,
+            "MMR"
+          ],
+          [
+            5,
+            "MMW"
+          ],
+          [
+            6,
+            "RESET"
+          ],
+          [
+            17,
+            "RDYS"
+          ],
+          [
+            22,
+            "T"
+          ],
+          [
+            15,
+            "BRD_n"
+          ],
+          [
+            23,
+            "BWR_n"
+          ],
+          [
+            14,
+            "BACK"
+          ],
+          [
+            21,
+            "CNT0"
+          ],
+          [
+            20,
+            "CNT1"
+          ],
+          [
+            18,
+            "CNT2"
+          ],
+          [
+            19,
+            "CNT3"
+          ],
+          [
+            16,
+            "CNT4"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "BRDY",
+          "net": "BRDY",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "MIO",
+          "net": "MIO",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "MMR",
+          "net": "MMR",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "MMW",
+          "net": "MMW",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 14,
+          "name": "BACK",
+          "net": "BACK",
+          "kind": "out"
+        },
+        {
+          "pin": 15,
+          "name": "BRD_n",
+          "net": "BRD_n",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "CNT4",
+          "net": "CNT4",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "RDYS",
+          "net": "RDYS",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "CNT2",
+          "net": "CNT2",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "CNT3",
+          "net": "CNT3",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "CNT1",
+          "net": "CNT1",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "CNT0",
+          "net": "CNT0",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "T",
+          "net": "T",
+          "kind": "out"
+        },
+        {
+          "pin": 23,
+          "name": "BWR_n",
+          "net": "BWR_n",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "uadp0",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "UART adapter",
+      "stage": "MEM",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
+          {
+            "out": "SLOT0",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "MR23",
+                  false
+                ],
+                [
+                  "MR24",
+                  false
+                ],
+                [
+                  "MR25",
+                  false
+                ],
+                [
+                  "MR26",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "SEL",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "SEL",
+                  false
+                ],
+                [
+                  "BWR_n",
+                  false
+                ],
+                [
+                  "SLOT0",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "SEL",
+                  false
+                ],
+                [
+                  "BRD_n",
+                  false
+                ],
+                [
+                  "SLOT0",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "RDW",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "SEL",
+                  false
+                ],
+                [
+                  "BRD_n",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K0",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K1",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K2",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K3",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "SEL",
                   true
                 ],
                 [
@@ -100510,19 +101576,15 @@
             "terms": [
               [
                 [
-                  "CNT2",
+                  "K3",
                   false
                 ],
                 [
-                  "CNT3",
+                  "SEL",
                   true
                 ],
                 [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMR",
+                  "RDW",
                   true
                 ],
                 [
@@ -100532,19 +101594,15 @@
               ],
               [
                 [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "K2",
                   false
                 ],
                 [
-                  "MIO",
+                  "SEL",
                   true
                 ],
                 [
-                  "MMR",
+                  "RDW",
                   true
                 ],
                 [
@@ -100554,85 +101612,19 @@
               ],
               [
                 [
-                  "CNT1",
+                  "K0",
                   false
                 ],
                 [
-                  "CNT3",
-                  true
-                ],
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMR",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "K1",
                   false
                 ],
                 [
-                  "MIO",
+                  "SEL",
                   true
                 ],
                 [
-                  "MMR",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT0",
-                  false
-                ],
-                [
-                  "CNT3",
-                  true
-                ],
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMR",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT0",
-                  true
-                ],
-                [
-                  "CNT3",
-                  false
-                ],
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMR",
+                  "RDW",
                   true
                 ],
                 [
@@ -100649,20 +101641,24 @@
             "terms": [
               [
                 [
-                  "CNT2",
+                  "K1",
                   false
                 ],
                 [
-                  "CNT3",
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
                   true
                 ],
                 [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMW",
-                  true
+                  "RDW",
+                  false
                 ],
                 [
                   "RESET",
@@ -100671,86 +101667,24 @@
               ],
               [
                 [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "K0",
                   false
                 ],
                 [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMW",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
+                  "K2",
                   false
                 ],
                 [
-                  "CNT3",
-                  true
-                ],
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMW",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "K3",
                   false
                 ],
                 [
-                  "MIO",
+                  "SEL",
                   true
                 ],
                 [
-                  "MMW",
-                  true
-                ],
-                [
-                  "RESET",
+                  "RDW",
                   false
-                ]
-              ],
-              [
-                [
-                  "CNT0",
-                  true
-                ],
-                [
-                  "CNT3",
-                  false
-                ],
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "MMW",
-                  true
                 ],
                 [
                   "RESET",
@@ -100760,24 +101694,304 @@
             ]
           },
           {
+            "out": "BRDY",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "SEL",
+                  true
+                ],
+                [
+                  "RDW",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "SEL",
+                true
+              ]
+            ]
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "BRD_n"
+          ],
+          [
+            3,
+            "BWR_n"
+          ],
+          [
+            4,
+            "MR23"
+          ],
+          [
+            5,
+            "MR24"
+          ],
+          [
+            6,
+            "MR25"
+          ],
+          [
+            7,
+            "MR26"
+          ],
+          [
+            8,
+            "RESET"
+          ],
+          [
+            23,
+            "SLOT0"
+          ],
+          [
+            19,
+            "SEL"
+          ],
+          [
+            21,
+            "RDW"
+          ],
+          [
+            14,
+            "K0"
+          ],
+          [
+            16,
+            "K1"
+          ],
+          [
+            20,
+            "K2"
+          ],
+          [
+            18,
+            "K3"
+          ],
+          [
+            17,
+            "URD_n"
+          ],
+          [
+            22,
+            "UWR_n"
+          ],
+          [
+            15,
+            "BRDY"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "BRD_n",
+          "net": "BRD_n",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "BWR_n",
+          "net": "BWR_n",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "MR23",
+          "net": "MR23",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "MR24",
+          "net": "MR24",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "MR25",
+          "net": "MR25",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "MR26",
+          "net": "MR26",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 14,
+          "name": "K0",
+          "net": "K0",
+          "kind": "out"
+        },
+        {
+          "pin": 15,
+          "name": "BRDY",
+          "net": "BRDY",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "K1",
+          "net": "K1",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "URD_n",
+          "net": "URD_n",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "K3",
+          "net": "K3",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "SEL",
+          "net": "SEL",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "K2",
+          "net": "K2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "RDW",
+          "net": "RDW",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "UWR_n",
+          "net": "UWR_n",
+          "kind": "out"
+        },
+        {
+          "pin": 23,
+          "name": "SLOT0",
+          "net": "SLOT0",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "uadp1",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "UART adapter",
+      "stage": "MEM",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
+          {
+            "out": "BB8",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "SEL",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "SEL",
+                true
+              ]
+            ]
+          },
+          {
             "out": "UA0",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "CNT0",
-                  false
-                ],
-                [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "CNT3",
+                  "SEL",
                   false
                 ],
                 [
@@ -100791,49 +102005,7 @@
               ],
               [
                 [
-                  "CNT0",
-                  true
-                ],
-                [
-                  "UA0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "UA0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "UA0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT3",
+                  "SEL",
                   true
                 ],
                 [
@@ -100853,19 +102025,7 @@
             "terms": [
               [
                 [
-                  "CNT0",
-                  false
-                ],
-                [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "CNT3",
+                  "SEL",
                   false
                 ],
                 [
@@ -100879,49 +102039,7 @@
               ],
               [
                 [
-                  "CNT0",
-                  true
-                ],
-                [
-                  "UA1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "UA1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "UA1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT3",
+                  "SEL",
                   true
                 ],
                 [
@@ -100941,19 +102059,7 @@
             "terms": [
               [
                 [
-                  "CNT0",
-                  false
-                ],
-                [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "CNT3",
+                  "SEL",
                   false
                 ],
                 [
@@ -100967,49 +102073,7 @@
               ],
               [
                 [
-                  "CNT0",
-                  true
-                ],
-                [
-                  "UA2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "UA2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "UA2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "CNT3",
+                  "SEL",
                   true
                 ],
                 [
@@ -101031,70 +102095,38 @@
           ],
           [
             2,
-            "MIO"
-          ],
-          [
-            3,
-            "MMR"
-          ],
-          [
-            4,
-            "MMW"
-          ],
-          [
-            5,
             "MR2"
           ],
           [
-            6,
+            3,
             "MR3"
           ],
           [
-            7,
+            4,
             "MR4"
           ],
           [
-            8,
+            5,
             "RESET"
           ],
           [
-            23,
-            "CNT0"
-          ],
-          [
-            15,
-            "CNT1"
-          ],
-          [
-            22,
-            "CNT2"
-          ],
-          [
-            16,
-            "CNT3"
-          ],
-          [
-            14,
-            "UCS_n"
-          ],
-          [
-            19,
-            "URD_n"
-          ],
-          [
-            18,
-            "UWR_n"
-          ],
-          [
-            20,
-            "UA0"
+            6,
+            "SEL"
           ],
           [
             17,
+            "BB8"
+          ],
+          [
+            19,
+            "UA0"
+          ],
+          [
+            18,
             "UA1"
           ],
           [
-            21,
+            20,
             "UA2"
           ]
         ]
@@ -101108,44 +102140,32 @@
         },
         {
           "pin": 2,
-          "name": "MIO",
-          "net": "MIO",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "MMR",
-          "net": "MMR",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "MMW",
-          "net": "MMW",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
           "name": "MR2",
           "net": "MR2",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 3,
           "name": "MR3",
           "net": "MR3",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 4,
           "name": "MR4",
           "net": "MR4",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 5,
           "name": "RESET",
           "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "SEL",
+          "net": "SEL",
           "kind": "in"
         },
         {
@@ -101155,63 +102175,27 @@
           "kind": "power"
         },
         {
-          "pin": 14,
-          "name": "UCS_n",
-          "net": "UCS_n",
-          "kind": "out"
-        },
-        {
-          "pin": 15,
-          "name": "CNT1",
-          "net": "CNT1",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "CNT3",
-          "net": "CNT3",
-          "kind": "out"
-        },
-        {
           "pin": 17,
+          "name": "BB8",
+          "net": "BB8",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
           "name": "UA1",
           "net": "UA1",
           "kind": "out"
         },
         {
-          "pin": 18,
-          "name": "UWR_n",
-          "net": "UWR_n",
-          "kind": "out"
-        },
-        {
           "pin": 19,
-          "name": "URD_n",
-          "net": "URD_n",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
           "name": "UA0",
           "net": "UA0",
           "kind": "out"
         },
         {
-          "pin": 21,
+          "pin": 20,
           "name": "UA2",
           "net": "UA2",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "CNT2",
-          "net": "CNT2",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "CNT0",
-          "net": "CNT0",
           "kind": "out"
         },
         {
@@ -101253,19 +102237,11 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101275,8 +102251,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1D0",
@@ -101289,35 +102265,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1D0",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1D0",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101347,19 +102295,11 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101369,8 +102309,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1D1",
@@ -101383,35 +102323,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1D1",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1D1",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101441,19 +102353,11 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101463,8 +102367,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1D2",
@@ -101477,35 +102381,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1D2",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1D2",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101535,19 +102411,11 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101557,8 +102425,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1D3",
@@ -101571,35 +102439,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1D3",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1D3",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101629,19 +102469,11 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101651,8 +102483,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1D4",
@@ -101665,35 +102497,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1D4",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1D4",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101731,19 +102535,11 @@
                   false
                 ],
                 [
-                  "CNT0",
-                  true
+                  "T",
+                  false
                 ],
                 [
-                  "CNT1",
-                  true
-                ],
-                [
-                  "CNT2",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   true
                 ]
               ],
@@ -101753,8 +102549,8 @@
                   true
                 ],
                 [
-                  "CNT0",
-                  false
+                  "T",
+                  true
                 ],
                 [
                   "WC1W_n",
@@ -101767,35 +102563,7 @@
                   true
                 ],
                 [
-                  "CNT1",
-                  false
-                ],
-                [
-                  "WC1W_n",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT2",
-                  false
-                ],
-                [
-                  "WC1W_n",
-                  true
-                ]
-              ],
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "CNT3",
+                  "RDYS",
                   false
                 ],
                 [
@@ -101813,51 +102581,43 @@
           ],
           [
             2,
-            "CNT0"
-          ],
-          [
-            3,
-            "CNT1"
-          ],
-          [
-            4,
-            "CNT2"
-          ],
-          [
-            5,
-            "CNT3"
-          ],
-          [
-            6,
             "MDEST0"
           ],
           [
-            7,
+            3,
             "MDEST1"
           ],
           [
-            8,
+            4,
             "MDEST2"
           ],
           [
-            9,
+            5,
             "MDEST3"
           ],
           [
-            10,
+            6,
             "MDEST4"
           ],
           [
-            11,
+            7,
             "MIO"
           ],
           [
-            13,
+            8,
             "MRW"
           ],
           [
-            23,
+            9,
+            "RDYS"
+          ],
+          [
+            10,
             "RESET"
+          ],
+          [
+            11,
+            "T"
           ],
           [
             19,
@@ -101894,62 +102654,62 @@
         },
         {
           "pin": 2,
-          "name": "CNT0",
-          "net": "CNT0",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "CNT1",
-          "net": "CNT1",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "CNT2",
-          "net": "CNT2",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "CNT3",
-          "net": "CNT3",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
           "name": "MDEST0",
           "net": "MDEST0",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 3,
           "name": "MDEST1",
           "net": "MDEST1",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 4,
           "name": "MDEST2",
           "net": "MDEST2",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 5,
           "name": "MDEST3",
           "net": "MDEST3",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 6,
           "name": "MDEST4",
           "net": "MDEST4",
           "kind": "in"
         },
         {
-          "pin": 11,
+          "pin": 7,
           "name": "MIO",
           "net": "MIO",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "MRW",
+          "net": "MRW",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "RDYS",
+          "net": "RDYS",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "T",
+          "net": "T",
           "kind": "in"
         },
         {
@@ -101957,12 +102717,6 @@
           "name": "GND",
           "net": "GND",
           "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "MRW",
-          "net": "MRW",
-          "kind": "in"
         },
         {
           "pin": 16,
@@ -101999,12 +102753,6 @@
           "name": "WC1D4",
           "net": "WC1D4",
           "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
         },
         {
           "pin": 24,
@@ -102501,7 +103249,7 @@
         {
           "pin": 9,
           "name": "CS0",
-          "net": "VCC",
+          "net": "BB8",
           "kind": "in"
         },
         {
@@ -102513,7 +103261,7 @@
         {
           "pin": 11,
           "name": "CS2#",
-          "net": "UCS_n",
+          "net": "GND",
           "kind": "in"
         },
         {
@@ -109611,6 +110359,9 @@
       "name": "CODE"
     },
     {
+      "name": "RDYS"
+    },
+    {
       "name": "SFE"
     },
     {
@@ -109626,22 +110377,13 @@
       "name": "STEP2"
     },
     {
+      "name": "T"
+    },
+    {
       "name": "OEN"
     },
     {
       "name": "DMEN_n"
-    },
-    {
-      "name": "CNT0"
-    },
-    {
-      "name": "CNT1"
-    },
-    {
-      "name": "CNT2"
-    },
-    {
-      "name": "CNT3"
     },
     {
       "name": "DONE"
@@ -109779,13 +110521,59 @@
       "name": "MLSX"
     },
     {
-      "name": "MA0"
+      "name": "BB8",
+      "pull": "low",
+      "role": "bus:bb8"
     },
     {
-      "name": "MA1"
+      "name": "BRDY",
+      "pull": "low",
+      "role": "bus:brdy"
     },
     {
-      "name": "UCS_n"
+      "name": "BRD_n"
+    },
+    {
+      "name": "BWR_n"
+    },
+    {
+      "name": "BACK"
+    },
+    {
+      "name": "CNT0"
+    },
+    {
+      "name": "CNT1"
+    },
+    {
+      "name": "CNT2"
+    },
+    {
+      "name": "CNT3"
+    },
+    {
+      "name": "CNT4"
+    },
+    {
+      "name": "SLOT0"
+    },
+    {
+      "name": "SEL"
+    },
+    {
+      "name": "RDW"
+    },
+    {
+      "name": "K0"
+    },
+    {
+      "name": "K1"
+    },
+    {
+      "name": "K2"
+    },
+    {
+      "name": "K3"
     },
     {
       "name": "URD_n"

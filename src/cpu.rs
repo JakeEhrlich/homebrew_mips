@@ -932,11 +932,11 @@ fn exmem_sd_block() -> Vec<Eq> {
 /// address), and the selected element's sign bit for the load extension.
 fn mem_access_block() -> Vec<Eq> {
     let mut eqs = Vec::new();
-    // Address low bits: the group-0 sum with carry-in 0 (loads and
-    // stores add).  FA31 = the access is I/O.
+    // Address low bits: bit 0's sum (carry-in folded in), bit 1's group-0
+    // sum with carry-in 0 (loads and stores add).
     let (a0, a1) = ("SUM0".to_string(), n("S0_", 1));
     for j in 0..4usize {
-        let (j0, j1) = (j & 1 == 1, j >> 1 & 1 == 1);
+        let j1 = j >> 1 & 1 == 1;
         let mut terms = Vec::new();
         // Byte store not at lane j: the three other lanes.
         for a in 0..4usize {
@@ -946,25 +946,25 @@ fn mem_access_block() -> Vec<Eq> {
         }
         // Halfword store in the other half.
         terms.push(vec![l("XMW"), l("XSZH"), (a1.clone(), !j1)]);
-        let _ = j0;
         eqs.push(Eq::sop(&format!("MBE{j}_n"), Mode::Reg, terms));
     }
-    eqs.push(Eq::sop("MSZB", Mode::Reg, vec![vec![l("XSZB"), nl_(&n("FA", 31))]]));
-    eqs.push(Eq::sop("MSZH", Mode::Reg, vec![vec![l("XSZH"), nl_(&n("FA", 31))]]));
-    eqs.push(Eq::sop("MLSX", Mode::Reg, vec![vec![l("XLSX"), nl_(&n("FA", 31))]]));
-    eqs.push(Eq::sop("MA0", Mode::Reg, vec![vec![l(&a0), nl_(&n("FA", 31))]]));
-    eqs.push(Eq::sop("MA1", Mode::Reg, vec![vec![l(&a1), nl_(&n("FA", 31))]]));
-    // Sign of the selected byte (MSZB) or halfword.
+    eqs.push(Eq::sop("MSZB", Mode::Reg, vec![vec![l("XSZB")]]));
+    eqs.push(Eq::sop("MSZH", Mode::Reg, vec![vec![l("XSZH")]]));
+    eqs.push(Eq::sop("MLSX", Mode::Reg, vec![vec![l("XLSX")]]));
+    // MEM-stage state: held on WAIT like the rest of the pipeline.
+    let mut eqs = with_hold(eqs, "WAIT");
+    // Sign of the selected byte (MSZB) or halfword; the address bits are
+    // the (held) EX/MEM result's.
     eqs.push(Eq::sop(
         "LSGN",
         Mode::Comb,
         vec![
-            vec![l("MSZB"), nl_("MA1"), nl_("MA0"), l(&n("DQ", 7))],
-            vec![l("MSZB"), nl_("MA1"), l("MA0"), l(&n("DQ", 15))],
-            vec![l("MSZB"), l("MA1"), nl_("MA0"), l(&n("DQ", 23))],
-            vec![l("MSZB"), l("MA1"), l("MA0"), l(&n("DQ", 31))],
-            vec![nl_("MSZB"), nl_("MA1"), l(&n("DQ", 15))],
-            vec![nl_("MSZB"), l("MA1"), l(&n("DQ", 31))],
+            vec![l("MSZB"), nl_("MR1"), nl_("MR0"), l(&n("DQ", 7))],
+            vec![l("MSZB"), nl_("MR1"), l("MR0"), l(&n("DQ", 15))],
+            vec![l("MSZB"), l("MR1"), nl_("MR0"), l(&n("DQ", 23))],
+            vec![l("MSZB"), l("MR1"), l("MR0"), l(&n("DQ", 31))],
+            vec![nl_("MSZB"), nl_("MR1"), l(&n("DQ", 15))],
+            vec![nl_("MSZB"), l("MR1"), l(&n("DQ", 31))],
         ],
     ));
     eqs
@@ -984,17 +984,18 @@ fn mem_select_block() -> Vec<Eq> {
         // Not a load (and not waiting): WD takes the ALU result.
         Eq::sop("MNR", Mode::Comb, vec![vec![nl_("MMR"), nl_("WAIT")]]),
         // Bits 7:0 from DQ lane 0 / 1 / 2 / 3.
-        Eq::sop("ML0", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH")]), with(vec![l("MSZH"), nl_("MA1")]), with(vec![l("MSZB"), nl_("MA1"), nl_("MA0")])]),
-        Eq::sop("ML1", Mode::Comb, vec![with(vec![l("MSZB"), nl_("MA1"), l("MA0")])]),
-        Eq::sop("ML2", Mode::Comb, vec![with(vec![l("MSZH"), l("MA1")]), with(vec![l("MSZB"), l("MA1"), nl_("MA0")])]),
-        Eq::sop("ML3", Mode::Comb, vec![with(vec![l("MSZB"), l("MA1"), l("MA0")])]),
+        Eq::sop("ML0", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH")]), with(vec![l("MSZH"), nl_("MR1")]), with(vec![l("MSZB"), nl_("MR1"), nl_("MR0")])]),
+        Eq::sop("ML1", Mode::Comb, vec![with(vec![l("MSZB"), nl_("MR1"), l("MR0")])]),
+        Eq::sop("ML2", Mode::Comb, vec![with(vec![l("MSZH"), l("MR1")]), with(vec![l("MSZB"), l("MR1"), nl_("MR0")])]),
+        Eq::sop("ML3", Mode::Comb, vec![with(vec![l("MSZB"), l("MR1"), l("MR0")])]),
         // Bits 15:8: own lane (word, or halfword from the low half), the
-        // high half's low byte, or the byte's sign.
-        Eq::sop("MW8", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("MIO")]), with(vec![l("MSZH"), nl_("MA1")])]),
-        Eq::sop("MH1", Mode::Comb, vec![with(vec![l("MSZH"), l("MA1")])]),
+        // high half's low byte, or the byte's sign.  A byte device (BB8)
+        // drives lane 0 only: its upper bytes read as zero.
+        Eq::sop("MW8", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("BB8")]), with(vec![l("MSZH"), nl_("MR1")])]),
+        Eq::sop("MH1", Mode::Comb, vec![with(vec![l("MSZH"), l("MR1")])]),
         Eq::sop("MSB", Mode::Comb, vec![with(vec![l("MSZB"), l("MLSX")])]),
         // Bits 31:16: own lane (word) or the sign.
-        Eq::sop("MW16", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("MIO")])]),
+        Eq::sop("MW16", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("BB8")])]),
         Eq::sop("MSN", Mode::Comb, vec![with(vec![l("MSZB"), l("MLSX")]), with(vec![l("MSZH"), l("MLSX")])]),
     ]
 }
@@ -1130,12 +1131,11 @@ fn stall_block() -> Vec<Eq> {
         // Data memory CE# (low = selected): off during the boot code phase
         // and during an I/O access (the UART has the bus).
         Eq::sop("DMEN_n", Mode::Comb, vec![vec![l("BOOTCNT"), l("CODE")], vec![l("MIO")]]),
-        // Bus wait: an I/O access holds the whole pipeline for IO_CYCLES
-        // clocks (the wait counter runs while MIO; the access ends when
-        // it reaches its last value).  WAIT holds MEM/WB; HOLDW = HOLD |
-        // WAIT holds PC and IF/ID.  ID/EX and EX/MEM need no hold input:
-        // their inputs are functions of held registers, so they recapture
-        // the same values every cycle.
+        // Bus wait: an I/O access holds the whole pipeline until the bus
+        // controller has registered the device's ready (RDYS) and is not
+        // in the turnaround cycle after a transfer (T).  See docs/bus.md.
+        // WAIT holds ID/EX, EX/MEM and MEM/WB; HOLDW = HOLD | WAIT holds
+        // PC and IF/ID.
         Eq::sop("WAIT", Mode::Comb, wait_terms()),
         Eq::sop("HOLDW", Mode::Comb, { let mut t = hold_terms(); t.extend(wait_terms()); t }),
     ]
@@ -1155,66 +1155,91 @@ fn hold_terms() -> Vec<Vec<SLit>> {
     ]
 }
 
-/// WAIT = MIO & (CNT != IO_CYCLES - 1).
+/// WAIT = MIO & (T | !RDYS): the access in MEM has not been acknowledged.
 fn wait_terms() -> Vec<Vec<SLit>> {
-    (0..IO_CNT_BITS)
-        .map(|b| {
-            let last = (IO_CYCLES - 1) >> b & 1 == 1;
-            vec![l("MIO"), (n("CNT", b), !last)]
-        })
-        .collect()
+    vec![vec![l("MIO"), l("T")], vec![l("MIO"), nl_("RDYS")]]
+}
+/// The complement of [`wait_terms`] as a sum of products.
+fn not_wait_terms() -> Vec<Vec<SLit>> {
+    vec![vec![nl_("MIO")], vec![nl_("T"), l("RDYS")]]
 }
 
-/// Clock cycles an I/O access holds the pipeline (see docs/uart.md): the
-/// UART's read cycle in FIFO mode wants 425 ns between reads, and the
-/// pipeline is frozen anyway, so every access takes this long.
-pub const IO_CYCLES: usize = 16;
-const IO_CNT_BITS: usize = 4;
+/// Bus timeout: cycles without a ready before the controller completes
+/// the access by itself (an empty slot returns garbage, not a hang).
+pub const BUS_TIMEOUT: usize = 31;
+const BUS_CNT_BITS: usize = 5;
 
-/// Bus-wait sequencer: the wait counter, the UART's strobes, chip select
-/// and registered address (held for the strobe's hold times after the
-/// pipeline moves on).  All registers reset synchronously (RESET is a
-/// data input); see docs/uart.md for the cycle-by-cycle timing.
-fn wseq_block() -> Vec<Eq> {
-    let cnt: Vec<String> = (0..IO_CNT_BITS).map(|b| n("CNT", b)).collect();
+/// The bus controller (see docs/bus.md): the strobes, the registered
+/// ready, the turnaround flag and the timeout counter.  All registers
+/// reset synchronously (RESET is a data input).
+///
+/// - RDYS <- (BRDY | timeout) & MIO & !T: the device was ready during a
+///   strobe cycle; the next cycle is the transfer cycle.
+/// - T <- RDYS & MIO & !T: the previous edge transferred; the strobes
+///   are off for this one cycle so a back-to-back access starts clean.
+/// - BRD_n / BWR_n: combinational from MIO, the direction and T.
+/// - BACK: the transfer cycle, for devices that need the edge.
+fn bus_block() -> Vec<Eq> {
+    let cnt: Vec<String> = (0..BUS_CNT_BITS).map(|b| n("CNT", b)).collect();
+    let mut eqs = vec![
+        Eq::sop("RDYS", Mode::Reg, vec![vec![l("BRDY"), l("MIO"), nl_("T")], { let mut t: Vec<SLit> = cnt.iter().map(|c| l(c)).collect(); t.extend([l("MIO"), nl_("T")]); t }]),
+        Eq::sop("T", Mode::Reg, vec![vec![l("RDYS"), l("MIO"), nl_("T")]]),
+        Eq::sop("BRD_n", Mode::Comb, vec![vec![l("MIO"), l("MMR"), nl_("T")]]).active_low(),
+        Eq::sop("BWR_n", Mode::Comb, vec![vec![l("MIO"), l("MMW"), nl_("T")]]).active_low(),
+        Eq::sop("BACK", Mode::Comb, vec![vec![l("MIO"), l("RDYS"), nl_("T")]]),
+    ];
+    // CNT <- (MIO & !T & !RDYS) ? CNT + 1 : 0, saturating at the timeout.
     let mut ins: Vec<String> = cnt.clone();
-    ins.extend(["MIO", "MMR", "MMW"].map(String::from));
+    ins.extend(["MIO", "T", "RDYS"].map(String::from));
     let ins = strs(&ins);
-    let c = |m: u32| (m & 0xF) as usize;
-    let mio = |m: u32| m >> 4 & 1 == 1;
-    let mmr = |m: u32| m >> 5 & 1 == 1;
-    let mmw = |m: u32| m >> 6 & 1 == 1;
-    let mut eqs = Vec::new();
-    // CNT <- MIO ? CNT + 1 mod 2^bits : 0.
-    for b in 0..IO_CNT_BITS {
-        eqs.push(Eq::table_pos(&cnt[b], Mode::Reg, &ins, move |m| Some(mio(m) && ((c(m) + 1) % IO_CYCLES) >> b & 1 == 1)));
+    let c = |m: u32| (m & 0x1F) as usize;
+    let run = |m: u32| m >> 5 & 1 == 1 && m >> 6 & 1 == 0 && m >> 7 & 1 == 0;
+    for b in 0..BUS_CNT_BITS {
+        eqs.push(Eq::table_pos(&cnt[b], Mode::Reg, &ins, move |m| Some(run(m) && (c(m) + 1).min(BUS_TIMEOUT) >> b & 1 == 1)));
     }
-    // Chip select follows MIO one cycle late (registered), so it stays
-    // for a cycle after the access ends: the strobe's hold time.
-    eqs.push(Eq::sop("UCS_n", Mode::Reg, vec![vec![l("MIO")]]).active_low());
-    // Read strobe: cycles 2 .. IO_CYCLES-1 of the access, i.e. registered
-    // from CNT in 1 .. IO_CYCLES-2.  It ends after the edge on which
-    // MEM/WB captures the data, and the address / chip select are held
-    // a cycle beyond.
-    eqs.push(Eq::table_pos("URD_n", Mode::Reg, &ins, move |m| Some(mio(m) && mmr(m) && (1..=IO_CYCLES - 2).contains(&c(m)))).active_low());
-    // Write strobe: cycles 2 .. IO_CYCLES-2, ending a cycle before the
-    // store-data drivers let go (data hold).
-    eqs.push(Eq::table_pos("UWR_n", Mode::Reg, &ins, move |m| Some(mio(m) && mmw(m) && (1..=IO_CYCLES - 3).contains(&c(m)))).active_low());
-    // Register select: MR[4:2] captured on the access's first edge (CNT
-    // = 0) and held while the counter runs.
-    let hold: Vec<Vec<SLit>> = (0..IO_CNT_BITS).map(|b| vec![l(&cnt[b])]).collect();
+    eqs
+}
+
+/// The UART's bus adapter (see docs/bus.md and docs/uart.md): device
+/// slot 0.  Turns a bus access into the 16550's strobes, holds the
+/// register select for the strobe's address hold time, and answers
+/// ready after the strobe has been long enough (reads: 13 cycles, for
+/// the 40 ns strobe and the 425 ns FIFO read spacing; writes: 3, then a
+/// cycle of data hold before the transfer).  Its select output is also
+/// the bus byte-device flag (BB8) and the 16550's CS0.
+fn uart_adapter_block() -> Vec<Eq> {
+    let k: Vec<String> = (0..4).map(|b| n("K", b)).collect();
+    let mut ins: Vec<String> = k.clone();
+    ins.extend(["SEL", "RDW", "BRD_n", "BWR_n", "SLOT0"].map(String::from));
+    let ins = strs(&ins);
+    let kv = |m: u32| (m & 0xF) as usize;
+    let sel = |m: u32| m >> 4 & 1 == 1;
+    let rdw = |m: u32| m >> 5 & 1 == 1;
+    let strobe = |m: u32| (m >> 6 & 1 == 0 || m >> 7 & 1 == 0) && m >> 8 & 1 == 1;
+    let last = |m: u32| if rdw(m) { 15 } else { 6 };
+    let mut eqs = vec![
+        // Slot decode: A[26:23] == 0.
+        Eq::sop("SLOT0", Mode::Comb, vec![vec![nl_(&n("MR", 23)), nl_(&n("MR", 24)), nl_(&n("MR", 25)), nl_(&n("MR", 26))]]),
+        // Selected from the strobe until the count runs out.
+        Eq::table_pos("SEL", Mode::Reg, &ins, move |m| Some(if sel(m) { kv(m) < last(m) } else { strobe(m) })),
+        // Direction, captured with SEL.
+        Eq::table_pos("RDW", Mode::Reg, &ins, move |m| Some(if sel(m) { rdw(m) } else { m >> 6 & 1 == 0 })),
+    ];
+    for b in 0..4 {
+        eqs.push(Eq::table_pos(&k[b], Mode::Reg, &ins, move |m| Some(sel(m) && (kv(m) + 1) >> b & 1 == 1)));
+    }
+    // Read strobe: K = 1 ..= 13 (through the transfer cycle: the 16550
+    // holds its data while RD is low).  Ready at K = 12.
+    eqs.push(Eq::table_pos("URD_n", Mode::Reg, &ins, move |m| Some(sel(m) && rdw(m) && (0..=12).contains(&kv(m)))).active_low());
+    // Write strobe: K = 1 ..= 3; ready at K = 4, a cycle after it ended
+    // (data hold), transfer at the end of K = 5.
+    eqs.push(Eq::table_pos("UWR_n", Mode::Reg, &ins, move |m| Some(sel(m) && !rdw(m) && (0..=2).contains(&kv(m)))).active_low());
+    eqs.push(Eq::table_pos("BRDY", Mode::Comb, &ins, move |m| Some(sel(m) && kv(m) == if rdw(m) { 12 } else { 4 })).with_oe(vec![l("SEL")]));
+    // Byte device: high while selected, released otherwise (pulled down).
+    eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![l("SEL")]]).with_oe(vec![l("SEL")]));
+    // Register select, captured at the start and held to the end.
     for i in 0..3 {
-        let mut terms = vec![{
-            let mut t: Vec<SLit> = cnt.iter().map(|c| nl_(c)).collect();
-            t.push(l(&n("MR", i + 2)));
-            t
-        }];
-        for h in &hold {
-            let mut t = h.clone();
-            t.push(l(&n("UA", i)));
-            terms.push(t);
-        }
-        eqs.push(Eq::sop(&n("UA", i), Mode::Reg, terms));
+        eqs.push(Eq::sop(&n("UA", i), Mode::Reg, vec![vec![nl_("SEL"), l(&n("MR", i + 2))], vec![l("SEL"), l(&n("UA", i))]]));
     }
     eqs
 }
@@ -1277,7 +1302,7 @@ fn memwb_block() -> Vec<Eq> {
     // Load data by lane, from the one-hot selects (mem_select_block):
     // bits 7:0 from any DQ byte, bits 15:8 from their own lane or the
     // high half or the sign, bits 31:16 from their own lane or the
-    // sign.  Bits 8..31 of an I/O load are zero (the selects see MIO).
+    // sign.  Bits 8..31 from a byte device are zero (the selects see BB8).
     // With no select active (a bus wait) the register recirculates.
     let mut eqs: Vec<Eq> = (0..32)
         .map(|i| {
@@ -1347,13 +1372,10 @@ fn wcopy1_block() -> Vec<Eq> {
     eqs.push(Eq::sop("WC1W_n", Mode::Reg, vec![vec![nl_("MRW"), nl_("RESET")]]));
     // Bus wait: the pipeline holds at the next edge, so the WB instruction
     // stays and the copy must too.  WAIT itself is combinational and would
-    // miss the T3 window; MIO and the counter are registered (valid 5.5 ns
+    // miss the T3 window; MIO, T and RDYS are registered (valid 5.5 ns
     // after the edge, 9.5 ns before the window), so the condition is
-    // rebuilt here: hold while MIO and CNT != IO_CYCLES - 1.
-    let not_wait: Vec<Vec<SLit>> = vec![
-        vec![nl_("MIO")],
-        (0..IO_CNT_BITS).map(|b| (n("CNT", b), (IO_CYCLES - 1) >> b & 1 == 1)).collect(),
-    ];
+    // rebuilt from them here.
+    let not_wait = not_wait_terms();
     with_hold_sop(eqs, &not_wait, &wait_terms())
 }
 
@@ -1497,7 +1519,8 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("macc", clk, None, mem_access_block()));
     v.extend(pack("msel", None, None, mem_select_block()));
     v.extend(pack("sf", None, None, sf_block()));
-    v.extend(pack("wseq", clk, None, with_bubble(wseq_block(), "RESET")));
+    v.extend(pack("bus", clk, None, with_bubble(bus_block(), "RESET")));
+    v.extend(pack("uadp", clk, None, with_bubble(uart_adapter_block(), "RESET")));
     v.extend(pack("wc1", Some("T3"), None, wcopy1_block()));
     v.extend(pack("wc2", Some("T1"), None, wcopy2_block()));
     v
@@ -1542,7 +1565,7 @@ pub fn layout() -> Vec<Column> {
         col("", 240, &["ID/EX control", "Forwarding control", "ID/EX A", "ID/EX B", "ID/EX store data", "ID/EX branch target"], true),
         col("EX", 330, &["Forward A", "Forward B", "ALU slices + carries", "Shifter", "Compare", "Next PC"], false),
         col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Access size", "Stall"], true),
-        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "Bus wait", "UART", "Serial port"], false),
+        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "Bus controller", "UART adapter", "UART", "Serial port"], false),
         col("", 240, &["MEM/WB", "Write copies"], true),
         col("WB", 170, &[], false),
     ]
@@ -1644,15 +1667,21 @@ pub fn build_netlist(p: &Params) -> Netlist {
             let net = nl.net(&n("UA", i as usize));
             nl.connect(net, c, uart_pin_of(UartPin::A(i)));
         }
-        for (net, p) in [("UCS_n", UartPin::Cs2N), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout)] {
+        // CS0 is the adapter's select (also the bus byte-device flag);
+        // CS1 high, CS2# low.
+        for (net, p) in [("BB8", UartPin::Cs0), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout)] {
             let net = nl.net(net);
             nl.connect(net, c, uart_pin_of(p));
         }
-        for p in [UartPin::Cs0, UartPin::Cs1] {
-            nl.connect(vcc, c, uart_pin_of(p));
-        }
-        for p in [UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
+        nl.connect(vcc, c, uart_pin_of(UartPin::Cs1));
+        for p in [UartPin::Cs2N, UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
             nl.connect(gnd, c, uart_pin_of(p));
+        }
+        // Bus lines driven by whichever device is selected: pulled down.
+        for name in ["BRDY", "BB8"] {
+            let net = nl.net(name);
+            nl.pull(net, Level::L);
+            nl.set_net_role(net, &format!("bus:{}", name.to_lowercase()));
         }
         for (net, pins) in [("URTS_n", vec![32, 38]), ("UDTR_n", vec![33, 39, 40]), ("UBAUD", vec![12, 5])] {
             let net = nl.net(net);
@@ -2293,7 +2322,8 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "dl" => ("Delay line", "CLK"),
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
-        "wseq" => ("Bus wait", "MEM"),
+        "bus" => ("Bus controller", "MEM"),
+        "uadp" => ("UART adapter", "MEM"),
         "macc" => ("Access size", "EX/MEM"),
         "msel" => ("Load lane select", "MEM"),
         "sf" => ("Narrow-store hold", "ID"),

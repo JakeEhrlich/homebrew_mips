@@ -1420,7 +1420,10 @@ impl Sim {
     fn resolve_excluding(&self, net: NetId, chip: ChipId, pin: usize) -> Level {
         let n = &self.nets[net];
         let others = n.pins.iter().filter(|&&(c, p)| !(c == chip && p == pin)).map(|&(c, p)| self.drives[c][p]);
-        resolve(others.chain([n.tie, self.ext[net]]), n.pull)
+        // A pull resistor only matters to a pin that listens: a driver
+        // (tri-stated or not) is never "fought" by the pull.
+        let pull = if self.chips[chip].1.pin_kind(pin) == PinKind::In { n.pull } else { Level::Z };
+        resolve(others.chain([n.tie, self.ext[net]]), pull)
     }
 
     fn recompute_values(&mut self) {

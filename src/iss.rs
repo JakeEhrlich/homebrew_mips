@@ -43,6 +43,14 @@ pub fn is_io(base: u32) -> bool {
     base & 0x8000_0000 != 0
 }
 
+/// Device slot of an I/O address: A[26:23] (docs/bus.md).
+pub fn io_slot(addr: u32) -> u32 {
+    addr >> 23 & 0xF
+}
+
+/// The UART's slot.
+pub const UART_SLOT: u32 = 0;
+
 impl Cpu {
     pub fn new() -> Self {
         Cpu {
@@ -155,31 +163,40 @@ impl Cpu {
                     Op::Lui => self.set_reg(rt_n, zext << 16),
                     Op::Lw | Op::Lb | Op::Lbu | Op::Lh | Op::Lhu => {
                         let addr = rs.wrapping_add(sext);
-                        let v = if is_io(rs) {
-                            // I/O: the UART byte, on lane 0 whatever the size.
-                            let v = self.uart.read((addr >> 2 & 7) as u8) as u32;
-                            self.uart.drain();
-                            v
-                        } else {
-                            // Little-endian lanes; unaligned addresses are
-                            // undefined on the board, so they are not
-                            // masked here either: the low bits select.
-                            let word = self.load_word(addr);
-                            match op {
-                                Op::Lw => word,
-                                Op::Lb => (word >> (8 * (addr & 3))) as u8 as i8 as i32 as u32,
-                                Op::Lbu => (word >> (8 * (addr & 3))) as u8 as u32,
-                                Op::Lh => (word >> (16 * (addr >> 1 & 1))) as u16 as i16 as i32 as u32,
-                                _ => (word >> (16 * (addr >> 1 & 1))) as u16 as u32,
+                        // The word on the bus: memory, or the device (the
+                        // UART is a byte device: its byte on lane 0, zero
+                        // above; an empty slot reads as zero here, garbage
+                        // on the board).  Then the lane and extension as
+                        // for any load.  Little-endian lanes; unaligned
+                        // addresses are undefined on the board, so they
+                        // are not masked here either: the low bits select.
+                        let word = if is_io(rs) {
+                            if io_slot(addr) == UART_SLOT {
+                                let v = self.uart.read((addr >> 2 & 7) as u8) as u32;
+                                self.uart.drain();
+                                v
+                            } else {
+                                0
                             }
+                        } else {
+                            self.load_word(addr)
+                        };
+                        let v = match op {
+                            Op::Lw => word,
+                            Op::Lb => (word >> (8 * (addr & 3))) as u8 as i8 as i32 as u32,
+                            Op::Lbu => (word >> (8 * (addr & 3))) as u8 as u32,
+                            Op::Lh => (word >> (16 * (addr >> 1 & 1))) as u16 as i16 as i32 as u32,
+                            _ => (word >> (16 * (addr >> 1 & 1))) as u16 as u32,
                         };
                         self.load_delay = Some((rt_n, v));
                     }
                     Op::Sw | Op::Sb | Op::Sh => {
                         let addr = rs.wrapping_add(sext);
                         if is_io(rs) {
-                            self.uart.write((addr >> 2 & 7) as u8, rt as u8);
-                            self.uart.drain();
+                            if io_slot(addr) == UART_SLOT {
+                                self.uart.write((addr >> 2 & 7) as u8, rt as u8);
+                                self.uart.drain();
+                            }
                         } else {
                             let old = self.load_word(addr);
                             let v = match op {

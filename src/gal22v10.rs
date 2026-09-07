@@ -521,6 +521,14 @@ impl Gal22v10 {
                 g.olmc[k].out = xor_pol(v, g.cfg.olmc[k].active_low);
             }
         }
+        // Likewise output enables from a product term over known inputs
+        // (a tri-state driver enabled by the chip's own register is off at
+        // power-up, not unknown).
+        for k in 0..OLMCS {
+            if let Oe::Term(t) = &g.cfg.olmc[k].oe {
+                g.olmc[k].oe = g.eval_term_x(t);
+            }
+        }
         for k in 0..OLMCS {
             g.refresh_io_pin(k);
         }
