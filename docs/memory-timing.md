@@ -5,9 +5,10 @@ datasheet value or a margin the simulator computes from datasheet values; the
 places where the simulator cannot see the board (clock skew, trace delay) are
 called out as PCB requirements with the margin they must fit into.
 
-Status: simulated clean at 32 to 40 ns clock period, for delay-line tolerance
-grades room, commercial (0..70 C) and industrial, with every CPU test program
-(`cargo test --release`, `tests/memory_timing.rs`, `tests/cpu.rs`).
+Status: simulated clean with every CPU test program (`cargo test --release`,
+`tests/memory_timing.rs`, `tests/cpu.rs`) at commercial-grade delay-line
+tolerance (0..70 C): from 33 ns with the IS61C256AH-12 data SRAM, from 37 ns
+with the AS7C164A-15. The register file is clean from 32 ns.
 
 ## 1. The problem this solves
 
@@ -35,15 +36,22 @@ consequences.
 
 ## 2. The scheme in one paragraph
 
-Both SRAM write ports have their chip enable driven directly by CLK. The write
-is the clock's low half (17 ns) and ends exactly at the rising edge. The
-address and write flag for each write port come from a copy register clocked
-by a delay-line tap, so they are valid before the low half starts and hold
-until well after the edge that ends the write. Write data comes from an
-ordinary edge-clocked register, which is enough because both parts have zero
-data hold. Reads never share a port with writes: the register file already had
-separate read ports, and the data memory becomes dual-port for the same
-reason. Nothing else in the machine changed.
+Register file: the write port's chip enable is driven directly by CLK. The
+write is the clock's low half (17 ns) and ends exactly at the rising edge. The
+port's address and write flag come from a copy register clocked by a
+delay-line tap, so they are valid before the low half starts and hold until
+well after the edge that ends the write; the data comes from the ordinary
+edge-clocked write-back register (zero data hold). Reads use the other port.
+
+Data memory (single-port): the chip stays selected, so reads hold their data
+past the edge. The write is a pulse on WE# made from one delay-line tap ANDed
+with the store flag in a single fast gate, during the store's own MEM cycle,
+so the address is the EX/MEM result register as before and the pulse ends a
+few ns before the edge that changes it. The memory's output enable is a
+registered signal raised a cycle early so the bus is free when the store-data
+drivers turn on. Two one-cycle interlocks in ID (a load right behind a store,
+a store right behind a load) keep loads away from the cycles where the outputs
+are off.
 
 ## 3. Parts
 
@@ -51,14 +59,12 @@ reason. Nothing else in the machine changed.
 |---|---|---|
 | Register file | 8 x CY7C131-15 (1K x 8 dual-port) | unchanged |
 | Instruction memory | 4 x AS7C164A-15 (8K x 8) | unchanged, read only, no strobes |
-| Data memory | 4 x IDT7006S15 or CY7C006-15 (16K x 8 dual-port, PLCC-68) | **new**; 64 KB; timing modelled with the CY7C131-15 numbers, to be confirmed against the 7006 datasheet before layout |
-| Delay line | 1 x DS1100-30 (taps 6, 12, 18, 24, 30 ns) | **new**; taps 1 and 3 used |
-| Logic | 145 x ATF22V10C-7 | was 132; +4 write copies, +4 write-data copy, +1 stall, +4 from adding a hold input to pipeline registers |
+| Data memory | 4 x IS61C256AH-12 (32K x 8, 5 V, DIP-28) at 34 ns, or 4 x AS7C164A-15 (8K x 8) at 37 ns | same JEDEC footprint: pins 1 and 26 are A14 / A13 on the 32K part, NC / CE2 on the 8K part; jumper both to ground (CE2 high for the 8K part) |
+| Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
+| Write gate | 1 x 2-input NAND, 74LVC1G00 or NC7SZ00 class, SOT-23-5 | **new**; modelled as 1.0 to 4.5 ns propagation, confirm against the part's 5 V datasheet |
+| Logic | 136 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
 
-Total 162 chips.
-
-The AS7C164A-15 and IS61C256AH-12 grades are both in the simulator
-(`as7c164a::Timing`); data memory does not use them any more.
+Total 154 chips plus the gate.
 
 ## 4. The clock
 
@@ -67,8 +73,8 @@ The AS7C164A-15 and IS61C256AH-12 grades are both in the simulator
   at least 14 ns after the rising edge for the register file steer (section 5).
   Use a 45/55 % or better oscillator, or an exact divide-by-two from a doubled
   oscillator in a GAL.
-- The clock drives every GAL clock pin, both SRAM write-port enables (8 + 4
-  pins) and the delay line input.
+- The clock drives every GAL clock pin, the eight register-file write-port
+  enables and the two delay-line inputs.
 
 ### 4.1 Skew budget
 
@@ -79,20 +85,21 @@ enable pin and at the GAL clock pins whose outputs it races. N is:
 | Race | N | Where |
 |---|---|---|
 | GAL to GAL hold (tCO min 2, tH 0), everywhere | 2 | whole pipeline, unchanged |
-| Data hold at both write ports (tHD 0), WD / WSD change 2 ns after the edge | 2 | MEM/WB chips vs SRAM enable |
-| Read data hold at the data memory read port (tOHA 0 after address change) | 2 | EX/MEM address chips vs MEM/WB capture |
-| Address hold at both write ports (tHA 2), copies change 5 ns after the edge at commercial grade | 3 | copy chips vs SRAM enable |
-| Write start after steer (steer settled at 13, write starts at 17) | 4 | steer chip vs SRAM enable (helped, not hurt, by early SRAM clock) |
+| Register-file data hold (tHD 0): WD changes 2 ns after the edge | 2 | MEM/WB chips vs register-file CE |
+| Register-file address hold (tHA 2): copies change 5 ns after the edge at commercial grade | 3 | copy chips vs register-file CE |
+| Register-file write start after steer (steer settled at 13, write starts at 17) | 4 | steer chip vs register-file CE (helped by an early SRAM clock) |
+| Data memory write end (gate) before MR changes at 36 | 3.5 | delay-line input vs EX/MEM chips |
+| Data memory read hold (tOHA 2 after the address changes at 36) | 2 | EX/MEM chips vs MEM/WB capture |
 
-The board must keep skew under about 1 ns between the SRAM enable pins and the
-GAL clock pins named above. Concretely:
+The board must keep skew under about 1 ns between the register-file enable
+pins, the delay-line input, and the GAL clock pins named above. Concretely:
 
 1. One clock buffer family with a specified output-to-output skew (0.25 to
    0.5 ns class, e.g. a 74FCT3807-type 1:10 driver at 5 V).
-2. The buffer output that clocks the EX/MEM and MEM/WB register chips also
-   drives the four data-memory write-port enables; the output that clocks the
-   MEM/WB chips also drives the eight register-file write-port enables. Only
-   intra-device skew then applies to the races above.
+2. The buffer output that clocks the MEM/WB chips also drives the eight
+   register-file write-port enables; the output that clocks the EX/MEM chips
+   also feeds the two delay lines. Only intra-device skew then applies to the
+   races above.
 3. Trace lengths of those enable nets matched to the corresponding GAL clock
    nets within about 3 cm (6.5 ps/mm on FR4).
 4. Bias: if anything, make the SRAM enable traces the shorter ones. An early
@@ -156,50 +163,67 @@ completes inside the instruction's own WB cycle.
 
 ## 6. Data memory
 
-Four 16K x 8 dual-port SRAMs, one per byte lane. A13 of the write port is the
-idle park (addresses 8K..16K are never read), so the board wires it exactly
-like the register file's A5.
+Four single-port SRAMs, one per byte lane, always selected (CE# low, CE2
+high). Pins:
 
 | Pin | Net | Source |
 |---|---|---|
-| Read port A0-12 | MR[14:2] | EX/MEM result |
-| Read port A13 | GND | |
-| Read port CE | MMR_n | EX/MEM control; low only during a load's MEM cycle |
-| Read port R/W, OE | VCC, GND | read, always output-enabled |
-| Read port IO | DQ[31:0] | to MEM/WB |
-| Write port CE | CLK | clock buffer |
-| Write port R/W, A13 | DWE_n | copy stage 2, low = write; high parks at 8K..16K |
-| Write port A0-12 | DA[12:0] | copy stage 2 |
-| Write port IO | WSD[31:0] | WB-stage copy of the store data (chips wsd*) |
-| Write port OE | VCC | port never drives |
-| BUSY, INT (both ports) | pulled up | unused |
+| A0-12 | MR[14:2] | EX/MEM result: load address, or store address during the store's MEM cycle |
+| DQ | DQ[31:0] | driven by the SRAMs during loads (and whenever OE# is low), by the EX/MEM store-data drivers (chips msd*) during a store's MEM cycle |
+| OE# | OEN | registered (chip stl0): high during a store's EX cycle, its MEM cycle and the cycle after |
+| WE# | WEN | the gate: NAND(U1, MMW), U1 = CLK delayed 8 ns (DS1100-40 tap 1), MMW = store in MEM |
 
-The write happens in the store's WB cycle: stage 1 samples MR and MMW at T3
-of the MEM cycle, stage 2 re-times them at T1 of the WB cycle, and WSD
-captures the forwarded store data at the edge that begins the WB cycle. The
-write is the low half of that cycle. Margins are the same as the register
-file's (same copy stages, same datasheet numbers), except there is no steer
-and no bus turnaround: the write port has its own data pins and never drives.
+### 6.1 The write pulse
 
-Loads: read port selected and addressed 2 to 5.5 ns into the MEM cycle, data
-at 5.5 + 15 = 20.5 ns, captured at 34 with 3.5 setup: 10 ns margin. Hold:
-address and select change at 36, tOHA 0: 2 - skew.
+Nominal: WE# falls at 8 ns plus the gate delay, rises at 25 ns (the tap's
+falling edge, half a period after its rising edge) plus the gate delay.
+Windows at commercial grade (tap +-3 ns, gate 1.0 to 4.5 ns), 34 ns period:
 
-### 6.1 Load-after-store interlock
+| Event | Window | Constraint | Margin |
+|---|---|---|---|
+| Write start | 6 to 15.5 | address (MR) valid at 5.5, tAS 0; data (msd) valid at 5.5 | 0.5 |
+| Write end | 23 to 32.5 | before MR changes at 36 (tWR 0) | 3.5 - skew |
+| Pulse width | >= 23 - 15.5 = 7.5 at 34 ns; grows by half the period increase | tPWE 8 (IS61C256AH-12), 10 (AS7C164A-15) | met at 33 ns / 37 ns |
+| Data setup to write end | msd valid 5.5, end >= 23 | tSD 7 / 8 | 9.5 |
 
-A load in MEM during a store's WB cycle would select the read port while the
-write port is active. If the addresses matched, the arbitration would inhibit
-the write (the read port, selected earlier, wins). The read port is selected
-only during loads precisely so that no other instruction can cause this. For
-the remaining case, a load immediately behind a store, the pipeline holds one
-cycle (`cpu::stall_block`): PC, IF/ID, ID/EX and MEM/WB keep their values,
-EX/MEM takes a bubble (the store has already been captured by the copies), and
-the load enters MEM after the write has ended. `HELD` limits it to one cycle.
-Cost: one extra cycle per store-then-load pair. A compiler or rewriter that
-separates them avoids it.
+The pulse width is the binding constraint and the reason the two parts have
+different operating points: half a period minus twice the tap tolerance minus
+the gate's delay range must exceed the part's minimum pulse.
 
-This is also the machinery a bus-wait for slow peripherals will reuse, with
-one addition: a wait must hold EX/MEM rather than bubble it.
+### 6.2 Reads and bus turnaround
+
+Loads: address at 5.5, data at 17.5 (12 ns part) or 20.5 (15 ns part),
+captured at the edge with 3.5 ns setup. Data holds 2 to 3 ns after the
+address changes at 36 (tOHA): 2 - skew, the machine's standard hold margin.
+
+Around a store the bus changes hands once each way, and both handovers are
+kept a full cycle apart from any read:
+
+- OEN goes high at 2 to 5.5 ns into the store's EX cycle (it is registered
+  from the decode of a store in ID), so the SRAM outputs are off by 12.5 ns
+  of that cycle, long before the store-data drivers turn on at 5 to 13 ns of
+  the MEM cycle.
+- OEN stays high through the cycle after the MEM cycle, so the outputs come
+  back only at 2 to 12.5 ns of the second cycle after the store, by which
+  time the drivers have been off for a full cycle.
+
+Being registered, OEN cannot glitch at the EX-to-MEM handover; a
+combinational OR of the two store flags did, and the simulator caught it as a
+bus conflict.
+
+### 6.3 Interlocks
+
+A load in ID right behind a store in EX, or a store in ID right behind a load
+in EX, is held in ID for one cycle (`cpu::stall_block`): PC and IF/ID keep
+their values and ID/EX takes a bubble, while EX, MEM and WB proceed. The
+first case keeps the load out of the cycle where the outputs are still off;
+the second lets the load finish before OEN goes high for the store. Cost:
+one cycle per adjacent load/store pair; instructions that separate them avoid
+it. One consequence: a store in a load's delay slot that stores the loaded
+register sees the new value rather than the old one. MIPS I leaves that read
+undefined and the test programs avoid it.
+
+This is also the machinery a bus-wait for slow peripherals will reuse.
 
 ## 7. Reset
 
@@ -222,7 +246,10 @@ one addition: a wait must hold EX/MEM rather than bubble it.
 
 ## 8. Delay line
 
-DS1100-30 (8-pin DIP, 5 V). Input: CLK. Taps used: T1 (6 ns) and T3 (18 ns).
+Two DS1100 (8-pin DIP, 5 V), both fed by CLK. DS1100-30: taps T1 (6 ns) and
+T3 (18 ns) clock the register-file copies. DS1100-40: tap U1 (8 ns) is the
+write gate's timing input; its rising edge starts the data-memory write
+pulse and its falling edge ends it.
 Tolerance per tap: +-2 ns at 25 C, +-3 ns over 0..70 C, +-4 ns over -40..85 C.
 Both are modelled as independent unknown windows, which is more pessimistic
 than the part (all taps drift together). Datasheet note 9: "at or near
@@ -231,10 +258,9 @@ sensitive (decoupling, layout)". The input pulse width (17 ns) is far above
 the 6 ns minimum. Give it its own decoupling capacitor and a short, clean
 input trace from the clock buffer.
 
-Each tap clocks two or three GAL clock pins (the copy chips). Those are
-ordinary GAL clock inputs; the copy chips' hold and setup margins (section 5)
-already include the full tap tolerance, so no matching is needed on the tap
-nets beyond keeping them short.
+T1 and T3 each clock one GAL (the copy chips); U1 feeds one gate input. The
+margins in sections 5 and 6 include the full tap tolerance, so no matching is
+needed on the tap nets beyond keeping them short.
 
 ## 9. What the simulation covers and what it does not
 
@@ -250,13 +276,11 @@ Not covered:
 - Clock skew and trace delay. All margins above are quoted "minus skew"; the
   board has to meet section 4.1. A clock-buffer model with per-net delays is
   the planned next step so the simulator can check this from the layout.
-- IDT7006 timing: modelled with the CY7C131-15 numbers (same family, same
-  nominal grade). Confirm tSA, tHA, tPWE, tSCE, tSD, tHD, tACE, tOHA and the
-  arbitration parameters from the 7006 datasheet and update
-  `cy7c131::Timing` before layout.
-- Physical pin numbers of the 16K dual-port (PLCC-68): `netlist::dp16k_pin`
-  is a logical map; replace it with the real one for the netlist export.
-- Oscillator duty cycle: the simulator uses exactly 50 %.
+- The gate: modelled as 1.0 to 4.5 ns at 5 V; enter the chosen part's
+  datasheet min/max (`Build::gate_tpd`) and re-run `tests/memory_timing.rs`.
+- Oscillator duty cycle: the simulator uses exactly 50 %. The data-memory
+  write pulse is half a period wide before tolerances, so a short high half
+  eats directly into it (see 4).
 
 ## 10. PCB checklist
 
@@ -267,10 +291,12 @@ Not covered:
 - [ ] Jumper for the GAL clock-tree tap (0 / 6 / 12 ns).
 - [ ] Oscillator socket; 45/55 duty or divide-by-two.
 - [ ] Reset supervisor plus one-flop synchroniser on CLK.
-- [ ] DS1100-30 with local decoupling; T1 and T3 to the copy chips.
-- [ ] Data memory write-port A13 and register-file write-port A5 wired to the
-      write flags (park addresses), read-port A13 grounded.
-- [ ] BUSY and INT pins of every dual-port pulled up.
-- [ ] IDT7006 datasheet numbers entered and simulation re-run.
+- [ ] DS1100-30 and DS1100-40 with local decoupling; T1 / T3 to the copy
+      chips, U1 to the gate.
+- [ ] Gate placed next to the delay line and the SRAMs; WEN to all four WE#.
+- [ ] Register-file write-port A5 wired to the write flag copy (park address).
+- [ ] BUSY and INT pins of the register-file chips pulled up.
+- [ ] Data SRAM footprint: pins 1 and 26 jumpered for the 32K or 8K part.
+- [ ] Gate datasheet numbers entered and simulation re-run.
 - [ ] Bench: scope CLK at one SRAM enable pin and one GAL clock pin of each
       group in section 4.1, record skew and edge rate, set the tap jumper.

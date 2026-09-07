@@ -334,6 +334,91 @@ impl Chip for DualPort16k {
 }
 
 // ---------------------------------------------------------------------------
+// Chip impl: a single fast 2-input NAND gate (SOT-23-5: 1 A, 2 B, 3 GND,
+// 4 Y, 5 VCC), e.g. 74LVC1G00 / NC7SZ00 at 5 V.  Conservative: after any
+// input change that can change the output, the output is unknown from
+// tPD(min) to tPD(max); an input change that provably leaves the output
+// alone (the other input already holds it) does nothing.
+
+pub struct FastGate {
+    pub tpd_min: Time,
+    pub tpd_max: Time,
+    a: Level,
+    b: Level,
+    out: Level,
+    /// Pending settle: (when unknown starts, when it settles, final value).
+    pending: Option<(Time, Time, Level)>,
+    now: Time,
+}
+
+impl FastGate {
+    /// 74LVC1G00-class at 5 V: 1.0 to 4.5 ns (to be confirmed against the
+    /// chosen part's datasheet).
+    pub fn nand_5v() -> FastGate {
+        FastGate::new(NS, 4500)
+    }
+    pub fn new(tpd_min: Time, tpd_max: Time) -> FastGate {
+        FastGate { tpd_min, tpd_max, a: Level::X, b: Level::X, out: Level::X, pending: None, now: 0 }
+    }
+    fn nand(a: Level, b: Level) -> Level {
+        match (a, b) {
+            (Level::L, _) | (_, Level::L) => Level::H,
+            (Level::H, Level::H) => Level::L,
+            _ => Level::X,
+        }
+    }
+    fn advance(&mut self, t: Time) {
+        self.now = t;
+        if let Some((x0, x1, v)) = self.pending {
+            if t >= x1 {
+                self.out = v;
+                self.pending = None;
+            } else if t >= x0 {
+                self.out = Level::X;
+            }
+        }
+    }
+}
+
+impl Chip for FastGate {
+    fn pin_count(&self) -> usize {
+        5
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        ["?", "A", "B", "GND", "Y", "VCC"][pin.min(5)].into()
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        self.advance(t);
+        let z = |l: Level| if l == Level::Z { Level::X } else { l };
+        let (a, b) = (z(ext[1]), z(ext[2]));
+        if a == self.a && b == self.b {
+            return;
+        }
+        self.a = a;
+        self.b = b;
+        let target = Self::nand(a, b);
+        let settled = self.pending.map_or(self.out, |(_, _, v)| v);
+        if target == settled && self.pending.is_none() && target != Level::X {
+            return; // the other input holds the output
+        }
+        self.pending = Some((t + self.tpd_min, t + self.tpd_max, target));
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        self.advance(t);
+        out[4] = self.out;
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        self.pending.and_then(|(x0, x1, _)| [x0, x1].into_iter().find(|&e| e > t))
+    }
+    fn warnings(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Chip impl: AS7C164A (28-pin DIP/SOJ)
 
 /// Pin functions of the AS7C164A, from the datasheet pin configuration.
