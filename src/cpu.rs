@@ -661,8 +661,24 @@ fn alu_l1_block() -> Vec<Eq> {
         let mut ins: Vec<String> = (lo..=hi).map(|i| n("FA", i)).collect();
         ins.extend((lo..=hi).map(|i| n("FB", i)));
         let mask = (1u32 << w) - 1;
+        if k == 0 {
+            // Group 0's carry-in is XSUB, known from the start of the
+            // cycle: bit 0's sum is produced with it folded in (SUM0, four
+            // terms), so the EX/MEM result bit 0 needs one term for it
+            // instead of a carry-select pair; that term is what its hold
+            // needs.  (Bits 1 and 2 would take 12 and 28 terms folded.)
+            let mut ins0 = ins.clone();
+            ins0.push("XSUB".into());
+            eqs.push(Eq::table("SUM0", Mode::Comb, &strs(&ins0), move |m| {
+                let cin = m >> (2 * w) & 1;
+                Some(((m & mask) + (m >> w & mask) + cin) & 1 == 1)
+            }));
+        }
         for cin in 0..2u32 {
             for bit in 0..w {
+                if k == 0 && bit == 0 {
+                    continue;
+                }
                 eqs.push(Eq::table(&format!("S{cin}_{}", lo + bit), Mode::Comb, &strs(&ins), move |m| {
                     Some(((m & mask) + (m >> w & mask) + cin) >> bit & 1 == 1)
                 }));
@@ -804,7 +820,6 @@ fn exmem_result_block() -> Vec<Eq> {
             let k = (i / 3).min(10);
             let (s0, s1) = (format!("S0_{i}"), format!("S1_{i}"));
             let (fa, fb) = (n("FA", i), n("FB", i));
-            // Sum with carry select (group 0's carry-in is XSUB).
             let c = if k == 0 { "XSUB".to_string() } else { format!("C{k}") };
             let with = |code: u32, extra: Vec<SLit>| {
                 let mut t = op_lits(code);
@@ -812,10 +827,16 @@ fn exmem_result_block() -> Vec<Eq> {
                 t.extend(extra);
                 t
             };
-            let terms = vec![
-                vec![l("XSH"), l(&n("SH", i))],
-                with(0, vec![l(&c), l(&s1)]),
-                with(0, vec![nl_(&c), l(&s0)]),
+            // Sum: bit 0 has its carry-in folded in (SUM0), the others
+            // select by the group carry (XSUB for group 0).
+            let sum: Vec<Vec<SLit>> = if i == 0 {
+                vec![with(0, vec![l("SUM0")])]
+            } else {
+                vec![with(0, vec![l(&c), l(&s1)]), with(0, vec![nl_(&c), l(&s0)])]
+            };
+            let mut terms = vec![vec![l("XSH"), l(&n("SH", i))]];
+            terms.extend(sum);
+            terms.extend(vec![
                 with(1, vec![l(&fb)]),
                 with(2, vec![l(&fa), l(&fb)]),
                 with(3, vec![l(&fa)]),
@@ -823,27 +844,33 @@ fn exmem_result_block() -> Vec<Eq> {
                 with(4, vec![l(&fa), nl_(&fb)]),
                 with(4, vec![nl_(&fa), l(&fb)]),
                 with(5, vec![nl_(&fa), nl_(&fb)]),
-            ];
+            ]);
             if i == 0 {
                 // Bit 0 also carries SLT and SLTU, which pushes the hand-written
                 // form past 16 terms; let the minimiser share terms, with the
                 // control combinations that decode never produces as don't
                 // cares (XSH implies XOP = 0; XOP 6/7 imply XSUB).
+                // The bus-wait hold (WAIT, recirculating MR0) is folded
+                // into the table too: the plain hold transform would need
+                // a 17th term.
                 let ins = [
-                    "XOP0", "XOP1", "XOP2", "XSH", "XSUB", "S0_0", "S1_0", "FA0", "FB0", "SH0", "FA31", "FB31", "C10", "S0_31",
-                    "S1_31", "G10", "PP10",
+                    "XOP0", "XOP1", "XOP2", "XSH", "SUM0", "FA0", "FB0", "SH0", "FA31", "FB31", "C10", "S0_31", "S1_31", "G10", "PP10",
+                    "WAIT", "MR0",
                 ];
                 let f = |m: u32| -> Option<bool> {
                     let bit = |b: usize| m >> b & 1 == 1;
+                    if bit(15) {
+                        return Some(bit(16));
+                    }
                     let op = m & 7;
-                    let (xsh, xsub) = (bit(3), bit(4));
-                    let (s0, s1, fa, fb, sh) = (bit(5), bit(6), bit(7), bit(8), bit(9));
-                    let (fa31, fb31, c10, s0_31, s1_31, g10, pp10) = (bit(10), bit(11), bit(12), bit(13), bit(14), bit(15), bit(16));
+                    let xsh = bit(3);
+                    let (sum0, fa, fb, sh) = (bit(4), bit(5), bit(6), bit(7));
+                    let (fa31, fb31, c10, s0_31, s1_31, g10, pp10) = (bit(8), bit(9), bit(10), bit(11), bit(12), bit(13), bit(14));
                     if xsh {
                         return if op == 0 { Some(sh) } else { None };
                     }
-                    let cin = xsub;
-                    let sum0 = if cin { s1 } else { s0 };
+                    // Ops 6 and 7 (SLT, SLTU) always subtract, so the
+                    // carries are those of A - B.
                     Some(match op {
                         0 => sum0,
                         1 => fb,
@@ -851,7 +878,6 @@ fn exmem_result_block() -> Vec<Eq> {
                         3 => fa | fb,
                         4 => fa ^ fb,
                         5 => !(fa | fb),
-                        6 | 7 if !xsub => return None,
                         6 => {
                             // b31 as seen here is !fb31 (B inverted for subtract).
                             let sum31 = if c10 { s1_31 } else { s0_31 };
@@ -863,7 +889,9 @@ fn exmem_result_block() -> Vec<Eq> {
                 return Eq::table(&n("MR", i), Mode::Reg, &ins, f);
                 // (bit 0 is not a data-memory address pin: no OE)
             }
-            let eq = Eq::sop(&n("MR", i), Mode::Reg, terms);
+            // Held on WAIT like the rest of the pipeline (the bus address
+            // stays on MR for the whole access).
+            let eq = with_hold(vec![Eq::sop(&n("MR", i), Mode::Reg, terms)], "WAIT").pop().unwrap();
             // Bits on the data-memory address pins give way to the boot
             // address buffers while the copier counts (off one cycle before
             // the buffers come on, back one cycle after they go off).
@@ -906,7 +934,7 @@ fn mem_access_block() -> Vec<Eq> {
     let mut eqs = Vec::new();
     // Address low bits: the group-0 sum with carry-in 0 (loads and
     // stores add).  FA31 = the access is I/O.
-    let (a0, a1) = (n("S0_", 0), n("S0_", 1));
+    let (a0, a1) = ("SUM0".to_string(), n("S0_", 1));
     for j in 0..4usize {
         let (j0, j1) = (j & 1 == 1, j >> 1 & 1 == 1);
         let mut terms = Vec::new();
@@ -1449,11 +1477,9 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("shm", None, None, shift_mask_block()));
     v.extend(pack("sh2", None, None, shift2_block()));
     v.extend(pack("mr", clk, None, exmem_result_block()));
-    // EX/MEM store data and control hold on WAIT too (the instruction in
-    // EX must not replace the one waiting in MEM).  The result register
-    // is not held: its bit 0 has no spare product term, and nothing reads
-    // it during a wait (the UART address is captured on the first edge,
-    // the data memory is deselected, and MEM/WB is held).
+    // EX/MEM store data, result and control hold on WAIT too (the
+    // instruction in EX must not replace the one waiting in MEM; the
+    // result register carries the bus address for the whole access).
     v.extend(pack("msd", clk, None, w(exmem_sd_block())));
     // EX/MEM control feeds the tap-clocked write copies (wc1 reads MDEST
     // and MRW inside its 15 to 21 ns window).  An asynchronous clear

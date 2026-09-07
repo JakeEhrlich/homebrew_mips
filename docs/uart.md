@@ -83,8 +83,9 @@ Signals (`wseq_block`, `stall_block`, `exmem_ctrl_block`):
 - `UWR_n`: write strobe, cycles 2..14; ends a cycle before the store-data
   drivers let go (data hold).
 - `UA[2:0]`: MR[4:2] captured on the access's first edge (`CNT` = 0), held
-  while it runs; so the UART's address holds through the strobe's hold
-  time after the pipeline has moved on.
+  while it runs; MR itself is held during the wait too, so the copy now
+  only serves the strobe's address hold time after the pipeline has moved
+  on.
 
 What is held on `WAIT` (every register whose input is *not* a function
 of held state):
@@ -94,7 +95,7 @@ of held state):
 | PC, IF/ID | pc, ifid | `HOLDW` (existing hold input) |
 | ID/EX | ctl, xa, xb, xsd, xbt, fwdc | `WAIT` |
 | EX/MEM | msd, mctl | `WAIT` |
-| EX/MEM result | mr | **not held**: MR0 has no spare product term. During a wait MR follows the (held) EX instruction; nothing reads it: the UART address was captured on the first edge, data memory is deselected, MEM/WB is held |
+| EX/MEM result | mr | `WAIT` (bit 0's carry-in is folded into the ALU's SUM0 so its table has room for the hold); the bus address stays on MR for the whole access |
 | MEM/WB | wb | `WAIT` |
 | Write-port copies | wc1 | `MIO & CNT != 15`, rebuilt from the registered signals: `WAIT` itself is combinational (13 ns) and would miss the 15 to 21 ns window of the T3-clocked copy |
 | Boot sequencer, reset, stall | - | unaffected (`MIO` is 0 during boot) |

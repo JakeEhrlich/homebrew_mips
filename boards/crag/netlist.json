@@ -38915,7 +38915,7 @@
         "ar": null,
         "eqs": [
           {
-            "out": "S0_0",
+            "out": "SUM0",
             "mode": "comb",
             "terms": [
               [
@@ -38926,6 +38926,10 @@
                 [
                   "FB0",
                   false
+                ],
+                [
+                  "XSUB",
+                  false
                 ]
               ],
               [
@@ -38935,6 +38939,38 @@
                 ],
                 [
                   "FB0",
+                  true
+                ],
+                [
+                  "XSUB",
+                  false
+                ]
+              ],
+              [
+                [
+                  "FA0",
+                  false
+                ],
+                [
+                  "FB0",
+                  false
+                ],
+                [
+                  "XSUB",
+                  true
+                ]
+              ],
+              [
+                [
+                  "FA0",
+                  true
+                ],
+                [
+                  "FB0",
+                  true
+                ],
+                [
+                  "XSUB",
                   true
                 ]
               ]
@@ -39343,32 +39379,6 @@
                 ],
                 [
                   "FB2",
-                  true
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "S1_0",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "FA0",
-                  false
-                ],
-                [
-                  "FB0",
-                  false
-                ]
-              ],
-              [
-                [
-                  "FA0",
-                  true
-                ],
-                [
-                  "FB0",
                   true
                 ]
               ]
@@ -40182,8 +40192,12 @@
             "FB4"
           ],
           [
+            11,
+            "XSUB"
+          ],
+          [
             15,
-            "S0_0"
+            "SUM0"
           ],
           [
             21,
@@ -40192,10 +40206,6 @@
           [
             19,
             "S0_2"
-          ],
-          [
-            23,
-            "S1_0"
           ],
           [
             16,
@@ -40214,7 +40224,7 @@
             "PP0"
           ],
           [
-            14,
+            23,
             "S0_3"
           ],
           [
@@ -40285,21 +40295,21 @@
           "kind": "in"
         },
         {
+          "pin": 11,
+          "name": "XSUB",
+          "net": "XSUB",
+          "kind": "in"
+        },
+        {
           "pin": 12,
           "name": "GND",
           "net": "GND",
           "kind": "power"
         },
         {
-          "pin": 14,
-          "name": "S0_3",
-          "net": "S0_3",
-          "kind": "out"
-        },
-        {
           "pin": 15,
-          "name": "S0_0",
-          "net": "S0_0",
+          "name": "SUM0",
+          "net": "SUM0",
           "kind": "out"
         },
         {
@@ -40346,8 +40356,8 @@
         },
         {
           "pin": 23,
-          "name": "S1_0",
-          "net": "S1_0",
+          "name": "S0_3",
+          "net": "S0_3",
           "kind": "out"
         },
         {
@@ -67617,38 +67627,12 @@
                   false
                 ],
                 [
-                  "XSUB",
-                  false
-                ],
-                [
-                  "S0_0",
-                  true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
-                ],
-                [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  false
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "XSUB",
+                  "SUM0",
                   true
                 ],
                 [
-                  "S1_0",
-                  true
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67671,6 +67655,10 @@
                 [
                   "FB0",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67685,6 +67673,10 @@
                 [
                   "FB0",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67707,6 +67699,10 @@
                 [
                   "FB0",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67725,6 +67721,10 @@
                 [
                   "FB0",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67735,6 +67735,10 @@
                 [
                   "SH0",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67757,6 +67761,10 @@
                 [
                   "FB0",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67775,6 +67783,10 @@
                 [
                   "FA0",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67797,6 +67809,10 @@
                 [
                   "FB31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67823,6 +67839,10 @@
                 [
                   "S0_31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67849,6 +67869,10 @@
                 [
                   "S0_31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67875,6 +67899,10 @@
                 [
                   "S1_31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67900,6 +67928,20 @@
                 ],
                 [
                   "S1_31",
+                  true
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR0",
                   true
                 ]
               ],
@@ -67923,6 +67965,10 @@
                 [
                   "PP10",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -67944,6 +67990,10 @@
                 ],
                 [
                   "G10",
+                  false
+                ],
+                [
+                  "WAIT",
                   false
                 ]
               ]
@@ -67985,23 +68035,23 @@
           ],
           [
             9,
-            "S0_0"
-          ],
-          [
-            10,
             "S0_31"
           ],
           [
-            11,
-            "S1_0"
-          ],
-          [
-            13,
+            10,
             "S1_31"
           ],
           [
-            23,
+            11,
             "SH0"
+          ],
+          [
+            13,
+            "SUM0"
+          ],
+          [
+            23,
+            "WAIT"
           ],
           [
             14,
@@ -68018,10 +68068,6 @@
           [
             21,
             "XSH"
-          ],
-          [
-            16,
-            "XSUB"
           ],
           [
             19,
@@ -68080,20 +68126,20 @@
         },
         {
           "pin": 9,
-          "name": "S0_0",
-          "net": "S0_0",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
           "name": "S0_31",
           "net": "S0_31",
           "kind": "in"
         },
         {
+          "pin": 10,
+          "name": "S1_31",
+          "net": "S1_31",
+          "kind": "in"
+        },
+        {
           "pin": 11,
-          "name": "S1_0",
-          "net": "S1_0",
+          "name": "SH0",
+          "net": "SH0",
           "kind": "in"
         },
         {
@@ -68104,8 +68150,8 @@
         },
         {
           "pin": 13,
-          "name": "S1_31",
-          "net": "S1_31",
+          "name": "SUM0",
+          "net": "SUM0",
           "kind": "in"
         },
         {
@@ -68118,12 +68164,6 @@
           "pin": 15,
           "name": "XOP2",
           "net": "XOP2",
-          "kind": "in"
-        },
-        {
-          "pin": 16,
-          "name": "XSUB",
-          "net": "XSUB",
           "kind": "in"
         },
         {
@@ -68146,8 +68186,8 @@
         },
         {
           "pin": 23,
-          "name": "SH0",
-          "net": "SH0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -68181,6 +68221,10 @@
                 [
                   "SH1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68207,6 +68251,10 @@
                 [
                   "S1_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68233,6 +68281,10 @@
                 [
                   "S0_1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68255,6 +68307,10 @@
                 [
                   "FB1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68281,6 +68337,10 @@
                 [
                   "FB1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68303,6 +68363,10 @@
                 [
                   "FA1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68325,31 +68389,9 @@
                 [
                   "FB1",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA1",
-                  true
-                ],
-                [
-                  "FB1",
+                  "WAIT",
                   false
                 ]
               ],
@@ -68372,11 +68414,45 @@
                 ],
                 [
                   "FA1",
+                  true
+                ],
+                [
+                  "FB1",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA1",
                   false
                 ],
                 [
                   "FB1",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68403,6 +68479,20 @@
                 [
                   "FB1",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR1",
+                  true
                 ]
               ]
             ]
@@ -68419,6 +68509,10 @@
                 [
                   "SH2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68445,6 +68539,10 @@
                 [
                   "S1_2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68471,6 +68569,10 @@
                 [
                   "S0_2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68493,6 +68595,10 @@
                 [
                   "FB2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68519,6 +68625,10 @@
                 [
                   "FB2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68541,6 +68651,10 @@
                 [
                   "FA2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68563,31 +68677,9 @@
                 [
                   "FB2",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA2",
-                  true
-                ],
-                [
-                  "FB2",
+                  "WAIT",
                   false
                 ]
               ],
@@ -68610,11 +68702,45 @@
                 ],
                 [
                   "FA2",
+                  true
+                ],
+                [
+                  "FB2",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA2",
                   false
                 ],
                 [
                   "FB2",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68641,6 +68767,20 @@
                 [
                   "FB2",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR2",
+                  true
                 ]
               ]
             ],
@@ -68711,22 +68851,26 @@
           ],
           [
             14,
-            "XOP0"
+            "WAIT"
           ],
           [
             22,
-            "XOP1"
+            "XOP0"
           ],
           [
             15,
-            "XOP2"
+            "XOP1"
           ],
           [
             21,
-            "XSH"
+            "XOP2"
           ],
           [
             16,
+            "XSH"
+          ],
+          [
+            20,
             "XSUB"
           ],
           [
@@ -68820,20 +68964,20 @@
         },
         {
           "pin": 14,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSUB",
-          "net": "XSUB",
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -68849,15 +68993,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSUB",
+          "net": "XSUB",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -68897,6 +69047,10 @@
                 [
                   "SH3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68923,6 +69077,10 @@
                 [
                   "S1_3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68949,6 +69107,10 @@
                 [
                   "S0_3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68971,6 +69133,10 @@
                 [
                   "FB3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -68997,6 +69163,10 @@
                 [
                   "FB3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69019,6 +69189,10 @@
                 [
                   "FA3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69041,31 +69215,9 @@
                 [
                   "FB3",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA3",
-                  true
-                ],
-                [
-                  "FB3",
+                  "WAIT",
                   false
                 ]
               ],
@@ -69088,11 +69240,45 @@
                 ],
                 [
                   "FA3",
+                  true
+                ],
+                [
+                  "FB3",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA3",
                   false
                 ],
                 [
                   "FB3",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69119,6 +69305,20 @@
                 [
                   "FB3",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR3",
+                  true
                 ]
               ]
             ],
@@ -69145,6 +69345,10 @@
                 [
                   "SH4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69171,6 +69375,10 @@
                 [
                   "S1_4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69197,6 +69405,10 @@
                 [
                   "S0_4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69219,6 +69431,10 @@
                 [
                   "FB4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69245,6 +69461,10 @@
                 [
                   "FB4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69267,6 +69487,10 @@
                 [
                   "FA4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69289,31 +69513,9 @@
                 [
                   "FB4",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA4",
-                  true
-                ],
-                [
-                  "FB4",
+                  "WAIT",
                   false
                 ]
               ],
@@ -69336,11 +69538,45 @@
                 ],
                 [
                   "FA4",
+                  true
+                ],
+                [
+                  "FB4",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA4",
                   false
                 ],
                 [
                   "FB4",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69367,6 +69603,20 @@
                 [
                   "FB4",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR4",
+                  true
                 ]
               ]
             ],
@@ -69441,18 +69691,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -69552,14 +69806,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -69575,15 +69829,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -69623,6 +69883,10 @@
                 [
                   "SH5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69649,6 +69913,10 @@
                 [
                   "S1_5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69675,6 +69943,10 @@
                 [
                   "S0_5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69697,6 +69969,10 @@
                 [
                   "FB5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69723,6 +69999,10 @@
                 [
                   "FB5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69745,6 +70025,10 @@
                 [
                   "FA5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69767,31 +70051,9 @@
                 [
                   "FB5",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA5",
-                  true
-                ],
-                [
-                  "FB5",
+                  "WAIT",
                   false
                 ]
               ],
@@ -69814,11 +70076,45 @@
                 ],
                 [
                   "FA5",
+                  true
+                ],
+                [
+                  "FB5",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA5",
                   false
                 ],
                 [
                   "FB5",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69845,6 +70141,20 @@
                 [
                   "FB5",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR5",
+                  true
                 ]
               ]
             ],
@@ -69871,6 +70181,10 @@
                 [
                   "SH6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69897,6 +70211,10 @@
                 [
                   "S1_6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69923,6 +70241,10 @@
                 [
                   "S0_6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69945,6 +70267,10 @@
                 [
                   "FB6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69971,6 +70297,10 @@
                 [
                   "FB6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -69993,6 +70323,10 @@
                 [
                   "FA6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70015,31 +70349,9 @@
                 [
                   "FB6",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA6",
-                  true
-                ],
-                [
-                  "FB6",
+                  "WAIT",
                   false
                 ]
               ],
@@ -70062,11 +70374,45 @@
                 ],
                 [
                   "FA6",
+                  true
+                ],
+                [
+                  "FB6",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA6",
                   false
                 ],
                 [
                   "FB6",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70093,6 +70439,20 @@
                 [
                   "FB6",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR6",
+                  true
                 ]
               ]
             ],
@@ -70171,18 +70531,22 @@
           ],
           [
             15,
-            "XOP0"
+            "WAIT"
           ],
           [
             21,
-            "XOP1"
+            "XOP0"
           ],
           [
             16,
-            "XOP2"
+            "XOP1"
           ],
           [
             20,
+            "XOP2"
+          ],
+          [
+            17,
             "XSH"
           ],
           [
@@ -70282,14 +70646,20 @@
         },
         {
           "pin": 15,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -70306,14 +70676,14 @@
         },
         {
           "pin": 20,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 21,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -70359,6 +70729,10 @@
                 [
                   "SH7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70385,6 +70759,10 @@
                 [
                   "S1_7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70411,6 +70789,10 @@
                 [
                   "S0_7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70433,6 +70815,10 @@
                 [
                   "FB7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70459,6 +70845,10 @@
                 [
                   "FB7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70481,6 +70871,10 @@
                 [
                   "FA7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70503,31 +70897,9 @@
                 [
                   "FB7",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA7",
-                  true
-                ],
-                [
-                  "FB7",
+                  "WAIT",
                   false
                 ]
               ],
@@ -70550,11 +70922,45 @@
                 ],
                 [
                   "FA7",
+                  true
+                ],
+                [
+                  "FB7",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA7",
                   false
                 ],
                 [
                   "FB7",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70581,6 +70987,20 @@
                 [
                   "FB7",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR7",
+                  true
                 ]
               ]
             ],
@@ -70607,6 +71027,10 @@
                 [
                   "SH8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70633,6 +71057,10 @@
                 [
                   "S1_8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70659,6 +71087,10 @@
                 [
                   "S0_8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70681,6 +71113,10 @@
                 [
                   "FB8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70707,6 +71143,10 @@
                 [
                   "FB8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70729,6 +71169,10 @@
                 [
                   "FA8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70751,31 +71195,9 @@
                 [
                   "FB8",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA8",
-                  true
-                ],
-                [
-                  "FB8",
+                  "WAIT",
                   false
                 ]
               ],
@@ -70798,11 +71220,45 @@
                 ],
                 [
                   "FA8",
+                  true
+                ],
+                [
+                  "FB8",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA8",
                   false
                 ],
                 [
                   "FB8",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -70829,6 +71285,20 @@
                 [
                   "FB8",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR8",
+                  true
                 ]
               ]
             ],
@@ -70903,18 +71373,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -71014,14 +71488,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -71037,15 +71511,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -71085,6 +71565,10 @@
                 [
                   "SH9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71111,6 +71595,10 @@
                 [
                   "S1_9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71137,6 +71625,10 @@
                 [
                   "S0_9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71159,6 +71651,10 @@
                 [
                   "FB9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71185,6 +71681,10 @@
                 [
                   "FB9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71207,6 +71707,10 @@
                 [
                   "FA9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71229,31 +71733,9 @@
                 [
                   "FB9",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA9",
-                  true
-                ],
-                [
-                  "FB9",
+                  "WAIT",
                   false
                 ]
               ],
@@ -71276,11 +71758,45 @@
                 ],
                 [
                   "FA9",
+                  true
+                ],
+                [
+                  "FB9",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA9",
                   false
                 ],
                 [
                   "FB9",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71307,6 +71823,20 @@
                 [
                   "FB9",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR9",
+                  true
                 ]
               ]
             ],
@@ -71333,6 +71863,10 @@
                 [
                   "SH10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71359,6 +71893,10 @@
                 [
                   "S1_10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71385,6 +71923,10 @@
                 [
                   "S0_10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71407,6 +71949,10 @@
                 [
                   "FB10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71433,6 +71979,10 @@
                 [
                   "FB10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71455,6 +72005,10 @@
                 [
                   "FA10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71477,31 +72031,9 @@
                 [
                   "FB10",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA10",
-                  true
-                ],
-                [
-                  "FB10",
+                  "WAIT",
                   false
                 ]
               ],
@@ -71524,11 +72056,45 @@
                 ],
                 [
                   "FA10",
+                  true
+                ],
+                [
+                  "FB10",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA10",
                   false
                 ],
                 [
                   "FB10",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71555,6 +72121,20 @@
                 [
                   "FB10",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR10",
+                  true
                 ]
               ]
             ],
@@ -71629,18 +72209,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -71740,14 +72324,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -71763,15 +72347,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -71811,6 +72401,10 @@
                 [
                   "SH11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71837,6 +72431,10 @@
                 [
                   "S1_11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71863,6 +72461,10 @@
                 [
                   "S0_11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71885,6 +72487,10 @@
                 [
                   "FB11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71911,6 +72517,10 @@
                 [
                   "FB11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71933,6 +72543,10 @@
                 [
                   "FA11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -71955,31 +72569,9 @@
                 [
                   "FB11",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA11",
-                  true
-                ],
-                [
-                  "FB11",
+                  "WAIT",
                   false
                 ]
               ],
@@ -72002,11 +72594,45 @@
                 ],
                 [
                   "FA11",
+                  true
+                ],
+                [
+                  "FB11",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA11",
                   false
                 ],
                 [
                   "FB11",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72033,6 +72659,20 @@
                 [
                   "FB11",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR11",
+                  true
                 ]
               ]
             ],
@@ -72059,6 +72699,10 @@
                 [
                   "SH12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72085,6 +72729,10 @@
                 [
                   "S1_12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72111,6 +72759,10 @@
                 [
                   "S0_12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72133,6 +72785,10 @@
                 [
                   "FB12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72159,6 +72815,10 @@
                 [
                   "FB12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72181,6 +72841,10 @@
                 [
                   "FA12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72203,31 +72867,9 @@
                 [
                   "FB12",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA12",
-                  true
-                ],
-                [
-                  "FB12",
+                  "WAIT",
                   false
                 ]
               ],
@@ -72250,11 +72892,45 @@
                 ],
                 [
                   "FA12",
+                  true
+                ],
+                [
+                  "FB12",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA12",
                   false
                 ],
                 [
                   "FB12",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72281,6 +72957,20 @@
                 [
                   "FB12",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR12",
+                  true
                 ]
               ]
             ],
@@ -72359,18 +73049,22 @@
           ],
           [
             15,
-            "XOP0"
+            "WAIT"
           ],
           [
             21,
-            "XOP1"
+            "XOP0"
           ],
           [
             16,
-            "XOP2"
+            "XOP1"
           ],
           [
             20,
+            "XOP2"
+          ],
+          [
+            17,
             "XSH"
           ],
           [
@@ -72470,14 +73164,20 @@
         },
         {
           "pin": 15,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -72494,14 +73194,14 @@
         },
         {
           "pin": 20,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 21,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -72547,6 +73247,10 @@
                 [
                   "SH13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72573,6 +73277,10 @@
                 [
                   "S1_13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72599,6 +73307,10 @@
                 [
                   "S0_13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72621,6 +73333,10 @@
                 [
                   "FB13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72647,6 +73363,10 @@
                 [
                   "FB13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72669,6 +73389,10 @@
                 [
                   "FA13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72691,31 +73415,9 @@
                 [
                   "FB13",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA13",
-                  true
-                ],
-                [
-                  "FB13",
+                  "WAIT",
                   false
                 ]
               ],
@@ -72738,11 +73440,45 @@
                 ],
                 [
                   "FA13",
+                  true
+                ],
+                [
+                  "FB13",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA13",
                   false
                 ],
                 [
                   "FB13",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72769,6 +73505,20 @@
                 [
                   "FB13",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR13",
+                  true
                 ]
               ]
             ],
@@ -72795,6 +73545,10 @@
                 [
                   "SH14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72821,6 +73575,10 @@
                 [
                   "S1_14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72847,6 +73605,10 @@
                 [
                   "S0_14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72869,6 +73631,10 @@
                 [
                   "FB14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72895,6 +73661,10 @@
                 [
                   "FB14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72917,6 +73687,10 @@
                 [
                   "FA14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -72939,31 +73713,9 @@
                 [
                   "FB14",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA14",
-                  true
-                ],
-                [
-                  "FB14",
+                  "WAIT",
                   false
                 ]
               ],
@@ -72986,11 +73738,45 @@
                 ],
                 [
                   "FA14",
+                  true
+                ],
+                [
+                  "FB14",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA14",
                   false
                 ],
                 [
                   "FB14",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73017,6 +73803,20 @@
                 [
                   "FB14",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR14",
+                  true
                 ]
               ]
             ],
@@ -73091,18 +73891,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -73202,14 +74006,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -73225,15 +74029,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -73273,6 +74083,10 @@
                 [
                   "SH15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73299,6 +74113,10 @@
                 [
                   "S1_15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73325,6 +74143,10 @@
                 [
                   "S0_15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73347,6 +74169,10 @@
                 [
                   "FB15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73373,6 +74199,10 @@
                 [
                   "FB15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73395,6 +74225,10 @@
                 [
                   "FA15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73417,31 +74251,9 @@
                 [
                   "FB15",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA15",
-                  true
-                ],
-                [
-                  "FB15",
+                  "WAIT",
                   false
                 ]
               ],
@@ -73464,11 +74276,45 @@
                 ],
                 [
                   "FA15",
+                  true
+                ],
+                [
+                  "FB15",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA15",
                   false
                 ],
                 [
                   "FB15",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73495,6 +74341,20 @@
                 [
                   "FB15",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR15",
+                  true
                 ]
               ]
             ],
@@ -73521,6 +74381,10 @@
                 [
                   "SH16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73547,6 +74411,10 @@
                 [
                   "S1_16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73573,6 +74441,10 @@
                 [
                   "S0_16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73595,6 +74467,10 @@
                 [
                   "FB16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73621,6 +74497,10 @@
                 [
                   "FB16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73643,6 +74523,10 @@
                 [
                   "FA16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73665,31 +74549,9 @@
                 [
                   "FB16",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA16",
-                  true
-                ],
-                [
-                  "FB16",
+                  "WAIT",
                   false
                 ]
               ],
@@ -73712,11 +74574,45 @@
                 ],
                 [
                   "FA16",
+                  true
+                ],
+                [
+                  "FB16",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA16",
                   false
                 ],
                 [
                   "FB16",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -73743,6 +74639,20 @@
                 [
                   "FB16",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR16",
+                  true
                 ]
               ]
             ],
@@ -73817,18 +74727,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -73928,14 +74842,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -73951,15 +74865,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -73999,6 +74919,10 @@
                 [
                   "SH17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74025,6 +74949,10 @@
                 [
                   "S1_17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74051,6 +74979,10 @@
                 [
                   "S0_17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74073,6 +75005,10 @@
                 [
                   "FB17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74099,6 +75035,10 @@
                 [
                   "FB17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74121,6 +75061,10 @@
                 [
                   "FA17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74143,31 +75087,9 @@
                 [
                   "FB17",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA17",
-                  true
-                ],
-                [
-                  "FB17",
+                  "WAIT",
                   false
                 ]
               ],
@@ -74190,11 +75112,45 @@
                 ],
                 [
                   "FA17",
+                  true
+                ],
+                [
+                  "FB17",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA17",
                   false
                 ],
                 [
                   "FB17",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74221,6 +75177,20 @@
                 [
                   "FB17",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR17",
+                  true
                 ]
               ]
             ],
@@ -74247,6 +75217,10 @@
                 [
                   "SH18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74273,6 +75247,10 @@
                 [
                   "S1_18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74299,6 +75277,10 @@
                 [
                   "S0_18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74321,6 +75303,10 @@
                 [
                   "FB18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74347,6 +75333,10 @@
                 [
                   "FB18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74369,6 +75359,10 @@
                 [
                   "FA18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74391,31 +75385,9 @@
                 [
                   "FB18",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA18",
-                  true
-                ],
-                [
-                  "FB18",
+                  "WAIT",
                   false
                 ]
               ],
@@ -74438,11 +75410,45 @@
                 ],
                 [
                   "FA18",
+                  true
+                ],
+                [
+                  "FB18",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA18",
                   false
                 ],
                 [
                   "FB18",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74469,6 +75475,20 @@
                 [
                   "FB18",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR18",
+                  true
                 ]
               ]
             ],
@@ -74547,18 +75567,22 @@
           ],
           [
             15,
-            "XOP0"
+            "WAIT"
           ],
           [
             21,
-            "XOP1"
+            "XOP0"
           ],
           [
             16,
-            "XOP2"
+            "XOP1"
           ],
           [
             20,
+            "XOP2"
+          ],
+          [
+            17,
             "XSH"
           ],
           [
@@ -74658,14 +75682,20 @@
         },
         {
           "pin": 15,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -74682,14 +75712,14 @@
         },
         {
           "pin": 20,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 21,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -74735,6 +75765,10 @@
                 [
                   "SH19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74761,6 +75795,10 @@
                 [
                   "S1_19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74787,6 +75825,10 @@
                 [
                   "S0_19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74809,6 +75851,10 @@
                 [
                   "FB19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74835,6 +75881,10 @@
                 [
                   "FB19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74857,6 +75907,10 @@
                 [
                   "FA19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74879,31 +75933,9 @@
                 [
                   "FB19",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA19",
-                  true
-                ],
-                [
-                  "FB19",
+                  "WAIT",
                   false
                 ]
               ],
@@ -74926,11 +75958,45 @@
                 ],
                 [
                   "FA19",
+                  true
+                ],
+                [
+                  "FB19",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA19",
                   false
                 ],
                 [
                   "FB19",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -74957,6 +76023,20 @@
                 [
                   "FB19",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR19",
+                  true
                 ]
               ]
             ],
@@ -74983,6 +76063,10 @@
                 [
                   "SH20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75009,6 +76093,10 @@
                 [
                   "S1_20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75035,6 +76123,10 @@
                 [
                   "S0_20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75057,6 +76149,10 @@
                 [
                   "FB20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75083,6 +76179,10 @@
                 [
                   "FB20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75105,6 +76205,10 @@
                 [
                   "FA20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75127,31 +76231,9 @@
                 [
                   "FB20",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA20",
-                  true
-                ],
-                [
-                  "FB20",
+                  "WAIT",
                   false
                 ]
               ],
@@ -75174,11 +76256,45 @@
                 ],
                 [
                   "FA20",
+                  true
+                ],
+                [
+                  "FB20",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA20",
                   false
                 ],
                 [
                   "FB20",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75205,6 +76321,20 @@
                 [
                   "FB20",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR20",
+                  true
                 ]
               ]
             ]
@@ -75269,18 +76399,22 @@
           ],
           [
             22,
-            "XOP0"
+            "WAIT"
           ],
           [
             15,
-            "XOP1"
+            "XOP0"
           ],
           [
             21,
-            "XOP2"
+            "XOP1"
           ],
           [
             16,
+            "XOP2"
+          ],
+          [
+            20,
             "XSH"
           ],
           [
@@ -75380,14 +76514,14 @@
         },
         {
           "pin": 15,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 16,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -75403,15 +76537,21 @@
           "kind": "out"
         },
         {
+          "pin": 20,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 21,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -75451,6 +76591,10 @@
                 [
                   "SH21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75477,6 +76621,10 @@
                 [
                   "S1_21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75503,6 +76651,10 @@
                 [
                   "S0_21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75525,6 +76677,10 @@
                 [
                   "FB21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75551,6 +76707,10 @@
                 [
                   "FB21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75573,6 +76733,10 @@
                 [
                   "FA21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75595,31 +76759,9 @@
                 [
                   "FB21",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA21",
-                  true
-                ],
-                [
-                  "FB21",
+                  "WAIT",
                   false
                 ]
               ],
@@ -75642,11 +76784,45 @@
                 ],
                 [
                   "FA21",
+                  true
+                ],
+                [
+                  "FB21",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA21",
                   false
                 ],
                 [
                   "FB21",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75673,6 +76849,20 @@
                 [
                   "FB21",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR21",
+                  true
                 ]
               ]
             ]
@@ -75689,6 +76879,10 @@
                 [
                   "SH22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75715,6 +76909,10 @@
                 [
                   "S1_22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75741,6 +76939,10 @@
                 [
                   "S0_22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75763,6 +76965,10 @@
                 [
                   "FB22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75789,6 +76995,10 @@
                 [
                   "FB22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75811,6 +77021,10 @@
                 [
                   "FA22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75833,31 +77047,9 @@
                 [
                   "FB22",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA22",
-                  true
-                ],
-                [
-                  "FB22",
+                  "WAIT",
                   false
                 ]
               ],
@@ -75880,11 +77072,45 @@
                 ],
                 [
                   "FA22",
+                  true
+                ],
+                [
+                  "FB22",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA22",
                   false
                 ],
                 [
                   "FB22",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -75911,6 +77137,20 @@
                 [
                   "FB22",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR22",
+                  true
                 ]
               ]
             ]
@@ -75967,18 +77207,22 @@
           ],
           [
             23,
-            "XOP0"
+            "WAIT"
           ],
           [
             14,
-            "XOP1"
+            "XOP0"
           ],
           [
             22,
-            "XOP2"
+            "XOP1"
           ],
           [
             15,
+            "XOP2"
+          ],
+          [
+            21,
             "XSH"
           ],
           [
@@ -76072,14 +77316,14 @@
         },
         {
           "pin": 14,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -76095,15 +77339,21 @@
           "kind": "out"
         },
         {
+          "pin": 21,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 22,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 23,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -76137,6 +77387,10 @@
                 [
                   "SH23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76163,6 +77417,10 @@
                 [
                   "S1_23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76189,6 +77447,10 @@
                 [
                   "S0_23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76211,6 +77473,10 @@
                 [
                   "FB23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76237,6 +77503,10 @@
                 [
                   "FB23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76259,6 +77529,10 @@
                 [
                   "FA23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76281,31 +77555,9 @@
                 [
                   "FB23",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA23",
-                  true
-                ],
-                [
-                  "FB23",
+                  "WAIT",
                   false
                 ]
               ],
@@ -76328,11 +77580,45 @@
                 ],
                 [
                   "FA23",
+                  true
+                ],
+                [
+                  "FB23",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA23",
                   false
                 ],
                 [
                   "FB23",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76359,6 +77645,20 @@
                 [
                   "FB23",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR23",
+                  true
                 ]
               ]
             ]
@@ -76375,6 +77675,10 @@
                 [
                   "SH24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76401,6 +77705,10 @@
                 [
                   "S1_24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76427,6 +77735,10 @@
                 [
                   "S0_24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76449,6 +77761,10 @@
                 [
                   "FB24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76475,6 +77791,10 @@
                 [
                   "FB24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76497,6 +77817,10 @@
                 [
                   "FA24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76519,31 +77843,9 @@
                 [
                   "FB24",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA24",
-                  true
-                ],
-                [
-                  "FB24",
+                  "WAIT",
                   false
                 ]
               ],
@@ -76566,11 +77868,45 @@
                 ],
                 [
                   "FA24",
+                  true
+                ],
+                [
+                  "FB24",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA24",
                   false
                 ],
                 [
                   "FB24",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76597,6 +77933,20 @@
                 [
                   "FB24",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR24",
+                  true
                 ]
               ]
             ]
@@ -76657,18 +78007,22 @@
           ],
           [
             14,
-            "XOP0"
+            "WAIT"
           ],
           [
             22,
-            "XOP1"
+            "XOP0"
           ],
           [
             15,
-            "XOP2"
+            "XOP1"
           ],
           [
             21,
+            "XOP2"
+          ],
+          [
+            16,
             "XSH"
           ],
           [
@@ -76762,14 +78116,20 @@
         },
         {
           "pin": 14,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "in"
+        },
+        {
+          "pin": 16,
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -76786,14 +78146,14 @@
         },
         {
           "pin": 21,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -76833,6 +78193,10 @@
                 [
                   "SH25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76859,6 +78223,10 @@
                 [
                   "S1_25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76885,6 +78253,10 @@
                 [
                   "S0_25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76907,6 +78279,10 @@
                 [
                   "FB25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76933,6 +78309,10 @@
                 [
                   "FB25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76955,6 +78335,10 @@
                 [
                   "FA25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -76977,31 +78361,9 @@
                 [
                   "FB25",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA25",
-                  true
-                ],
-                [
-                  "FB25",
+                  "WAIT",
                   false
                 ]
               ],
@@ -77024,11 +78386,45 @@
                 ],
                 [
                   "FA25",
+                  true
+                ],
+                [
+                  "FB25",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA25",
                   false
                 ],
                 [
                   "FB25",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77055,6 +78451,20 @@
                 [
                   "FB25",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR25",
+                  true
                 ]
               ]
             ]
@@ -77071,6 +78481,10 @@
                 [
                   "SH26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77097,6 +78511,10 @@
                 [
                   "S1_26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77123,6 +78541,10 @@
                 [
                   "S0_26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77145,6 +78567,10 @@
                 [
                   "FB26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77171,6 +78597,10 @@
                 [
                   "FB26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77193,6 +78623,10 @@
                 [
                   "FA26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77215,31 +78649,9 @@
                 [
                   "FB26",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA26",
-                  true
-                ],
-                [
-                  "FB26",
+                  "WAIT",
                   false
                 ]
               ],
@@ -77262,11 +78674,45 @@
                 ],
                 [
                   "FA26",
+                  true
+                ],
+                [
+                  "FB26",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA26",
                   false
                 ],
                 [
                   "FB26",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77293,6 +78739,20 @@
                 [
                   "FB26",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR26",
+                  true
                 ]
               ]
             ]
@@ -77349,18 +78809,22 @@
           ],
           [
             23,
-            "XOP0"
+            "WAIT"
           ],
           [
             14,
-            "XOP1"
+            "XOP0"
           ],
           [
             22,
-            "XOP2"
+            "XOP1"
           ],
           [
             15,
+            "XOP2"
+          ],
+          [
+            21,
             "XSH"
           ],
           [
@@ -77454,14 +78918,14 @@
         },
         {
           "pin": 14,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -77477,15 +78941,21 @@
           "kind": "out"
         },
         {
+          "pin": 21,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 22,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 23,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -77519,6 +78989,10 @@
                 [
                   "SH27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77545,6 +79019,10 @@
                 [
                   "S1_27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77571,6 +79049,10 @@
                 [
                   "S0_27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77593,6 +79075,10 @@
                 [
                   "FB27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77619,6 +79105,10 @@
                 [
                   "FB27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77641,6 +79131,10 @@
                 [
                   "FA27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77663,31 +79157,9 @@
                 [
                   "FB27",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA27",
-                  true
-                ],
-                [
-                  "FB27",
+                  "WAIT",
                   false
                 ]
               ],
@@ -77710,11 +79182,45 @@
                 ],
                 [
                   "FA27",
+                  true
+                ],
+                [
+                  "FB27",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA27",
                   false
                 ],
                 [
                   "FB27",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77741,6 +79247,20 @@
                 [
                   "FB27",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR27",
+                  true
                 ]
               ]
             ]
@@ -77757,6 +79277,10 @@
                 [
                   "SH28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77783,6 +79307,10 @@
                 [
                   "S1_28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77809,6 +79337,10 @@
                 [
                   "S0_28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77831,6 +79363,10 @@
                 [
                   "FB28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77857,6 +79393,10 @@
                 [
                   "FB28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77879,6 +79419,10 @@
                 [
                   "FA28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77901,31 +79445,9 @@
                 [
                   "FB28",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA28",
-                  true
-                ],
-                [
-                  "FB28",
+                  "WAIT",
                   false
                 ]
               ],
@@ -77948,11 +79470,45 @@
                 ],
                 [
                   "FA28",
+                  true
+                ],
+                [
+                  "FB28",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA28",
                   false
                 ],
                 [
                   "FB28",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -77979,6 +79535,20 @@
                 [
                   "FB28",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR28",
+                  true
                 ]
               ]
             ]
@@ -78035,18 +79605,22 @@
           ],
           [
             23,
-            "XOP0"
+            "WAIT"
           ],
           [
             14,
-            "XOP1"
+            "XOP0"
           ],
           [
             22,
-            "XOP2"
+            "XOP1"
           ],
           [
             15,
+            "XOP2"
+          ],
+          [
+            21,
             "XSH"
           ],
           [
@@ -78140,14 +79714,14 @@
         },
         {
           "pin": 14,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
@@ -78163,15 +79737,21 @@
           "kind": "out"
         },
         {
+          "pin": 21,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
+        },
+        {
           "pin": 22,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
           "kind": "in"
         },
         {
           "pin": 23,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
@@ -78205,6 +79785,10 @@
                 [
                   "SH29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78231,6 +79815,10 @@
                 [
                   "S1_29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78257,6 +79845,10 @@
                 [
                   "S0_29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78279,6 +79871,10 @@
                 [
                   "FB29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78305,6 +79901,10 @@
                 [
                   "FB29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78327,6 +79927,10 @@
                 [
                   "FA29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78349,31 +79953,9 @@
                 [
                   "FB29",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA29",
-                  true
-                ],
-                [
-                  "FB29",
+                  "WAIT",
                   false
                 ]
               ],
@@ -78396,11 +79978,45 @@
                 ],
                 [
                   "FA29",
+                  true
+                ],
+                [
+                  "FB29",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA29",
                   false
                 ],
                 [
                   "FB29",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78427,6 +80043,20 @@
                 [
                   "FB29",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR29",
+                  true
                 ]
               ]
             ]
@@ -78443,6 +80073,10 @@
                 [
                   "SH30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78469,6 +80103,10 @@
                 [
                   "S1_30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78495,6 +80133,10 @@
                 [
                   "S0_30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78517,6 +80159,10 @@
                 [
                   "FB30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78543,6 +80189,10 @@
                 [
                   "FB30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78565,6 +80215,10 @@
                 [
                   "FA30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78587,31 +80241,9 @@
                 [
                   "FB30",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA30",
-                  true
-                ],
-                [
-                  "FB30",
+                  "WAIT",
                   false
                 ]
               ],
@@ -78634,11 +80266,45 @@
                 ],
                 [
                   "FA30",
+                  true
+                ],
+                [
+                  "FB30",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA30",
                   false
                 ],
                 [
                   "FB30",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78665,6 +80331,20 @@
                 [
                   "FB30",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR30",
+                  true
                 ]
               ]
             ]
@@ -78725,18 +80405,22 @@
           ],
           [
             14,
-            "XOP0"
+            "WAIT"
           ],
           [
             22,
-            "XOP1"
+            "XOP0"
           ],
           [
             15,
-            "XOP2"
+            "XOP1"
           ],
           [
             21,
+            "XOP2"
+          ],
+          [
+            16,
             "XSH"
           ],
           [
@@ -78830,14 +80514,20 @@
         },
         {
           "pin": 14,
-          "name": "XOP0",
-          "net": "XOP0",
+          "name": "WAIT",
+          "net": "WAIT",
           "kind": "in"
         },
         {
           "pin": 15,
-          "name": "XOP2",
-          "net": "XOP2",
+          "name": "XOP1",
+          "net": "XOP1",
+          "kind": "in"
+        },
+        {
+          "pin": 16,
+          "name": "XSH",
+          "net": "XSH",
           "kind": "in"
         },
         {
@@ -78854,14 +80544,14 @@
         },
         {
           "pin": 21,
-          "name": "XSH",
-          "net": "XSH",
+          "name": "XOP2",
+          "net": "XOP2",
           "kind": "in"
         },
         {
           "pin": 22,
-          "name": "XOP1",
-          "net": "XOP1",
+          "name": "XOP0",
+          "net": "XOP0",
           "kind": "in"
         },
         {
@@ -78901,6 +80591,10 @@
                 [
                   "SH31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78927,6 +80621,10 @@
                 [
                   "S1_31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78953,6 +80651,10 @@
                 [
                   "S0_31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -78975,6 +80677,10 @@
                 [
                   "FB31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -79001,6 +80707,10 @@
                 [
                   "FB31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -79023,6 +80733,10 @@
                 [
                   "FA31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -79045,31 +80759,9 @@
                 [
                   "FB31",
                   true
-                ]
-              ],
-              [
-                [
-                  "XOP0",
-                  false
                 ],
                 [
-                  "XOP1",
-                  false
-                ],
-                [
-                  "XOP2",
-                  true
-                ],
-                [
-                  "XSH",
-                  false
-                ],
-                [
-                  "FA31",
-                  true
-                ],
-                [
-                  "FB31",
+                  "WAIT",
                   false
                 ]
               ],
@@ -79092,11 +80784,45 @@
                 ],
                 [
                   "FA31",
+                  true
+                ],
+                [
+                  "FB31",
+                  false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "XOP0",
+                  false
+                ],
+                [
+                  "XOP1",
+                  false
+                ],
+                [
+                  "XOP2",
+                  true
+                ],
+                [
+                  "XSH",
+                  false
+                ],
+                [
+                  "FA31",
                   false
                 ],
                 [
                   "FB31",
                   true
+                ],
+                [
+                  "WAIT",
+                  false
                 ]
               ],
               [
@@ -79123,6 +80849,20 @@
                 [
                   "FB31",
                   false
+                ],
+                [
+                  "WAIT",
+                  false
+                ]
+              ],
+              [
+                [
+                  "WAIT",
+                  true
+                ],
+                [
+                  "MR31",
+                  true
                 ]
               ]
             ]
@@ -79159,18 +80899,22 @@
           ],
           [
             8,
-            "XOP0"
+            "WAIT"
           ],
           [
             9,
-            "XOP1"
+            "XOP0"
           ],
           [
             10,
-            "XOP2"
+            "XOP1"
           ],
           [
             11,
+            "XOP2"
+          ],
+          [
+            13,
             "XSH"
           ],
           [
@@ -79224,26 +80968,26 @@
         },
         {
           "pin": 8,
+          "name": "WAIT",
+          "net": "WAIT",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
           "name": "XOP0",
           "net": "XOP0",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 10,
           "name": "XOP1",
           "net": "XOP1",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 11,
           "name": "XOP2",
           "net": "XOP2",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "XSH",
-          "net": "XSH",
           "kind": "in"
         },
         {
@@ -79251,6 +80995,12 @@
           "name": "GND",
           "net": "GND",
           "kind": "power"
+        },
+        {
+          "pin": 13,
+          "name": "XSH",
+          "net": "XSH",
+          "kind": "in"
         },
         {
           "pin": 19,
@@ -96782,7 +98532,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -96800,7 +98550,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -96818,7 +98568,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -96856,7 +98606,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -96874,7 +98624,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -96892,7 +98642,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -96930,7 +98680,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -96948,7 +98698,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -96966,7 +98716,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -97004,7 +98754,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -97022,7 +98772,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -97040,7 +98790,7 @@
                   true
                 ],
                 [
-                  "S0_0",
+                  "SUM0",
                   false
                 ],
                 [
@@ -97118,7 +98868,7 @@
             "terms": [
               [
                 [
-                  "S0_0",
+                  "SUM0",
                   true
                 ],
                 [
@@ -97278,11 +99028,11 @@
           ],
           [
             7,
-            "S0_0"
+            "S0_1"
           ],
           [
             8,
-            "S0_1"
+            "SUM0"
           ],
           [
             9,
@@ -97381,14 +99131,14 @@
         },
         {
           "pin": 7,
-          "name": "S0_0",
-          "net": "S0_0",
+          "name": "S0_1",
+          "net": "S0_1",
           "kind": "in"
         },
         {
           "pin": 8,
-          "name": "S0_1",
-          "net": "S0_1",
+          "name": "SUM0",
+          "net": "SUM0",
           "kind": "in"
         },
         {
@@ -107240,16 +108990,13 @@
       "name": "FB31"
     },
     {
-      "name": "S0_0"
+      "name": "SUM0"
     },
     {
       "name": "S0_1"
     },
     {
       "name": "S0_2"
-    },
-    {
-      "name": "S1_0"
     },
     {
       "name": "S1_1"
