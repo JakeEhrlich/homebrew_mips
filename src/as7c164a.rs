@@ -139,6 +139,34 @@ impl Timing {
     }
 }
 
+impl Timing {
+    /// IS61C256AH-12 (ISSI 32K x 8, 5 V, 12 ns; datasheet SR020-1O pages 4
+    /// and 6, saved as `docs/IS61C256AH_datasheet.pdf`).  Same pin family
+    /// as the 8K x 8 part with two more address lines (tied low here) and
+    /// no CE2.  tOW is the datasheet's tLZWE.
+    pub const fn is61c256ah_12() -> Timing {
+        Timing {
+            taa: 12 * NS,
+            tace: 12 * NS,
+            toe: 5 * NS,
+            tclz: 3 * NS,
+            tolz: 0,
+            tchz: 7 * NS,
+            tohz: 6 * NS,
+            toh: 2 * NS,
+            taw: 10 * NS,
+            tcw: 10 * NS,
+            tas: 0,
+            twp: 8 * NS,
+            twr: 0,
+            tdw: 7 * NS,
+            tdh: 0,
+            tow: 0,
+            twhz: 6 * NS,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Warning {
     pub time: Time,

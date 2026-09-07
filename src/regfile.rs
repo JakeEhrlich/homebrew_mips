@@ -197,6 +197,6 @@ impl Default for RegFile {
     }
 }
 
-fn pad_addr(r: [Level; 5]) -> [Level; 10] {
+fn pad_addr(r: [Level; 5]) -> [Level; crate::cy7c131::ADDR_BITS] {
     std::array::from_fn(|i| if i < 5 { r[i] } else { Level::L })
 }

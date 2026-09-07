@@ -378,7 +378,15 @@ pub struct Gal22v10 {
     olmc: Vec<Olmc>,
     clk: Level,
     clk_since: Time,
+    /// When the clock pin went unknown, and the level it left.  A tap of a
+    /// delay line reaches a clock pin as an X window; the edge is somewhere
+    /// inside it.
+    clk_x_since: Time,
+    clk_before_x: Level,
+    /// Last rising edge as `(earliest, latest)`: the same instant for a
+    /// definite edge, the X window for an uncertain one.
     last_edge: Option<Time>,
+    edge_start: Time,
     ar: Level,
     ar_since: Time,
     /// AR term as the array sees it (undelayed) and when it last went H.
@@ -461,7 +469,10 @@ impl Gal22v10 {
             olmc,
             clk: Level::X,
             clk_since: 0,
+            clk_x_since: 0,
+            clk_before_x: Level::X,
             last_edge: None,
+            edge_start: 0,
             ar: Level::L,
             ar_since: 0,
             ar_in: Level::L,
@@ -737,7 +748,7 @@ impl Gal22v10 {
             self.olmc[k].cone_changed = t;
             if self.cfg.olmc[k].registered {
                 if let Some(e) = self.last_edge
-                    && t >= e
+                    && t >= self.edge_start
                     && t <= e + tm.th
                 {
                     self.warn(WarningKind::Hold { olmc: k, changed_at: t });
@@ -962,7 +973,7 @@ impl Gal22v10 {
                     self.unknown_all_regs();
                     return;
                 }
-                self.rising_edge();
+                self.rising_edge(t, t);
             }
             (Level::H, Level::L) => {
                 if width < tm.tw {
@@ -970,15 +981,56 @@ impl Gal22v10 {
                     self.unknown_all_regs();
                 }
             }
-            (_, Level::X) | (_, Level::Z) => {
-                self.warn(WarningKind::ClockUnknown);
-                self.unknown_all_regs();
-            }
-            (Level::X, _) | (Level::Z, _) => {
-                // Clock became known; treat a new high as a possible edge.
-                if new == Level::H {
+            (Level::L, Level::X) | (Level::H, Level::X) => {
+                // A transition window begins: the level was definite for
+                // `width` (its pulse width, conservatively).
+                self.clk_x_since = t;
+                self.clk_before_x = old;
+                if width < tm.tw {
+                    self.warn(WarningKind::ClockWidth { width });
                     self.unknown_all_regs();
                 }
+                if old == Level::L && self.ar != Level::H {
+                    // A rising edge may be anywhere from now on: outputs
+                    // are unknown from tCO(min) after the window opens
+                    // until the capture (below) settles them.  (Under
+                    // reset nothing moves.)
+                    for k in 0..OLMCS {
+                        if self.cfg.olmc[k].registered {
+                            self.schedule(t + tm.tco_min, Ev::RegPin(k, Level::X));
+                            self.schedule(t + tm.tcf_min, Ev::RegFb(k, Level::X));
+                        }
+                    }
+                }
+            }
+            (Level::X, Level::H) if self.clk_before_x == Level::L => {
+                // Rising edge somewhere in [clk_x_since, t].
+                let start = self.clk_x_since;
+                self.rising_edge(start, t);
+            }
+            (Level::X, Level::L) if self.clk_before_x == Level::H => {}
+            (Level::X, Level::L) if self.clk_before_x == Level::L => {
+                // No edge after all: the speculative unknowns resolve back.
+                for k in 0..OLMCS {
+                    let c = &self.cfg.olmc[k];
+                    if c.registered {
+                        let q = self.olmc[k].q;
+                        self.schedule(t, Ev::RegPin(k, xor_pol(q, c.active_low)));
+                        self.schedule(t, Ev::RegFb(k, not3(q)));
+                    }
+                }
+            }
+            (Level::X, Level::H) | (Level::X, Level::L) => {
+                // Unknown resolving to the level it left: no edge.  A clock
+                // that was never known (power-up) becoming high is a
+                // possible edge, so the registers are unknown.
+                if self.clk_before_x == Level::X && new == Level::H {
+                    self.unknown_all_regs();
+                }
+            }
+            (_, Level::X) | (_, Level::Z) | (Level::Z, _) => {
+                self.warn(WarningKind::ClockUnknown);
+                self.unknown_all_regs();
             }
             _ => {}
         }
@@ -992,10 +1044,14 @@ impl Gal22v10 {
         }
     }
 
-    fn rising_edge(&mut self) {
-        let t = self.now;
+    /// A rising clock edge that happened somewhere in `[start, end]`
+    /// (`end` is now).  Setup is measured to `start`, hold from `end`,
+    /// outputs are unknown from `start + tCO(min)` to `end + tCO(max)`.
+    fn rising_edge(&mut self, start: Time, end: Time) {
+        let t = start;
         let tm = self.tm;
-        self.last_edge = Some(t);
+        self.last_edge = Some(end);
+        self.edge_start = start;
         // Reset dominates.
         if self.ar == Level::H {
             return;
@@ -1054,14 +1110,21 @@ impl Gal22v10 {
             let v = new_q[k];
             let old = self.olmc[k].q;
             self.olmc[k].q = v;
-            if v == old {
-                continue; // flip-flop outputs don't glitch
-            }
             let out = xor_pol(v, self.cfg.olmc[k].active_low);
-            self.schedule(t + tm.tco_min, Ev::RegPin(k, Level::X));
-            self.schedule(t + tm.tco_max, Ev::RegPin(k, out));
-            self.schedule(t + tm.tcf_min, Ev::RegFb(k, Level::X));
-            self.schedule(t + tm.tcf_max, Ev::RegFb(k, not3(v)));
+            if v == old {
+                // Flip-flop outputs don't glitch.  After an uncertain edge
+                // the outputs were made unknown when its window opened, so
+                // settle them back.
+                if start != end {
+                    self.schedule(end + tm.tco_max, Ev::RegPin(k, out));
+                    self.schedule(end + tm.tcf_max, Ev::RegFb(k, not3(v)));
+                }
+                continue;
+            }
+            self.schedule(start + tm.tco_min, Ev::RegPin(k, Level::X));
+            self.schedule(end + tm.tco_max, Ev::RegPin(k, out));
+            self.schedule(start + tm.tcf_min, Ev::RegFb(k, Level::X));
+            self.schedule(end + tm.tcf_max, Ev::RegFb(k, not3(v)));
         }
     }
 }

@@ -361,7 +361,7 @@ fn run_overlap(rf: &mut RegFile, period: u64, mode: Overlap, cycles: &[Cycle]) -
 fn set_bank(rf: &mut RegFile, bank: usize, lane: usize, t: Time, i: RegFileInputs) {
     use mips32::cy7c131::{Inputs, PortInputs};
     let raddr = if bank == 0 { i.rs } else { i.rt };
-    let pad = |r: [Level; 5]| -> [Level; 10] { std::array::from_fn(|k| if k < 5 { r[k] } else { Level::L }) };
+    let pad = |r: [Level; 5]| -> [Level; mips32::cy7c131::ADDR_BITS] { std::array::from_fn(|k| if k < 5 { r[k] } else { Level::L }) };
     let read = PortInputs { addr: pad(raddr), ce_n: i.ce_r_n, rw_n: Level::H, oe_n: Level::L, data: [Level::Z; 8] };
     let write = PortInputs {
         addr: pad(i.rd),

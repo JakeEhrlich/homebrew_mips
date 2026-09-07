@@ -203,6 +203,12 @@ impl Chip for Cy7c131 {
                 _ => {}
             }
         }
+        // The 1K part has ten address pins; the model carries fourteen.
+        for p in [cy7c131::Port::Left, cy7c131::Port::Right] {
+            for b in 10..cy7c131::ADDR_BITS {
+                inp.port_mut(p).addr[b] = Level::L;
+            }
+        }
         Cy7c131::set_inputs(self, t, inp);
     }
     fn drive(&mut self, t: Time, out: &mut [Level]) {
@@ -225,6 +231,102 @@ impl Chip for Cy7c131 {
     }
     fn warnings(&self) -> Vec<String> {
         Cy7c131::warnings(self).iter().map(|w| w.to_string()).collect()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Chip impl: 16K x 8 dual-port SRAM (IDT7006 / CY7C006 class), same model
+// as the CY7C131 with fourteen address lines.  Pin numbers here are a
+// logical map (see `dp16k_pin`); the physical PLCC-68 assignment is a PCB
+// task (docs/memory-timing.md).
+
+pub struct DualPort16k(pub Cy7c131);
+
+/// Logical pins: 1-14 A_L0-13, 15-22 IO_L0-7, 23 CE_L, 24 RW_L, 25 OE_L,
+/// 26 BUSY_L, 27 INT_L, 28 GND; 35-48 A_R0-13, 49-56 IO_R0-7, 57 CE_R,
+/// 58 RW_R, 59 OE_R, 60 BUSY_R, 61 INT_R, 62 VCC; the rest NC.
+pub fn dp16k_pin(pin: usize) -> SramPin {
+    use cy7c131::Port::{Left as L, Right as R};
+    match pin {
+        1..=14 => SramPin::A(L, (pin - 1) as u8),
+        15..=22 => SramPin::Io(L, (pin - 15) as u8),
+        23 => SramPin::Ce(L),
+        24 => SramPin::Rw(L),
+        25 => SramPin::Oe(L),
+        26 => SramPin::Busy(L),
+        27 => SramPin::Int(L),
+        28 => SramPin::Gnd,
+        35..=48 => SramPin::A(R, (pin - 35) as u8),
+        49..=56 => SramPin::Io(R, (pin - 49) as u8),
+        57 => SramPin::Ce(R),
+        58 => SramPin::Rw(R),
+        59 => SramPin::Oe(R),
+        60 => SramPin::Busy(R),
+        61 => SramPin::Int(R),
+        62 => SramPin::Vcc,
+        _ => SramPin::Nc,
+    }
+}
+pub fn dp16k_pin_of(f: SramPin) -> usize {
+    (1..=68).find(|&p| dp16k_pin(p) == f).expect("no such pin")
+}
+
+impl Chip for DualPort16k {
+    fn pin_count(&self) -> usize {
+        68
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        let s = |p: cy7c131::Port| if p == cy7c131::Port::Left { "L" } else { "R" };
+        match dp16k_pin(pin) {
+            SramPin::Ce(p) => format!("CE{}", s(p)),
+            SramPin::Rw(p) => format!("RW{}", s(p)),
+            SramPin::Busy(p) => format!("BUSY{}", s(p)),
+            SramPin::Int(p) => format!("INT{}", s(p)),
+            SramPin::Oe(p) => format!("OE{}", s(p)),
+            SramPin::A(p, i) => format!("A{i}{}", s(p)),
+            SramPin::Io(p, i) => format!("IO{i}{}", s(p)),
+            SramPin::Nc => "NC".into(),
+            SramPin::Gnd => "GND".into(),
+            SramPin::Vcc => "VCC".into(),
+        }
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        let mut inp = Inputs { l: PortInputs::default(), r: PortInputs::default() };
+        for (pin, &v) in ext.iter().enumerate().take(69).skip(1) {
+            match dp16k_pin(pin) {
+                SramPin::Ce(p) => inp.port_mut(p).ce_n = v,
+                SramPin::Rw(p) => inp.port_mut(p).rw_n = v,
+                SramPin::Oe(p) => inp.port_mut(p).oe_n = v,
+                SramPin::A(p, i) => inp.port_mut(p).addr[i as usize] = v,
+                SramPin::Io(p, i) => inp.port_mut(p).data[i as usize] = v,
+                _ => {}
+            }
+        }
+        self.0.set_inputs(t, inp);
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        let o = self.0.outputs(t);
+        for (pin, slot) in out.iter_mut().enumerate().take(69).skip(1) {
+            *slot = match dp16k_pin(pin) {
+                SramPin::Io(p, i) => match o.port(p).data {
+                    Bus::Z => Level::Z,
+                    Bus::X => Level::X,
+                    Bus::V(v) => Level::from_bit(v >> i & 1 == 1),
+                },
+                SramPin::Busy(p) => o.port(p).busy_n,
+                SramPin::Int(p) => o.port(p).int_n,
+                _ => Level::Z,
+            };
+        }
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        self.0.next_event(t)
+    }
+    fn warnings(&self) -> Vec<String> {
+        Cy7c131::warnings(&self.0).iter().map(|w| w.to_string()).collect()
     }
     fn as_any(&self) -> &dyn std::any::Any {
         self

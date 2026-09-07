@@ -24,11 +24,11 @@
 //! `X*` (ID/EX), `M*` (EX/MEM), `W*` (MEM/WB).
 
 use crate::as7c164a::As7c164a;
-use crate::cy7c131::{Cy7c131, Port};
-use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate, instantiate_all, lit, nlit, pack};
+use crate::cy7c131::{self, Cy7c131, Port};
+use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::netlist::{DS1100_IN, Level, NetId, Netlist, Sim, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of};
+use crate::netlist::{DS1100_IN, DualPort16k, Level, NetId, Netlist, Sim, SramPin, Sram8kPin, Time, NS, dp16k_pin_of, ds1100_tap_pin, sram_pin_of, sram8k_pin_of};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -787,13 +787,14 @@ fn exmem_result_block() -> Vec<Eq> {
         .collect()
 }
 
-/// EX/MEM store data with forwarding, tri-stated onto the data bus during
-/// stores (enabled by MMW and the PH_SD strobe).
+/// EX/MEM store data with forwarding.  Nothing is tri-stated any more: the
+/// data memory's write port has its own data pins, fed by the WB-stage copy
+/// [`wsd_block`].
 fn exmem_sd_block() -> Vec<Eq> {
     (0..32)
         .map(|i| {
             Eq::sop(
-                &n("DQ", i),
+                &n("SD", i),
                 Mode::Reg,
                 vec![
                     vec![nl_("XFSE"), nl_("XFSM"), l(&n("XSD", i))],
@@ -801,18 +802,47 @@ fn exmem_sd_block() -> Vec<Eq> {
                     vec![nl_("XFSE"), l("XFSM"), l(&n("WD", i))],
                 ],
             )
-            .with_oe(vec![l("MMW"), l("PH_SD")])
         })
         .collect()
 }
 
+/// WB-stage copy of the store data: the data memory write happens in the
+/// store's WB cycle (the low half, ended by the clock edge), so the data
+/// must still be there then.  Valid 5.5 ns into the cycle, held until 2 ns
+/// after the edge that ends the write (data hold needed: 0).
+fn wsd_block() -> Vec<Eq> {
+    (0..32).map(|i| Eq::sop(&n("WSD", i), Mode::Reg, vec![vec![l(&n("SD", i))]])).collect()
+}
+
+/// Load-after-store interlock.  A store's write uses the data memory's
+/// write port during the store's WB cycle; a load in MEM in that same cycle
+/// would select the read port at the same time and, if the addresses
+/// matched, the dual-port arbitration would inhibit the write.  So a load
+/// in EX behind a store in MEM is held for one cycle: PC, IF/ID, ID/EX and
+/// MEM/WB keep their values, EX/MEM takes a bubble (the store has left it;
+/// its write is already in the copies), and the load enters MEM a cycle
+/// later, after the write has ended.  HELD makes it a single cycle.
+fn stall_block() -> Vec<Eq> {
+    vec![
+        Eq::sop("HOLD", Mode::Comb, vec![vec![l("XMR"), l("MMW"), nl_("HELD")]]),
+        Eq::sop("HELD", Mode::Reg, vec![vec![l("HOLD")]]),
+    ]
+}
+
 /// EX/MEM control.
+///
+/// A HOLD cycle (load in EX right behind a store in MEM, see
+/// [`stall_block`]) turns the instruction entering MEM into a bubble: the
+/// store it replaces has already been captured by the write copies.
 fn exmem_ctrl_block() -> Vec<Eq> {
     let mut eqs = vec![
-        Eq::sop("MRW", Mode::Reg, vec![vec![l("XRW")]]),
-        Eq::sop("MMR", Mode::Reg, vec![vec![l("XMR")]]),
-        Eq::sop("MMW", Mode::Reg, vec![vec![l("XMW")]]),
-        Eq::sop("MMW_n", Mode::Reg, vec![vec![l("XMW")]]).active_low(),
+        Eq::sop("MRW", Mode::Reg, vec![vec![l("XRW"), nl_("HOLD")]]),
+        Eq::sop("MMR", Mode::Reg, vec![vec![l("XMR"), nl_("HOLD")]]),
+        // Data memory read port select (active low): only loads select
+        // it, so a pending write on the other port never arbitrates
+        // against an instruction that merely has an equal ALU result.
+        Eq::sop("MMR_n", Mode::Reg, vec![vec![l("XMR"), nl_("HOLD")]]).active_low(),
+        Eq::sop("MMW", Mode::Reg, vec![vec![l("XMW"), nl_("HOLD")]]),
     ];
     for i in 0..5 {
         eqs.push(Eq::sop(&n("MDEST", i), Mode::Reg, vec![vec![l(&n("XDEST", i))]]));
@@ -867,11 +897,46 @@ fn memwb_block() -> Vec<Eq> {
     for i in 0..5 {
         eqs.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
     }
-    // Polarity chosen so that reset (registers cleared) means "writing r0
-    // with WD = 0": the register file's r0 is zeroed by the reset sequence
-    // itself, and the steer keeps the read ports off r0 meanwhile.
+    // Polarity chosen so that reset (registers cleared) reads as "writing
+    // r0": the steer then keeps the read ports off r0 while the write copy
+    // (also reset) zeroes it.
     eqs.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
-    eqs.push(Eq::sop("WREG_n", Mode::Reg, vec![vec![nl_("MRW")]]));
+    eqs
+}
+
+/// Write-port copies, two stages on delay-line taps (see docs/memory-timing.md).
+///
+/// Stage 1 (clock T3, 18 ns after the edge) samples the MEM-stage
+/// destination / write flag / store flag while they are stable mid-cycle.
+/// Stage 2 (clock T1, 6 ns after the edge) re-times them so that the
+/// register-file write port sees the WB instruction's destination from
+/// ~13 ns into its WB cycle until ~8 ns into the next: valid before the
+/// write starts at the clock's falling edge, held past its end at the
+/// rising edge (tHA = 2 ns).  MMWC likewise is the store flag delayed
+/// ~6..12 ns, which times the store-data drivers into the gap between the
+/// memory's outputs turning off and on.
+///
+/// Neither stage has an asynchronous reset: their sources are held at zero
+/// by the pipeline's reset, the ATF22V10C powers up with registers cleared,
+/// and RESET enters the write flag synchronously so that "in reset" reads
+/// as "writing r0" (WC1W_n = 0) without any recovery-time relation between
+/// the reset release and the tap clocks.
+///
+/// The data memory's write port gets the same treatment: its address
+/// (DA, from the MEM-stage MR) and write flag (DWE_n, from MMW) go through
+/// both stages; the write then lands in the store's WB cycle.
+fn wcopy1_block() -> Vec<Eq> {
+    let mut eqs: Vec<Eq> = (0..5).map(|i| Eq::sop(&n("WC1D", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]])).collect();
+    eqs.push(Eq::sop("WC1W_n", Mode::Reg, vec![vec![nl_("MRW"), nl_("RESET")]]));
+    eqs.extend((0..13).map(|i| Eq::sop(&n("DA1_", i), Mode::Reg, vec![vec![l(&n("MR", i + 2))]])));
+    eqs.push(Eq::sop("DWE1_n", Mode::Reg, vec![vec![l("MMW")]]).active_low());
+    eqs
+}
+fn wcopy2_block() -> Vec<Eq> {
+    let mut eqs: Vec<Eq> = (0..5).map(|i| Eq::sop(&n("WDESTC", i), Mode::Reg, vec![vec![l(&n("WC1D", i))]])).collect();
+    eqs.push(Eq::sop("WREGC_n", Mode::Reg, vec![vec![l("WC1W_n")]]));
+    eqs.extend((0..13).map(|i| Eq::sop(&n("DA", i), Mode::Reg, vec![vec![l(&n("DA1_", i))]])));
+    eqs.push(Eq::sop("DWE_n", Mode::Reg, vec![vec![l("DWE1_n")]]));
     eqs
 }
 
@@ -905,15 +970,21 @@ pub fn with_hold(eqs: Vec<Eq>, hold: &str) -> Vec<Eq> {
         .collect()
 }
 
-/// The CPU's GALs with a global HOLD on every pipeline register (PC, IF/ID,
-/// ID/EX, EX/MEM) and a bubble in MEM/WB; only for counting the cost.
-pub fn gal_specs_with_hold() -> Vec<GalSpec> {
+/// Every GAL of the CPU, packed.
+pub fn gal_specs() -> Vec<GalSpec> {
+    // Minimising the tables takes seconds; every CPU instance shares one
+    // set of specs.
+    static SPECS: std::sync::OnceLock<Vec<GalSpec>> = std::sync::OnceLock::new();
+    SPECS.get_or_init(build_gal_specs).clone()
+}
+
+fn build_gal_specs() -> Vec<GalSpec> {
     let clk = Some("CLK");
     let rst = Some("RESET");
     let (bt1, bt2, btr) = bt_block();
     let (fa, fb) = fwd_mux_block();
-    let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLD");
     let mut v = Vec::new();
+    let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLD");
     v.extend(pack("pc", clk, rst, h(pc_block())));
     v.extend(pack("inc", None, None, inc_block()));
     v.extend(pack("ifid", clk, rst, h(ifid_block())));
@@ -934,146 +1005,40 @@ pub fn gal_specs_with_hold() -> Vec<GalSpec> {
     v.extend(pack("sh1", None, None, shift1_block()));
     v.extend(pack("shm", None, None, shift_mask_block()));
     v.extend(pack("sh2", None, None, shift2_block()));
-    v.extend(pack("mr", clk, None, h(exmem_result_block())));
-    v.extend(pack("msd", clk, None, h(exmem_sd_block())));
-    v.extend(pack("mctl", clk, rst, h(exmem_ctrl_block())));
-    v.extend(pack("cmp", None, None, cmp_block()));
-    v.extend(pack("nxt", None, None, taken_block()));
-    v.extend(pack("wb", clk, rst, memwb_block()));
-    v
-}
-
-/// Every GAL of the CPU, packed.
-pub fn gal_specs() -> Vec<GalSpec> {
-    // Minimising the tables takes seconds; every CPU instance shares one
-    // set of specs.
-    static SPECS: std::sync::OnceLock<Vec<GalSpec>> = std::sync::OnceLock::new();
-    SPECS.get_or_init(build_gal_specs).clone()
-}
-
-fn build_gal_specs() -> Vec<GalSpec> {
-    let clk = Some("CLK");
-    let rst = Some("RESET");
-    let (bt1, bt2, btr) = bt_block();
-    let (fa, fb) = fwd_mux_block();
-    let mut v = Vec::new();
-    v.extend(pack("pc", clk, rst, pc_block()));
-    v.extend(pack("inc", None, None, inc_block()));
-    v.extend(pack("ifid", clk, rst, ifid_block()));
-    v.extend(pack("dec", None, None, dec_block()));
-    v.extend(pack("ctl", clk, rst, ctrl_block()));
-    v.extend(pack("steer", None, None, steer_block()));
-    v.extend(pack("fwdc", clk, rst, fwdctl_block()));
-    v.extend(pack("xa", clk, None, idex_a_block()));
-    v.extend(pack("xb", clk, None, idex_b_block()));
-    v.extend(pack("xsd", clk, None, idex_sd_block()));
-    v.extend(pack("bt1", None, None, bt1));
-    v.extend(pack("bt2", None, None, bt2));
-    v.extend(pack("xbt", clk, None, btr));
-    v.extend(pack("fa", None, None, fa));
-    v.extend(pack("fb", None, None, fb));
-    v.extend(pack("alu1", None, None, alu_l1_block()));
-    v.extend(pack("alu2", None, None, alu_l2_block()));
-    v.extend(pack("sh1", None, None, shift1_block()));
-    v.extend(pack("shm", None, None, shift_mask_block()));
-    v.extend(pack("sh2", None, None, shift2_block()));
     v.extend(pack("mr", clk, None, exmem_result_block()));
     v.extend(pack("msd", clk, None, exmem_sd_block()));
     v.extend(pack("mctl", clk, rst, exmem_ctrl_block()));
+    v.extend(pack("stl", clk, rst, stall_block()));
     v.extend(pack("cmp", None, None, cmp_block()));
     v.extend(pack("nxt", None, None, taken_block()));
-    v.extend(pack("wb", clk, rst, memwb_block()));
+    v.extend(pack("wb", clk, rst, h(memwb_block())));
+    v.extend(pack("wsd", clk, None, wsd_block()));
+    v.extend(pack("wc1", Some("T3"), None, wcopy1_block()));
+    v.extend(pack("wc2", Some("T1"), None, wcopy2_block()));
     v
 }
 
 /// The running CPU.
-/// Where the memory strobes come from.
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Strobes {
-    /// Ideal testbench stimulus at the [`phases`] times.
-    Ideal,
-    /// A DS1100-`total` delay line on CLK feeding one combinational GAL
-    /// (`clkgen0`) that shapes PH_RF / PH_CE / PH_SD from the taps.
-    DelayLine { total: u32, grade: Grade, taps: StrobeTaps },
-}
-
-/// Which tap edges shape each strobe.  A strobe's active window is
-/// `[fall, half + rise]` in nominal ns, where `fall` is the tap index whose
-/// rising edge starts it and `rise` the tap whose falling edge ends it
-/// (index 0 = CLK itself, 1..=5 = TAP1..TAP5).  Built as
-/// `CLK & !T(fall) | !CLK & !T(rise)`, which is high outside the window.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct StrobeTaps {
-    pub ce: (u8, u8),
-    pub rf: (u8, u8),
-    pub sd: (u8, u8),
-}
-
-impl StrobeTaps {
-    /// Nearest taps to the ideal phases for a DS1100-`total`.
-    pub fn nearest(total: u32) -> StrobeTaps {
-        let step = total as f64 / 5.0;
-        let tap = |ns: f64| ((ns / step).round() as u8).clamp(0, 5);
-        StrobeTaps { ce: (tap(10.0), tap(14.0)), rf: (tap(15.0), tap(14.0)), sd: (tap(8.0), tap(15.0)) }
-    }
-}
+/// The delay line part used for the write-copy clocks: DS1100-30, taps at
+/// 6, 12, 18, 24, 30 ns.  T1 (6) clocks the second copy stage, T3 (18) the
+/// first.
+pub const DELAY_LINE_TOTAL: u32 = 30;
 
 pub struct Cpu {
     pub sim: Sim,
     pub period: Time,
     pub cycles: u64,
     pub pc_trace: Vec<Option<u32>>,
-    pub strobes: Strobes,
+    /// Delay-line tolerance grade the netlist was built with.
+    pub grade: Grade,
     /// When RESET was released (ps).
     pub reset_release: Time,
     clk: NetId,
-    ph_rf: NetId,
-    ph_ce: NetId,
-    ph_sd: NetId,
     pc: Vec<NetId>,
     imem: Vec<usize>,
     dmem: Vec<usize>,
     rf: Vec<usize>,
     pub gal_count: usize,
-}
-
-/// Clock-generator phases as (fall, rise) for the active-low strobes and
-/// (rise, fall) for PH_SD, in ns after the rising edge, given the period.
-///
-/// * PH_RF: register-file write CE.  Falls after the steer has settled
-///   (13 ns) plus tPS; rises at least tHA (2 ns) before the next MEM/WB
-///   update (next edge + 2), and after a >= 12 ns pulse.
-/// * PH_CE: data-memory CE#.  Load data is valid 15 ns after the fall and
-///   must still be there at the next edge, so it rises 1 ns after it; the
-///   EX/MEM address does not change before next edge + 2.
-/// * PH_SD: store-data output enable.  Rises after a preceding load's
-///   outputs are off (CE# up at next+1, tCHZ 7: 8 ns into the cycle);
-///   falls so the data holds to the write end (tER min 3) yet is gone
-///   before a following load's outputs turn on (10 + tCLZ 4).
-pub fn phases(period_ns: f64) -> [(f64, f64); 3] {
-    [(15.0, period_ns - 3.0), (10.0, period_ns + 1.0), (8.0, period_ns - 2.0)]
-}
-/// Strobe generator: one combinational GAL on CLK and the delay-line taps.
-/// Each strobe is `CLK & !T(fall) | !CLK & !T(rise)`: with a 50% clock and
-/// T(k) a delayed copy of CLK, that is high from the edge until T(fall)
-/// rises and again from T(rise)'s falling edge (half period + rise) until
-/// the next edge.  PH_SD is the same shape inverted (active high).
-pub fn clkgen_spec(taps: StrobeTaps) -> GalSpec {
-    let t = |k: u8| if k == 0 { "CLK".to_string() } else { format!("T{k}") };
-    let shape = |(fall, rise): (u8, u8)| -> Vec<Vec<SLit>> {
-        let mut v = Vec::new();
-        if fall != 0 {
-            v.push(vec![l("CLK"), nl_(&t(fall))]);
-        }
-        v.push(vec![nl_("CLK"), nl_(&t(rise))]);
-        v
-    };
-    let eqs = vec![
-        Eq::sop("PH_CE", Mode::Comb, shape(taps.ce)),
-        Eq::sop("PH_RF", Mode::Comb, shape(taps.rf)),
-        Eq::sop("PH_SD", Mode::Comb, shape(taps.sd)).active_low(),
-    ];
-    GalSpec { name: "clkgen0".into(), clk: None, ar: None, eqs }
 }
 
 /// Time stamp of a chip warning (`t=123.500ns` inside the text).
@@ -1093,38 +1058,29 @@ pub const PH_SD: usize = 2;
 
 impl Cpu {
     /// Build the netlist with `program` in instruction memory at address 0,
-    /// strobes from ideal stimulus.
+    /// delay line at commercial-temperature tolerance.
     pub fn new(program: &[u32], period_ns: f64) -> Cpu {
-        Cpu::with_strobes(program, period_ns, Strobes::Ideal)
+        Cpu::with_grade(program, period_ns, Grade::Commercial)
     }
 
-    pub fn with_strobes(program: &[u32], period_ns: f64, strobes: Strobes) -> Cpu {
+    pub fn with_grade(program: &[u32], period_ns: f64, grade: Grade) -> Cpu {
         let mut nl = Netlist::new();
         let specs = gal_specs();
-        let mut gal_count = specs.len();
+        let gal_count = specs.len();
         instantiate_all(&mut nl, &specs);
-        if let Strobes::DelayLine { total, grade, taps } = strobes {
-            let dl = nl.add_chip("dl0", Ds1100::new(total, grade));
-            let clk = nl.net("CLK");
-            nl.connect(clk, dl, DS1100_IN);
-            for k in 0..5 {
-                let net = nl.net(&format!("T{}", k + 1));
-                nl.connect(net, dl, ds1100_tap_pin(k));
-            }
-            let spec = clkgen_spec(taps);
-            spec.fits().unwrap();
-            instantiate(&mut nl, &spec);
-            gal_count += 1;
+        // Delay line on CLK: its taps clock the write-copy registers.
+        let dl = nl.add_chip("dl0", Ds1100::new(DELAY_LINE_TOTAL, grade));
+        let clk = nl.net("CLK");
+        nl.connect(clk, dl, DS1100_IN);
+        for k in 0..5 {
+            let net = nl.net(&format!("T{}", k + 1));
+            nl.connect(net, dl, ds1100_tap_pin(k));
         }
 
         let gnd = nl.net("GND");
         let vcc = nl.net("VCC");
         nl.tie(gnd, Level::L);
         nl.tie(vcc, Level::H);
-        let clk = nl.net("CLK");
-        let ph_rf = nl.net("PH_RF");
-        let ph_ce = nl.net("PH_CE");
-        let ph_sd = nl.net("PH_SD");
 
         // Instruction memory: 4 lanes, address = PC[14:2].
         let mut imem = Vec::new();
@@ -1151,31 +1107,57 @@ impl Cpu {
             nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::OeN));
             nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::WeN));
         }
-        // Data memory: address = MR[14:2], CE# strobe, WE# = MMW_n, OE# = GND.
+        // Data memory: four byte lanes of 16K x 8 dual-port SRAM.  Left
+        // port reads (address MR[14:2], selected only during loads by
+        // MMR_n, always output-enabled); right port writes (address and
+        // write flag from the two-stage copies, data from the WB-stage
+        // copy, CE = CLK so the write is the low half of the store's WB
+        // cycle and ends at the edge).  A13 of the write port doubles as
+        // the idle park (DWE_n = 1 -> 8K..16K, never read).
         let mut dmem = Vec::new();
         for lane in 0..4 {
-            let mut chip = As7c164a::new();
-            for w in 0..8192 {
+            let mut chip = Cy7c131::with_timing_and_size(cy7c131::Timing::grade_15(), 14);
+            for w in 0..8192u16 {
                 chip.preload(w, 0);
             }
-            let c = nl.add_chip(&format!("dmem{lane}"), chip);
+            let c = nl.add_chip(&format!("dmem{lane}"), DualPort16k(chip));
             dmem.push(c);
             for a in 0..13 {
                 let net = nl.net(&n("MR", a + 2));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
+                nl.connect(net, c, dp16k_pin_of(SramPin::A(Port::Left, a as u8)));
+                let net = nl.net(&n("DA", a));
+                nl.connect(net, c, dp16k_pin_of(SramPin::A(Port::Right, a as u8)));
             }
+            nl.connect(gnd, c, dp16k_pin_of(SramPin::A(Port::Left, 13)));
+            let dwe_n = nl.net("DWE_n");
+            nl.connect(dwe_n, c, dp16k_pin_of(SramPin::A(Port::Right, 13)));
             for b in 0..8 {
                 let net = nl.net(&n("DQ", 8 * lane + b));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::Dq(b as u8)));
+                nl.connect(net, c, dp16k_pin_of(SramPin::Io(Port::Left, b as u8)));
+                let net = nl.net(&n("WSD", 8 * lane + b));
+                nl.connect(net, c, dp16k_pin_of(SramPin::Io(Port::Right, b as u8)));
             }
-            nl.connect(ph_ce, c, sram8k_pin_of(Sram8kPin::CeN));
-            nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::Ce2));
-            nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::OeN));
-            let we = nl.net("MMW_n");
-            nl.connect(we, c, sram8k_pin_of(Sram8kPin::WeN));
+            let mmr_n = nl.net("MMR_n");
+            nl.connect(mmr_n, c, dp16k_pin_of(SramPin::Ce(Port::Left)));
+            nl.connect(vcc, c, dp16k_pin_of(SramPin::Rw(Port::Left)));
+            nl.connect(gnd, c, dp16k_pin_of(SramPin::Oe(Port::Left)));
+            nl.connect(clk, c, dp16k_pin_of(SramPin::Ce(Port::Right)));
+            nl.connect(dwe_n, c, dp16k_pin_of(SramPin::Rw(Port::Right)));
+            nl.connect(vcc, c, dp16k_pin_of(SramPin::Oe(Port::Right)));
+            for (p, name) in [
+                (SramPin::Busy(Port::Left), "DBUSYL"),
+                (SramPin::Busy(Port::Right), "DBUSYR"),
+                (SramPin::Int(Port::Left), "DINTL"),
+                (SramPin::Int(Port::Right), "DINTR"),
+            ] {
+                let net = nl.net(&format!("{name}_{lane}"));
+                nl.pull(net, Level::H);
+                nl.connect(net, c, dp16k_pin_of(p));
+            }
         }
         // Register file: bank 0 reads rs (IR25..21) -> RA, bank 1 reads rt
-        // (IR20..16) -> RB; write port: WDEST / WD / CE_W strobe / R/W = WREG_n.
+        // (IR20..16) -> RB; write port: address WDESTC (delayed copy), data
+        // WD, CE = CLK (write in the low half), R/W = WREGC_n.
         let mut rf = Vec::new();
         for bank in 0..2 {
             for lane in 0..4 {
@@ -1191,13 +1173,13 @@ impl Cpu {
                 for i in 0..5 {
                     let net = nl.net(&ir(field + i));
                     nl.connect(net, c, sram_pin_of(SramPin::A(Port::Left, i as u8)));
-                    let net = nl.net(&n("WDEST", i));
+                    let net = nl.net(&n("WDESTC", i));
                     nl.connect(net, c, sram_pin_of(SramPin::A(Port::Right, i as u8)));
                 }
                 // A5 of the write port is the inverted write enable: an idle
-                // strobe lands on 32..63, which no read ever matches, so it
+                // port lands on 32..63, which no read ever matches, so it
                 // never arbitrates against a read.
-                let wreg_n = nl.net("WREG_n");
+                let wreg_n = nl.net("WREGC_n");
                 nl.connect(wreg_n, c, sram_pin_of(SramPin::A(Port::Right, 5)));
                 nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Left, 5)));
                 for i in 6..10 {
@@ -1214,8 +1196,8 @@ impl Cpu {
                 nl.connect(cen, c, sram_pin_of(SramPin::Ce(Port::Left)));
                 nl.connect(vcc, c, sram_pin_of(SramPin::Rw(Port::Left)));
                 nl.connect(gnd, c, sram_pin_of(SramPin::Oe(Port::Left)));
-                nl.connect(ph_rf, c, sram_pin_of(SramPin::Ce(Port::Right)));
-                let rw = nl.net("WREG_n");
+                nl.connect(clk, c, sram_pin_of(SramPin::Ce(Port::Right)));
+                let rw = nl.net("WREGC_n");
                 nl.connect(rw, c, sram_pin_of(SramPin::Rw(Port::Right)));
                 nl.connect(vcc, c, sram_pin_of(SramPin::Oe(Port::Right)));
                 for (p, name) in [
@@ -1238,15 +1220,12 @@ impl Cpu {
             cycles: 0,
             pc_trace: Vec::new(),
             clk,
-            ph_rf,
-            ph_ce,
-            ph_sd,
             pc,
             imem,
             dmem,
             rf,
             gal_count,
-            strobes,
+            grade,
             reset_release: 0,
         };
         // Power-on: RESET asserted from the start (a supervisor holds it
@@ -1254,21 +1233,18 @@ impl Cpu {
         let reset = cpu.sim.net_id("RESET");
         cpu.sim.schedule(0, reset, Level::H);
         cpu.sim.schedule(0, cpu.clk, Level::L);
-        if strobes == Strobes::Ideal {
-            cpu.sim.schedule(0, cpu.ph_rf, Level::H);
-            cpu.sim.schedule(0, cpu.ph_ce, Level::H);
-            cpu.sim.schedule(0, cpu.ph_sd, Level::L);
-        }
         // Power-up: let every combinational chain settle, then hold RESET
-        // with the clock and strobes running (the pipeline registers stay
+        // with the clock running (the pipeline registers stay
         // cleared; the write-back stage writes r0 = 0), and release RESET
-        // early in a cycle so the reset path settles and recovers before
-        // the next edge.
+        // just after an edge so the reset path settles and recovers before
+        // the next edge and before the tap-clocked copies sample it.
         cpu.sim.run_until(3 * cpu.period);
         for _ in 0..RESET_CYCLES {
             cpu.step();
         }
-        let release = cpu.sim.now() + cpu.period / 4;
+        // Release as a clock-synchronised reset would: a registered
+        // output's latest clock-to-output after an edge.
+        let release = cpu.sim.now() + Self::ns(5.5);
         cpu.sim.schedule(release, reset, Level::L);
         cpu.step();
         cpu.reset_release = release;
@@ -1304,19 +1280,9 @@ impl Cpu {
     /// Run one clock cycle (rising edge now).
     pub fn step(&mut self) {
         let base = self.sim.now();
-        let t = |off: f64| base + Self::ns(off);
         let half = base + self.period / 2;
-        let ph = phases(self.period as f64 / NS as f64);
         self.sim.schedule(base, self.clk, Level::H);
         self.sim.schedule(half, self.clk, Level::L);
-        if self.strobes == Strobes::Ideal {
-            self.sim.schedule(t(ph[PH_RF].0), self.ph_rf, Level::L);
-            self.sim.schedule(t(ph[PH_RF].1), self.ph_rf, Level::H);
-            self.sim.schedule(t(ph[PH_CE].0), self.ph_ce, Level::L);
-            self.sim.schedule(t(ph[PH_CE].1), self.ph_ce, Level::H);
-            self.sim.schedule(t(ph[PH_SD].0), self.ph_sd, Level::H);
-            self.sim.schedule(t(ph[PH_SD].1), self.ph_sd, Level::L);
-        }
         // Sample the PC just before the next edge (what IF is fetching).
         self.sim.run_until(base + self.period - Self::ns(3.5));
         self.pc_trace.push(self.sim.read_bus(&self.pc).map(|w| w << 2));
@@ -1368,16 +1334,13 @@ impl Cpu {
     pub fn dmem_word(&self, addr: u32) -> Option<u32> {
         let mut w = 0u32;
         for lane in 0..4 {
-            let chip = self.chip_sram8k(self.dmem[lane]);
+            let chip = &self.sim.chip(self.dmem[lane]).downcast_ref::<DualPort16k>().unwrap().0;
             w |= (chip.peek((addr >> 2) as u16)? as u32) << (8 * lane);
         }
         Some(w)
     }
     fn chip_sram(&self, id: usize) -> &Cy7c131 {
         self.sim.chip(id).downcast_ref::<Cy7c131>().unwrap()
-    }
-    fn chip_sram8k(&self, id: usize) -> &As7c164a {
-        self.sim.chip(id).downcast_ref::<As7c164a>().unwrap()
     }
     pub fn imem_chips(&self) -> &[usize] {
         &self.imem
@@ -1427,7 +1390,10 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "mctl" => ("EX/MEM control", "EX/MEM"),
         "dmem" => ("Data memory", "MEM"),
         "wb" => ("MEM/WB", "MEM/WB"),
-        "clkgen" | "dl" => ("Clock generator", "CLK"),
+        "dl" => ("Delay line", "CLK"),
+        "wc" => ("Write copies", "MEM/WB"),
+        "wsd" => ("Write data copy", "MEM/WB"),
+        "stl" => ("Stall", "EX/MEM"),
         _ => ("?", "?"),
     }
 }
@@ -1461,15 +1427,27 @@ pub fn chip_infos() -> Vec<ChipInfo> {
         out.push(ChipInfo { name: format!("imem{lane}"), kind: "AS7C164A", block, stage, pins });
         let mut pins = Vec::new();
         for a in 0..13 {
-            pins.push((sram8k_pin_of(Sram8kPin::A(a as u8)), n("MR", a + 2), false));
+            pins.push((dp16k_pin_of(SramPin::A(Port::Left, a as u8)), n("MR", a + 2), false));
+            pins.push((dp16k_pin_of(SramPin::A(Port::Right, a as u8)), n("DA", a), false));
         }
+        pins.push((dp16k_pin_of(SramPin::A(Port::Right, 13)), "DWE_n".into(), false));
         for b in 0..8 {
-            pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("DQ", 8 * lane + b), true));
+            pins.push((dp16k_pin_of(SramPin::Io(Port::Left, b as u8)), n("DQ", 8 * lane + b), true));
+            pins.push((dp16k_pin_of(SramPin::Io(Port::Right, b as u8)), n("WSD", 8 * lane + b), false));
         }
-        pins.push((sram8k_pin_of(Sram8kPin::CeN), "PH_CE".into(), false));
-        pins.push((sram8k_pin_of(Sram8kPin::WeN), "MMW_n".into(), false));
+        pins.push((dp16k_pin_of(SramPin::Ce(Port::Left)), "MMR_n".into(), false));
+        pins.push((dp16k_pin_of(SramPin::Ce(Port::Right)), "CLK".into(), false));
+        pins.push((dp16k_pin_of(SramPin::Rw(Port::Right)), "DWE_n".into(), false));
         let (block, stage) = block_of("dmem");
-        out.push(ChipInfo { name: format!("dmem{lane}"), kind: "AS7C164A", block, stage, pins });
+        out.push(ChipInfo { name: format!("dmem{lane}"), kind: "IDT7006S15", block, stage, pins });
+    }
+    {
+        let mut pins = vec![(DS1100_IN, "CLK".to_string(), false)];
+        for k in 0..5 {
+            pins.push((ds1100_tap_pin(k), format!("T{}", k + 1), true));
+        }
+        let (block, stage) = block_of("dl");
+        out.push(ChipInfo { name: "dl0".into(), kind: "DS1100-30", block, stage, pins });
     }
     for bank in 0..2 {
         for lane in 0..4 {
@@ -1477,16 +1455,16 @@ pub fn chip_infos() -> Vec<ChipInfo> {
             let mut pins = Vec::new();
             for i in 0..5 {
                 pins.push((sram_pin_of(SramPin::A(Port::Left, i as u8)), ir(field + i), false));
-                pins.push((sram_pin_of(SramPin::A(Port::Right, i as u8)), n("WDEST", i), false));
+                pins.push((sram_pin_of(SramPin::A(Port::Right, i as u8)), n("WDESTC", i), false));
             }
-            pins.push((sram_pin_of(SramPin::A(Port::Right, 5)), "WREG_n".into(), false));
+            pins.push((sram_pin_of(SramPin::A(Port::Right, 5)), "WREGC_n".into(), false));
             for b in 0..8 {
                 pins.push((sram_pin_of(SramPin::Io(Port::Left, b as u8)), n(rdata, 8 * lane + b), true));
                 pins.push((sram_pin_of(SramPin::Io(Port::Right, b as u8)), n("WD", 8 * lane + b), false));
             }
             pins.push((sram_pin_of(SramPin::Ce(Port::Left)), ce.into(), false));
-            pins.push((sram_pin_of(SramPin::Ce(Port::Right)), "PH_RF".into(), false));
-            pins.push((sram_pin_of(SramPin::Rw(Port::Right)), "WREG_n".into(), false));
+            pins.push((sram_pin_of(SramPin::Ce(Port::Right)), "CLK".into(), false));
+            pins.push((sram_pin_of(SramPin::Rw(Port::Right)), "WREGC_n".into(), false));
             let (block, stage) = block_of("rf");
             out.push(ChipInfo { name: format!("rf{bank}{lane}"), kind: "CY7C131", block, stage, pins });
         }

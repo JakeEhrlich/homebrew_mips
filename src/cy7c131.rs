@@ -122,7 +122,7 @@ impl Port {
 /// drives them).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PortInputs {
-    pub addr: [Level; 10],
+    pub addr: [Level; ADDR_BITS],
     pub ce_n: Level,
     pub rw_n: Level,
     pub oe_n: Level,
@@ -132,7 +132,7 @@ pub struct PortInputs {
 impl Default for PortInputs {
     /// Everything undriven (`Z`).
     fn default() -> Self {
-        PortInputs { addr: [Level::Z; 10], ce_n: Level::Z, rw_n: Level::Z, oe_n: Level::Z, data: [Level::Z; 8] }
+        PortInputs { addr: [Level::Z; ADDR_BITS], ce_n: Level::Z, rw_n: Level::Z, oe_n: Level::Z, data: [Level::Z; 8] }
     }
 }
 
@@ -167,7 +167,12 @@ impl PortInputs {
     }
 }
 
-pub fn addr_levels(a: u16) -> [Level; 10] {
+/// Address inputs carried by the model: enough for the 16K x 8 members of
+/// the family (IDT7006 / CY7C006).  A smaller part leaves the upper bits
+/// low.
+pub const ADDR_BITS: usize = 14;
+
+pub fn addr_levels(a: u16) -> [Level; ADDR_BITS] {
     std::array::from_fn(|i| Level::from_bit(a >> i & 1 == 1))
 }
 pub fn data_levels(d: u8) -> [Level; 8] {
@@ -515,6 +520,7 @@ pub(crate) fn all_active(conds: &[(Level, Level)]) -> Option<bool> {
 pub struct Cy7c131 {
     t: Timing,
     now: Time,
+    addr_bits: usize,
     mem: Vec<Option<u8>>,
     ports: [PortState; 2],
     arb: Arb,
@@ -528,10 +534,17 @@ impl Cy7c131 {
         Self::with_timing(Timing::grade_15())
     }
     pub fn with_timing(t: Timing) -> Self {
+        Self::with_timing_and_size(t, 10)
+    }
+    /// A member of the family with `addr_bits` address lines (10 for the
+    /// 1K x 8 CY7C131, 14 for a 16K x 8 IDT7006 / CY7C006).
+    pub fn with_timing_and_size(t: Timing, addr_bits: usize) -> Self {
+        assert!(addr_bits <= ADDR_BITS);
         Cy7c131 {
             t,
             now: 0,
-            mem: vec![None; 1024],
+            addr_bits,
+            mem: vec![None; 1 << addr_bits],
             ports: [PortState::new(), PortState::new()],
             arb: Arb::None,
             arb_since: 0,
@@ -541,7 +554,7 @@ impl Cy7c131 {
 
     /// Pre-load a memory cell (models a known power-up image).
     pub fn preload(&mut self, addr: u16, data: u8) {
-        self.mem[addr as usize & 0x3FF] = Some(data);
+        self.mem[addr as usize & ((1 << self.addr_bits) - 1)] = Some(data);
     }
     /// Pre-load consecutive bytes starting at `addr`.
     pub fn preload_slice(&mut self, addr: u16, data: &[u8]) {
@@ -551,7 +564,7 @@ impl Cy7c131 {
     }
     /// Current contents of a cell (`None` = unknown).
     pub fn peek(&self, addr: u16) -> Option<u8> {
-        self.mem[addr as usize & 0x3FF]
+        self.mem[addr as usize & ((1 << self.addr_bits) - 1)]
     }
     pub fn timing(&self) -> &Timing {
         &self.t
@@ -1072,9 +1085,12 @@ impl Cy7c131 {
         // Unknown-ness: an enabled port with X controls/address touching a
         // mailbox could be doing anything.  Only worry if a mailbox is
         // plausibly addressed.
-        let maybe_mailbox = |a: &[Level; 10]| {
+        let bits = self.addr_bits;
+        let maybe_mailbox = |a: &[Level; ADDR_BITS]| {
+            // The top two addresses: bits 1..bits-1 set, bit 0 either, and
+            // nothing above the part's width.
             a.iter().enumerate().all(|(i, l)| match l.bit() {
-                Some(b) => i == 0 || b, // 3FE/3FF: bits 1..9 set, bit 0 either
+                Some(b) => i == 0 || (i < bits && b) || (i >= bits && !b),
                 None => true,
             })
         };
