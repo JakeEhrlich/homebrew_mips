@@ -415,6 +415,11 @@ pub struct Gal22v10 {
 }
 
 impl Gal22v10 {
+    /// Whether OLMC `k` is configured as an output.
+    pub fn is_output(&self, k: usize) -> bool {
+        let c = &self.cfg.olmc[k];
+        c.registered || !c.terms.is_empty()
+    }
     pub fn new(cfg: Config) -> Self {
         Self::with_timing(cfg, Timing::atf22v10c_7_dip())
     }

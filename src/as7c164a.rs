@@ -119,6 +119,16 @@ pub struct Timing {
 }
 
 impl Timing {
+    /// The timing grade by part name (as written in a board file).
+    pub fn by_name(name: &str) -> Timing {
+        match name {
+            "AS7C164A-15" => Timing::grade_15(),
+            "IS61C256AH-12" => Timing::is61c256ah_12(),
+            "CY7C1041G-10" => Timing::cy7c1041g_10(),
+            "IS61C64AL-10" => Timing::is61c64al_10(),
+            _ => panic!("unknown SRAM timing {name}"),
+        }
+    }
     /// AS7C164A-15, datasheet Rev 4.0 page 5.
     pub const fn grade_15() -> Timing {
         Timing {

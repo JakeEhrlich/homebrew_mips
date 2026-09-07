@@ -626,6 +626,20 @@ impl Chip for Uart16550 {
     fn pin_count(&self) -> usize {
         UART_PINS
     }
+    fn pin_kind(&self, pin: usize) -> crate::board::PinKind {
+        use crate::board::PinKind as K;
+        match uart_pin(pin) {
+            UartPin::D(_) => K::Bidir,
+            UartPin::Sout | UartPin::Xout => K::Out,
+            UartPin::Vcc | UartPin::Gnd => K::Power,
+            UartPin::Other => match pin {
+                12 | 22 | 23 | 29 | 30 | 31 | 32 | 33 | 34 => K::Out,
+                5 | 38 | 39 | 40 | 41 => K::In,
+                _ => K::Nc,
+            },
+            _ => K::In,
+        }
+    }
     fn pin_name(&self, pin: usize) -> String {
         match uart_pin(pin) {
             UartPin::D(i) => format!("D{i}"),
@@ -815,6 +829,9 @@ impl Chip for Uart16550 {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }

@@ -17,22 +17,26 @@ use crate::qm;
 /// `(net, positive)`.
 pub type SLit = (String, bool);
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Mode {
     Comb,
     Reg,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Eq {
     pub out: String,
     pub mode: Mode,
     /// Pin is the complement of the sum of products.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub active_low: bool,
     pub terms: Vec<Vec<SLit>>,
     /// Output-enable product term (`None` = always enabled).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oe: Option<Vec<SLit>>,
     /// Synchroniser stage (see `gal22v10::OlmcConfig::sync`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub sync: bool,
 }
 
@@ -173,24 +177,30 @@ pub fn pack(prefix: &str, clk: Option<&str>, ar: Option<&str>, eqs: Vec<Eq>) -> 
     chips
 }
 
-/// Build the chip and wire it into the netlist.  Returns the chip id and the
-/// pin assignment `(pin, net)`.
-pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, String)>) {
-    spec.fits().unwrap();
-    // Outputs: largest term count to largest macrocell.
+/// Which OLMC each equation lands on: largest term count to largest
+/// macrocell.
+fn olmc_assignment(spec: &GalSpec) -> Vec<usize> {
     let mut order: Vec<usize> = (0..spec.eqs.len()).collect();
     order.sort_by_key(|&i| std::cmp::Reverse(spec.eqs[i].terms.len()));
     let mut olmcs_by_size: Vec<usize> = (0..10).collect();
     olmcs_by_size.sort_by_key(|&k| std::cmp::Reverse(PT_COUNT[k]));
-    let mut olmc_of: Vec<Option<usize>> = vec![None; spec.eqs.len()];
-    let mut used_olmc = [false; 10];
+    let mut olmc_of = vec![0; spec.eqs.len()];
     for (rank, &ei) in order.iter().enumerate() {
-        let k = olmcs_by_size[rank];
-        olmc_of[ei] = Some(k);
+        olmc_of[ei] = olmcs_by_size[rank];
+    }
+    olmc_of
+}
+
+/// Pin assignment `(pin, net)`: clock on pin 1, inputs on the dedicated
+/// pins then on spare I/O pins (smallest macrocells first), outputs on
+/// their macrocells' pins.
+pub fn assign_pins(spec: &GalSpec) -> Vec<(usize, String)> {
+    spec.fits().unwrap();
+    let olmc_of = olmc_assignment(spec);
+    let mut used_olmc = [false; 10];
+    for &k in &olmc_of {
         used_olmc[k] = true;
     }
-    // Inputs: clock on pin 1, then dedicated pins, then spare I/O pins
-    // (smallest macrocells first).
     let mut pins: Vec<(usize, String)> = Vec::new();
     let mut dedicated: Vec<usize> = (2..=11).chain([13]).collect();
     if spec.needs_clock() {
@@ -200,22 +210,42 @@ pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, Str
     }
     let mut spare: Vec<usize> = (0..10).filter(|&k| !used_olmc[k]).collect();
     spare.sort_by_key(|&k| PT_COUNT[k]);
-    let mut input_array: std::collections::BTreeMap<String, usize> = Default::default();
     for name in spec.external_inputs() {
         if let Some(p) = dedicated.first().copied() {
             dedicated.remove(0);
             pins.push((p, name.clone()));
-            input_array.insert(name, pin_array_input(p as u8));
         } else {
             let k = spare.remove(0);
             pins.push((olmc_pin(k) as usize, name.clone()));
-            input_array.insert(name, crate::gal22v10::fb_array_input(k));
         }
     }
-    // Build the config.
+    for (ei, eq) in spec.eqs.iter().enumerate() {
+        pins.push((olmc_pin(olmc_of[ei]) as usize, eq.out.clone()));
+    }
+    pins
+}
+
+/// The fuse-level configuration for `spec` on the pin assignment `pins`
+/// (as [`assign_pins`] makes it, or as read back from a board file).
+pub fn configure(spec: &GalSpec, pins: &[(usize, String)]) -> Config {
+    let olmc_of = olmc_assignment(spec);
+    let outs: std::collections::BTreeSet<&str> = spec.eqs.iter().map(|e| e.out.as_str()).collect();
+    let mut input_array: std::collections::BTreeMap<String, usize> = Default::default();
+    for (p, net) in pins {
+        if outs.contains(net.as_str()) {
+            continue;
+        }
+        let ai = if (1..=11).contains(p) || *p == 13 {
+            pin_array_input(*p as u8)
+        } else {
+            let k = (14..=23).position(|q| q == *p).expect("output pin");
+            crate::gal22v10::fb_array_input(9 - k)
+        };
+        input_array.insert(net.clone(), ai);
+    }
     let mut cfg = Config::empty();
     for (ei, eq) in spec.eqs.iter().enumerate() {
-        let k = olmc_of[ei].unwrap();
+        let k = olmc_of[ei];
         cfg.olmc[k] = OlmcConfig {
             registered: eq.mode == Mode::Reg,
             active_low: eq.active_low,
@@ -228,13 +258,13 @@ pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, Str
         if let Some(&ai) = input_array.get(&l.0) {
             Lit { input: ai, neg: !l.1 }
         } else {
-            let ei = spec.eqs.iter().position(|e| e.out == l.0).expect("unknown signal");
-            let base = cfg.out(olmc_of[ei].unwrap());
+            let ei = spec.eqs.iter().position(|e| e.out == l.0).unwrap_or_else(|| panic!("unknown signal {}", l.0));
+            let base = cfg.out(olmc_of[ei]);
             Lit { neg: base.neg ^ !l.1, ..base }
         }
     };
     for (ei, eq) in spec.eqs.iter().enumerate() {
-        let k = olmc_of[ei].unwrap();
+        let k = olmc_of[ei];
         let terms: Vec<Term> = eq.terms.iter().map(|t| Term::new(t.iter().map(|l| resolve(&cfg, l)))).collect();
         let oe = match &eq.oe {
             None => Oe::Always,
@@ -246,9 +276,14 @@ pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, Str
     if let Some(ar) = &spec.ar {
         cfg.ar = Some(Term::new([resolve(&cfg, &lit(ar))]));
     }
-    for (ei, eq) in spec.eqs.iter().enumerate() {
-        pins.push((olmc_pin(olmc_of[ei].unwrap()) as usize, eq.out.clone()));
-    }
+    cfg
+}
+
+/// Build the chip and wire it into the netlist.  Returns the chip id and the
+/// pin assignment `(pin, net)`.
+pub fn instantiate(nl: &mut Netlist, spec: &GalSpec) -> (ChipId, Vec<(usize, String)>) {
+    let pins = assign_pins(spec);
+    let cfg = configure(spec, &pins);
     let chip = nl.add_chip(&spec.name, Gal22v10::new(cfg));
     for (p, net) in &pins {
         let n = nl.net(net);

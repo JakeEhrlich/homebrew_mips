@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use crate::as7c164a::{self, As7c164a};
+use crate::board::{Board, ChipMeta, ChipRec, Column, Fixed, NetRec, PinKind, PinRec};
 use crate::cy7c131::{self, Bus, Cy7c131, Inputs, PortInputs};
 use crate::ds1100::Ds1100;
 use crate::gal22v10::Gal22v10;
@@ -29,6 +30,11 @@ pub trait Chip {
     /// Highest pin number.
     fn pin_count(&self) -> usize;
     fn pin_name(&self, pin: usize) -> String;
+    /// What the pin is on the board (default: an input).
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        let _ = pin;
+        PinKind::In
+    }
     /// Externally driven level on every pin (`ext[pin]`, index 0 unused).
     fn set_inputs(&mut self, t: Time, ext: &[Level]);
     /// Levels the chip drives at time `t` (`out[pin]`; `Z` for inputs).
@@ -38,6 +44,7 @@ pub trait Chip {
     fn warnings(&self) -> Vec<String>;
     /// For downcasting to the concrete model (to peek memory contents etc.).
     fn as_any(&self) -> &dyn std::any::Any;
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +60,13 @@ pub const DS1100_IN: usize = 1;
 impl Chip for Ds1100 {
     fn pin_count(&self) -> usize {
         8
+    }
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match pin {
+            1 => PinKind::In,
+            4 | 8 => PinKind::Power,
+            _ => PinKind::Out,
+        }
     }
     fn pin_name(&self, pin: usize) -> String {
         match pin {
@@ -84,6 +98,9 @@ impl Chip for Ds1100 {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +109,13 @@ impl Chip for Ds1100 {
 impl Chip for Gal22v10 {
     fn pin_count(&self) -> usize {
         24
+    }
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match pin {
+            12 | 24 => PinKind::Power,
+            14..=23 if self.is_output(23 - pin) => PinKind::Out,
+            _ => PinKind::In,
+        }
     }
     fn pin_name(&self, pin: usize) -> String {
         match pin {
@@ -121,6 +145,9 @@ impl Chip for Gal22v10 {
         Gal22v10::warnings(self).iter().map(|w| w.to_string()).collect()
     }
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
@@ -173,6 +200,15 @@ pub fn sram_pin_of(f: SramPin) -> usize {
 }
 
 impl Chip for Cy7c131 {
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match sram_pin(pin) {
+            SramPin::Io(..) => PinKind::Bidir,
+            SramPin::Busy(_) | SramPin::Int(_) => PinKind::Out,
+            SramPin::Gnd | SramPin::Vcc => PinKind::Power,
+            SramPin::Nc => PinKind::Nc,
+            _ => PinKind::In,
+        }
+    }
     fn pin_count(&self) -> usize {
         52
     }
@@ -233,6 +269,9 @@ impl Chip for Cy7c131 {
         Cy7c131::warnings(self).iter().map(|w| w.to_string()).collect()
     }
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
@@ -331,6 +370,9 @@ impl Chip for DualPort16k {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -383,6 +425,13 @@ impl Chip for FastGate {
     fn pin_count(&self) -> usize {
         5
     }
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match pin {
+            4 => PinKind::Out,
+            3 | 5 => PinKind::Power,
+            _ => PinKind::In,
+        }
+    }
     fn pin_name(&self, pin: usize) -> String {
         ["?", "A", "B", "GND", "Y", "VCC"][pin.min(5)].into()
     }
@@ -413,6 +462,9 @@ impl Chip for FastGate {
         Vec::new()
     }
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
@@ -492,6 +544,14 @@ fn or_n(a: Level, b: Level) -> Level {
 }
 
 impl Chip for Sram16 {
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match sram16_pin(pin) {
+            Sram16Pin::Io(_) => PinKind::Bidir,
+            Sram16Pin::Vcc | Sram16Pin::Vss => PinKind::Power,
+            Sram16Pin::Nc => PinKind::Nc,
+            _ => PinKind::In,
+        }
+    }
     fn pin_count(&self) -> usize {
         44
     }
@@ -572,6 +632,9 @@ impl Chip for Sram16 {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +664,13 @@ impl Chip for ResetSupervisor {
     fn pin_count(&self) -> usize {
         4
     }
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match pin {
+            2 => PinKind::Out,
+            1 | 4 => PinKind::Power,
+            _ => PinKind::In,
+        }
+    }
     fn pin_name(&self, pin: usize) -> String {
         ["?", "GND", "RESET#", "MR#", "VCC"][pin.min(4)].into()
     }
@@ -625,6 +695,9 @@ impl Chip for ResetSupervisor {
         Vec::new()
     }
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
@@ -742,6 +815,13 @@ pub enum Level_bus {
 }
 
 impl Chip for Rom {
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match rom_pin(pin) {
+            RomPin::Dq(_) => PinKind::Bidir,
+            RomPin::Gnd | RomPin::Vcc => PinKind::Power,
+            _ => PinKind::In,
+        }
+    }
     fn pin_count(&self) -> usize {
         32
     }
@@ -807,6 +887,9 @@ impl Chip for Rom {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -852,6 +935,14 @@ pub fn sram8k_pin_of(f: Sram8kPin) -> usize {
 }
 
 impl Chip for As7c164a {
+    fn pin_kind(&self, pin: usize) -> PinKind {
+        match sram8k_pin(pin) {
+            Sram8kPin::Dq(_) => PinKind::Bidir,
+            Sram8kPin::Vcc | Sram8kPin::Vss => PinKind::Power,
+            Sram8kPin::Nc => PinKind::Nc,
+            _ => PinKind::In,
+        }
+    }
     fn pin_count(&self) -> usize {
         28
     }
@@ -909,6 +1000,9 @@ impl Chip for As7c164a {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -929,11 +1023,54 @@ struct Net {
 }
 
 /// Builder.
+/// A part with no behaviour in the simulator: transceiver, crystal,
+/// capacitor, connector.  Its pins drive nothing.
+pub struct Passive {
+    names: Vec<(usize, String)>,
+    count: usize,
+}
+
+impl Passive {
+    pub fn new(names: Vec<(usize, String)>) -> Passive {
+        let count = names.iter().map(|(p, _)| *p).max().unwrap_or(0);
+        Passive { names, count }
+    }
+}
+
+impl Chip for Passive {
+    fn pin_count(&self) -> usize {
+        self.count
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        self.names.iter().find(|(p, _)| *p == pin).map(|(_, n)| n.clone()).unwrap_or_else(|| format!("{pin}"))
+    }
+    fn pin_kind(&self, _pin: usize) -> PinKind {
+        PinKind::Passive
+    }
+    fn set_inputs(&mut self, _t: Time, _ext: &[Level]) {}
+    fn drive(&mut self, _t: Time, _out: &mut [Level]) {}
+    fn next_event(&self, _t: Time) -> Option<Time> {
+        None
+    }
+    fn warnings(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
+
 #[derive(Default)]
 pub struct Netlist {
     chips: Vec<(String, Box<dyn Chip>)>,
     nets: Vec<Net>,
     by_name: BTreeMap<String, NetId>,
+    /// Board metadata per chip (part, package, block, model), for export.
+    meta: Vec<Option<ChipMeta>>,
+    net_roles: BTreeMap<NetId, String>,
 }
 
 impl Netlist {
@@ -942,7 +1079,95 @@ impl Netlist {
     }
     pub fn add_chip(&mut self, name: &str, chip: impl Chip + 'static) -> ChipId {
         self.chips.push((name.to_string(), Box::new(chip)));
+        self.meta.push(None);
         self.chips.len() - 1
+    }
+    pub fn set_meta(&mut self, chip: ChipId, meta: ChipMeta) {
+        self.meta[chip] = Some(meta);
+    }
+    pub fn set_net_role(&mut self, net: NetId, role: &str) {
+        self.net_roles.insert(net, role.to_string());
+    }
+    pub fn chip_id(&self, name: &str) -> Option<ChipId> {
+        self.chips.iter().position(|(n, _)| n == name)
+    }
+    pub fn chips_with_role(&self, prefix: &str) -> Vec<(ChipId, String)> {
+        self.meta
+            .iter()
+            .enumerate()
+            .filter_map(|(i, m)| m.as_ref().and_then(|m| m.role.clone()).filter(|r| r.starts_with(prefix)).map(|r| (i, r)))
+            .collect()
+    }
+    /// The model of chip `id`, for preloading.
+    pub fn chip_mut<T: 'static>(&mut self, id: ChipId) -> &mut T {
+        self.chips[id].1.as_any_mut().downcast_mut::<T>().expect("chip model type")
+    }
+
+    /// The board file: every chip with its metadata and connected pins,
+    /// every net with its tie / pull / role.  Power pins that the builder
+    /// left unconnected are put on VCC / GND by their names.
+    pub fn export(&self, name: &str, description: &str, period_ns: f64, params: BTreeMap<String, serde_json::Value>, layout: Vec<Column>) -> Board {
+        let mut pin_net: Vec<Vec<Option<NetId>>> = self.chips.iter().map(|(_, c)| vec![None; c.pin_count() + 1]).collect();
+        for (id, net) in self.nets.iter().enumerate() {
+            for &(c, p) in &net.pins {
+                pin_net[c][p] = Some(id);
+            }
+        }
+        let mut chips = Vec::new();
+        for (id, (cname, chip)) in self.chips.iter().enumerate() {
+            let meta = self.meta[id].as_ref().unwrap_or_else(|| panic!("chip {cname} has no board metadata"));
+            let mut pins = Vec::new();
+            for p in 1..=chip.pin_count() {
+                let kind = chip.pin_kind(p);
+                let pname = match &meta.model {
+                    // GAL pins are named by the signal they carry.
+                    crate::board::Model::Gal { pins, .. } => pins.iter().find(|(q, _)| *q == p).map(|(_, s)| s.clone()).unwrap_or_else(|| chip.pin_name(p)),
+                    _ => chip.pin_name(p),
+                };
+                let net = match pin_net[id][p] {
+                    Some(n) => self.nets[n].name.clone(),
+                    None if kind == PinKind::Power => {
+                        let up = pname.to_ascii_uppercase();
+                        if up.contains("VCC") || up.contains("VDD") { "VCC".to_string() } else { "GND".to_string() }
+                    }
+                    None => continue,
+                };
+                pins.push(PinRec { pin: p, name: pname, net, kind });
+            }
+            chips.push(ChipRec {
+                name: cname.clone(),
+                part: meta.part.clone(),
+                package: meta.package.clone(),
+                block: meta.block.clone(),
+                stage: meta.stage.clone(),
+                role: meta.role.clone(),
+                model: meta.model.clone(),
+                pins,
+            });
+        }
+        let fixed = |l: Level| match l {
+            Level::H => Some(Fixed::High),
+            Level::L => Some(Fixed::Low),
+            _ => None,
+        };
+        let mut nets: Vec<NetRec> = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for (id, n) in self.nets.iter().enumerate() {
+            // Merged nets keep their entry but no pins; skip those.
+            if n.pins.is_empty() && n.tie == Level::Z && n.pull == Level::Z {
+                continue;
+            }
+            if !seen.insert(n.name.clone()) {
+                continue;
+            }
+            nets.push(NetRec { name: n.name.clone(), tie: fixed(n.tie), pull: fixed(n.pull), role: self.net_roles.get(&id).cloned() });
+        }
+        for rail in ["VCC", "GND"] {
+            if !seen.contains(rail) {
+                nets.push(NetRec { name: rail.into(), tie: Some(if rail == "VCC" { Fixed::High } else { Fixed::Low }), pull: None, role: None });
+            }
+        }
+        Board { name: name.into(), description: description.into(), period_ns, params, layout, chips, nets }
     }
     /// Get or create a net by name.
     pub fn net(&mut self, name: &str) -> NetId {

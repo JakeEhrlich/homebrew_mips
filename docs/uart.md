@@ -19,7 +19,7 @@ checked on every access by the chip model.
 The wait logic added one GAL (wseq0), and the hold inputs and terms it
 puts on existing registers repacked six blocks one chip larger each
 (forwarding control by two, operand B, branch target, stall, MEM/WB):
-151 GALs, from 144.
+151 GALs, from 144 (150 after a later dead-output clean-up).
 
 ## 2. Address space
 

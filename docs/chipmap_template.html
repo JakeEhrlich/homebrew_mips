@@ -1,0 +1,516 @@
+<title>Crag Chip Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F1F3F5; --ink: #1C2530; --ink-2: #5B6B7A; --chip: #FFFFFF; --reg: #E3E8ED; --rule: #C9D1D9; --corridor: #E8ECF0;
+  --copper: #C46A22; --slate: #7A8794; --back: #1F6FB5; --hi: #0B8F6A; --hi-bg: #D6F0E6; --stim: #9A7A2F; --panel: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --chip: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+    --copper: #E8964F; --slate: #8E9CAA; --back: #62AEEE; --hi: #3FD39E; --hi-bg: #173A2E; --stim: #C9A86A; --panel: #1B2129;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --chip: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+  --copper: #E8964F; --slate: #8E9CAA; --back: #62AEEE; --hi: #3FD39E; --hi-bg: #173A2E; --stim: #C9A86A; --panel: #1B2129;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14px; height: 100vh; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+header { display: flex; align-items: baseline; gap: 18px; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--bg); }
+header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+header .meta { color: var(--ink-2); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+header .spacer { flex: 1; }
+header button { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--rule); background: var(--chip); color: var(--ink); border-radius: 3px; cursor: pointer; }
+header button:focus-visible { outline: 2px solid var(--hi); outline-offset: 1px; }
+main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+#view { position: relative; overflow: hidden; cursor: grab; }
+#view.dragging { cursor: grabbing; }
+svg { display: block; width: 100%; height: 100%; }
+aside { border-left: 1px solid var(--rule); background: var(--panel); padding: 14px 16px; overflow: auto; font-size: 13px; }
+aside h2 { font-size: 12px; font-weight: 600; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+aside h3 { font-size: 15px; margin: 0 0 10px; font-weight: 600; }
+aside .mono, aside table { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+aside table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+aside td, aside th { text-align: left; padding: 3px 6px 3px 0; line-height: 1.35; border-bottom: 1px solid var(--rule); vertical-align: top; }
+aside th { color: var(--ink-2); font-weight: 500; }
+aside p { margin: 6px 0; line-height: 1.45; }
+aside .out { color: var(--copper); }
+aside .legend { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--ink-2); font-size: 12px; }
+aside .legend div { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+aside .legend svg { width: 42px; height: 12px; flex: none; }
+.stage-title { font: 500 12px "IBM Plex Sans", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; fill: var(--ink-2); }
+.divider { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 3 5; }
+.corridor { fill: var(--corridor); }
+.corridor-label { font: 500 10px "IBM Plex Sans", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; fill: var(--ink-2); }
+.block > rect.body { fill: var(--bg); stroke: var(--ink); stroke-width: 1; }
+.block.register > rect.body { fill: var(--reg); }
+.block > text.title { font: 600 12px "IBM Plex Sans", sans-serif; fill: var(--ink); }
+.block > text.count { font: 400 11px "IBM Plex Mono", monospace; fill: var(--ink-2); }
+.chip rect { fill: var(--chip); stroke: var(--ink); stroke-width: 1.2; }
+.chip text { font: 500 10.5px "IBM Plex Mono", monospace; fill: var(--ink); pointer-events: none; }
+.chip.sram rect { stroke-width: 2; }
+.chip:hover rect, .chip.sel rect { stroke: var(--hi); stroke-width: 2.2; fill: var(--hi-bg); }
+.rail text { font: 400 10px "IBM Plex Mono", monospace; fill: var(--ink); }
+.rail text.w { fill: var(--ink-2); }
+.rail rect.hit { fill: transparent; }
+.rail .port { fill: var(--ink); }
+.rail.hi text { fill: var(--hi); font-weight: 500; }
+.pinline { stroke: var(--copper); stroke-width: 0.6; opacity: 0.3; fill: none; }
+.pinline.ctl { stroke: var(--slate); }
+.pinline.hi { opacity: 1; stroke: var(--hi); stroke-width: 1.4; }
+.bus { fill: none; stroke: var(--copper); stroke-linejoin: round; opacity: 0.8; }
+.bus.ctl { stroke: var(--slate); opacity: 0.75; }
+.bus.back { stroke: var(--back); }
+.bus.stim { stroke: var(--stim); stroke-dasharray: 6 4; }
+.bus.hi { stroke: var(--hi); opacity: 1; }
+.bus.dim { opacity: 0.1; }
+.bus-hit { fill: none; stroke: transparent; stroke-width: 10; cursor: pointer; }
+.arrow { fill: var(--copper); }
+.arrow.ctl { fill: var(--slate); }
+.arrow.back { fill: var(--back); }
+.arrow.stim { fill: var(--stim); }
+.arrow.hi { fill: var(--hi); }
+.src { fill: var(--copper); }
+.src.ctl { fill: var(--slate); } .src.back { fill: var(--back); } .src.stim { fill: var(--stim); }
+.note { font: 400 11px "IBM Plex Sans", sans-serif; fill: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .bus, .pinline, .chip rect { transition: opacity .12s, stroke .12s; } }
+</style>
+<header>
+  <h1>MIPS-I Chip Map</h1>
+  <span class="meta" id="meta"></span>
+  <span class="spacer"></span>
+  <button id="fit" type="button">Fit</button>
+  <button id="clear" type="button">Clear selection</button>
+</header>
+<main>
+  <div id="view"><svg id="svg" role="img" aria-label="Every chip of the phase-1 CPU netlist grouped into named blocks inside the five pipeline stages; forward buses run in the channels between columns, backward and same-stage edges loop over the top corridor in blue, control signals run along the bottom"></svg></div>
+  <aside id="panel"></aside>
+</main>
+<script id="data" type="application/json">__BOARD_JSON__</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const STIM = new Set(['CLK']);
+const DESC = {
+"PC": "Program counter, word address bits 14:2. Byte bits 1:0 are implicit zero; bits above 14 are hard zero (32 KB code space).",
+"INC": "PC + 4, as a word address (PC[14:2] + 1). Next sequential fetch address and the PC+4 that travels with the instruction.",
+"INCG": "All-ones detect of PC bits 10:2: the carry from the low incrementer slice into the high one.",
+"IM": "Instruction word read from instruction memory at PC. Valid 10 ns after the PC settles (IS61C64AL-10).",
+"IR": "Instruction register (IF/ID): the 32-bit instruction now in ID. Captured as all zeros (NOP) when KILL is set.",
+"P4": "PC+4 of the instruction in ID (IF/ID copy of INC). Base for the branch target adder and the JAL link.",
+"KILL": "Discard the instruction being fetched: a taken branch or JR is in EX. Forces IF/ID to capture NOP.",
+"SELINC": "Next PC = PC+4 (no branch, jump or JR).",
+"SELJT": "Next PC = jump target from the instruction in ID (J / JAL).",
+"SELBT": "Next PC = branch target: BEQ/BNE in EX resolved taken.",
+"SELAF": "Next PC = forwarded rs (JR in EX).",
+"XBT": "Branch target of the instruction in EX, computed in ID and registered: P4 + offset, word address.",
+"FA": "Operand A in EX after forwarding: rs from ID/EX, EX/MEM or MEM/WB. Bits 14:2 double as the JR / JALR target; bits 4:0 are the shift amount, complemented for right shifts.",
+"FB": "Operand B in EX after forwarding, inverted when XSUB (subtract = A + !B + 1).",
+"RA": "Register file bank A read data: register rs of the instruction in ID.",
+"RB": "Register file bank B read data: register rt of the instruction in ID.",
+"CERA_n": "Bank A read-port chip enable, high (port off) when rs is the register being written this cycle.",
+"CERB_n": "Bank B read-port chip enable, high when rt is the register being written this cycle.",
+"STA": "Steer A: rs equals the register MEM/WB is writing, so operand A comes from WD instead of the file.",
+"STB": "Steer B: rt equals the register MEM/WB is writing, so operand B / store data comes from WD.",
+"WD": "Write-back data (MEM/WB): ALU result or load data of the instruction in WB. Written to the register file and forwarded.",
+"WDEST": "Register number written by the instruction in WB.",
+"WREG": "Instruction in WB writes a register (dest is not r0).",
+"RTYPERW": "Decode: R-type instruction that writes rd.",
+"ITYPERW": "Decode: I-type instruction that writes rt (ALU immediates, LUI, LW).",
+"JAL": "Decode: JAL. Destination is r31; with LINK the link goes through operand B.",
+"SELIMM": "Decode: operand B is the immediate.",
+"SEXT": "Decode: immediate is sign-extended (else zero-extended).",
+"LUI": "Decode: immediate goes to bits 31:16.",
+"DSELJT": "Decode: J or JAL, requests the jump target as next PC.",
+"USESRT": "Decode: rt is an operand (R-type, shifts, BEQ, BNE, BLEZ, BGTZ), so B is eligible for forwarding.",
+"STORE": "Decode: SW, so the store data path is eligible for forwarding.",
+"XA": "ID/EX operand A: rs from the register file or WD (steer). For constant shifts bits 4:0 take the shamt field instead (rs is r0).",
+"XB": "ID/EX operand B: rt, WD (steer), the extended immediate, or the link (PC+8 = INC of the instruction in ID) for JAL / JALR.",
+"XSD": "ID/EX store data: rt from the register file or WD (steer).",
+"XOP": "ALU operation code, 3 bits: 0 add (subtract when XSUB), 1 pass B (links), 2 and, 3 or, 4 xor, 5 nor, 6 slt, 7 sltu.",
+"XSUB": "ALU control: invert B and carry in 1 (SUBU, SLT, SLTU, SLTI, SLTIU).",
+"XBEQ": "Instruction in EX is BEQ.",
+"XBNE": "Instruction in EX is BNE.",
+"XJR": "Instruction in EX is JR or JALR: next PC comes from FA.",
+"XMR": "Instruction in EX is a load.",
+"XMW": "Instruction in EX is a store.",
+"XRW": "Instruction in EX writes a register.",
+"XDEST": "Register written by the instruction in EX.",
+"XRS": "rs field of the instruction in EX.",
+"XRT": "rt field of the instruction in EX.",
+"XFAE": "Forward A from EX/MEM (writer one ahead).",
+"XFAM": "Forward A from MEM/WB (writer two ahead).",
+"XFBE": "Forward B from EX/MEM.",
+"XFBM": "Forward B from MEM/WB.",
+"XFSE": "Forward store data from EX/MEM.",
+"XFSM": "Forward store data from MEM/WB.",
+"BS0": "Branch adder: per-group sums of P4 + offset assuming carry-in 0.",
+"BS1": "Branch adder: per-group sums assuming carry-in 1.",
+"BG": "Branch adder: group carry-out with carry-in 0.",
+"BP": "Branch adder: group carry-out with carry-in 1.",
+"BC": "Branch adder: carry into each 3-bit group (lookahead).",
+"S0": "ALU: per-group sums of FA + FB assuming carry-in 0.",
+"S1": "ALU: per-group sums assuming carry-in 1.",
+"G": "ALU: group carry-out with carry-in 0.",
+"PP": "ALU: group carry-out with carry-in 1.",
+"C": "ALU: carry into each 3-bit group (lookahead over G and PP).",
+"NEQ": "Compare: per 8-bit group, FA differs from FB.",
+"MR": "EX/MEM result: ALU output (sum selected by the group carry, the logic op, or pass B) or the shifter output when XSH. Also the data-memory address for loads and stores.",
+"DQ": "Data memory bus: driven by the SRAMs whenever OE# is low (loads), by the EX/MEM store-data drivers during a store's MEM cycle.",
+"MDEST": "Register written by the instruction in MEM.",
+"MRW": "Instruction in MEM writes a register.",
+"MMR": "Instruction in MEM is a load (MEM/WB takes DQ instead of MR).",
+"MMW": "Instruction in MEM is a store: enables the store-data drivers and, with the tap, the write pulse.",
+"T1": "Delay line tap, CLK delayed 6 ns (DS1100-30, +-3 ns over 0..70 C). Clocks the second write-copy stage.",
+"T2": "Delay line tap, CLK delayed 12 ns (unused).",
+"T3": "Delay line tap, CLK delayed 18 ns. Clocks the first write-copy stage, which samples the MEM-stage destination, write flag, store address and store flag while they are stable mid-cycle.",
+"T4": "Delay line tap, CLK delayed 24 ns (unused).",
+"T5": "Delay line tap, CLK delayed 30 ns (unused).",
+"WC1D": "Write copy stage 1: MEM-stage destination register, sampled at T3.",
+"WC1W_n": "Write copy stage 1: MEM-stage write flag (low = write), sampled at T3; forced to write during RESET so r0 is zeroed.",
+"WDESTC": "Register file write-port address: stage-2 copy (T1) of the WB destination. Valid ~13 ns into the WB cycle, held ~4 ns past the edge that ends the write.",
+"WREGC_n": "Register file write-port R/W and A5 (low = write): stage-2 copy of the write flag. Idle parks the port at 32..63.",
+"HOLD": "Interlock: a load in ID right behind a store in EX, or a store in ID right behind a load in EX. PC and IF/ID hold, ID/EX takes a bubble; EX, MEM and WB proceed. Keeps loads out of the cycles where the data memory's outputs are off.",
+"LOAD": "Decode: LW.",
+"OEN": "Data memory OE#, registered: high during a store's EX cycle (from the decode of a store in ID, unless a load is in EX), its MEM cycle (the write) and the cycle after, so the SRAM outputs and the store-data drivers never overlap on DQ.",
+"WEN": "Data memory WE#: the write pulse, NAND of the 8 ns tap U1 and the store-in-MEM flag through one fast gate. Falls ~9 ns, rises ~28 ns into the store's MEM cycle.",
+"U1": "Second delay line (DS1100-40), CLK delayed 8 ns: timing input of the write gate.",
+"U2": "DS1100-40 tap, CLK delayed 16 ns (unused).",
+"U3": "DS1100-40 tap, CLK delayed 24 ns (unused).",
+"U4": "DS1100-40 tap, CLK delayed 32 ns (unused).",
+"U5": "DS1100-40 tap, CLK delayed 40 ns (unused).",
+"BOOT": "Boot copier active: from power-up until a cycle after DONE. Instruction memory OE# and the ROMs' gating follow it.",
+"BOOTCNT": "Boot copier counting: the PC is the address counter (released from reset through RESET_PC), held except in step 4 of each word.",
+"BOOTCNTD": "BOOTCNT delayed one cycle: sequences the hand-over of the data-memory address nets between the EX/MEM chips and the boot address buffers.",
+"STEP": "Boot step counter, 0..4 per word: 0-2 wait for the ROM, 3 write, 4 hold the address; the PC advances at the end of 4.",
+"WRAP": "PC bit above the boot region (PC15 on the board): the region has been copied.",
+"PCCLR": "Clears the PC at a phase change (through RESET_PC).",
+"RESET_PC": "The PC register's async reset: RESET while the copier is not counting, plus PCCLR.",
+"CODE": "Boot phase: 1 = code (writing instruction memory), 0 = data regions.",
+"PHASE": "Boot data region being copied, counting down from NPH to 0.",
+"NPH": "Wired constant: the number of the last data region to copy.",
+"LAST": "Copier is on the last data region.",
+"DONE": "Boot copy finished: turns the ROMs off and lets the reset synchroniser release the CPU.",
+"SKIP": "Wired: boot without copying (memories filled another way).",
+"BOOTD": "Boot data phase: the boot data buffers drive the data bus from the instruction bus.",
+"BOOTWI_n": "Instruction memory WE# during the boot code phase: a full-cycle write (registered, no gate).",
+"IMEN": "Instruction memory CE2: high after boot and during boot code-phase writes.",
+"DMEN_n": "Data memory CE#: high (deselected) during the boot code phase only.",
+"MMWB": "Store gate flag (registered): a store in MEM, or a boot data-phase write.",
+"ROMOE_n": "Boot ROM OE#: low until DONE.",
+"BA": "Boot address buffers: PC bits and the region number onto the data-memory address nets while the copier counts.",
+"PC15": "The incrementer's carry out: the PC has passed 8K words. The boot copier's WRAP on the board.",
+"INC15": "Carry out of the PC incrementer.",
+"CLK": "System clock, 34 ns period, 50% duty. Every pipeline register captures on the rising edge; both SRAM write ports are enabled by it (the write is the low half and ends at the edge). Also the delay line input.",
+"RST_n": "MAX811L RESET# (active low): held low from power-on for the part's 140 ms minimum timeout and while the button is pressed, released at an instant unrelated to the clock. 4.63 V threshold; the 5 V rail is set to about 5.1 V.",
+"MR_n": "MAX811L MR# (active low): the reset button, to ground, debounced inside the part. Wired high in the simulator.",
+"MIO": "I/O access in MEM: a load or store whose base register has bit 31 set (docs/uart.md). Deselects data memory, starts the bus wait.",
+"CNT": "Bus-wait counter: 0..15 while MIO. The access ends when it reaches 15.",
+"WAIT": "MIO and CNT != 15: holds ID/EX, EX/MEM (except the result register) and MEM/WB.",
+"HOLDW": "HOLD or WAIT: holds PC and IF/ID.",
+"UCS_n": "UART chip select (CS2#), registered from MIO: a cycle late, so it holds after the last strobe.",
+"URD_n": "UART read strobe (RD1#): cycles 2..15 of an I/O load.",
+"UWR_n": "UART write strobe (WR1#): cycles 2..14 of an I/O store.",
+"UA": "UART register select A2..A0: MR[4:2] captured on the access's first edge and held.",
+"RS1": "Reset synchroniser stage 1 (active low): RST_n sampled on CLK. The one flip-flop allowed to see an asynchronous input; a setup violation resolves to a legal value (model assumption, see docs/memory-timing.md section 7).",
+"RESET": "Synchronised asynchronous reset, active high: RS1 registered once more, so it falls 2 to 5.5 ns after a clock edge. Clears the PC and every pipeline register; the write copies take it as synchronous data.",
+"LINK": "Decode: JAL or JALR. Operand B takes PC+8 and the ALU passes it through to the destination.",
+"SHIMM": "Decode: constant shift (SLL, SRL, SRA): ID/EX A bits 4:0 capture the shamt field.",
+"XSH": "Instruction in EX is a shift: EX/MEM takes the shifter output instead of the ALU.",
+"XSHR": "Shift right (SRL, SRA, SRLV, SRAV): amount complemented in Forward A, rotation +1, mask reversed.",
+"XSRA": "Arithmetic right shift: vacated bits fill with the sign of FB.",
+"XBRS": "Branch on a condition of rs alone (BLEZ, BGTZ, BLTZ, BGEZ): sign of FA, optionally OR rs == 0.",
+"XBZ": "rs-conditioned branch also tests rs == 0 (BLEZ, BGTZ).",
+"XBINV": "Invert the rs condition (BGTZ, BGEZ).",
+"SY": "Shifter stage 1: FB rotated left by FA[2:0] (an 8:1 sliding-window mux per bit).",
+"KEEP": "Shifter mask: for bit class j (bit index mod 8), whether an output whose 8-bit block equals the amount's high part keeps its rotated bit rather than the fill.",
+"FILL": "Shifter fill bit: the sign of FB for SRA / SRAV, else 0.",
+"SH": "Shifter stage 2: SY rotated by 8 * FA[4:3] (plus one more for right shifts), with the mask and fill folded in. The final shift result.",
+};
+const descOf = bus => DESC[bus] || '';
+function busOf(net){ const m = /^([A-Za-z][A-Za-z0-9]*?_?)(\d+)$/.exec(net); if (m && !/\d$/.test(m[1].replace(/_$/,'')) ) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; if (m) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; return {bus:net, bit:null}; }
+// ---------- blocks ----------
+const blocks = new Map();
+for (const c of DATA.chips) {
+  if (!blocks.has(c.block)) blocks.set(c.block, {name:c.block, stage:c.stage, chips:[], ins:new Map(), outs:new Map()});
+  const b = blocks.get(c.block); b.chips.push(c);
+  for (const {pin, net, kind} of c.pins) {
+    if (kind === 'power' || kind === 'nc' || net === 'VCC' || net === 'GND') continue;
+    const out = kind === 'out' || kind === 'bidir';
+    const {bus, bit} = busOf(net);
+    const side = out ? b.outs : b.ins;
+    if (!side.has(bus)) side.set(bus, {bits:new Set(), chips:new Map()});
+    const e = side.get(bus); e.bits.add(bit); if (!e.chips.has(c.name)) e.chips.set(c.name, new Set()); e.chips.get(c.name).add(bit);
+  }
+}
+const producers = new Map(), consumers = new Map(), busWidth = new Map();
+for (const b of blocks.values()) {
+  for (const [bus,e] of b.outs) { if (!producers.has(bus)) producers.set(bus, []); producers.get(bus).push(b.name); }
+  for (const [bus,e] of b.ins) { if (!consumers.has(bus)) consumers.set(bus, []); consumers.get(bus).push(b.name); }
+  for (const side of [b.ins, b.outs]) for (const [bus, e] of side) busWidth.set(bus, Math.max(busWidth.get(bus)||0, e.bits.has(null) ? 1 : Math.max(...e.bits)+1));
+}
+function busClass(bus){ return STIM.has(bus) ? 'stim' : (busWidth.get(bus) === 1 ? 'ctl' : ''); }
+function bitsLabel(bits){ const a=[...bits].filter(b=>b!==null); if (!a.length) return ''; const lo=Math.min(...a), hi=Math.max(...a); return lo===hi ? `[${lo}]` : `[${hi}:${lo}]`; }
+// ---------- column plan ----------
+const COLS = DATA.layout.map(c => ({title:c.title, w:c.width, blocks:c.blocks, reg:!!c.reg}));
+// (column plan comes from the board file)
+const colOf = new Map(), rowOf = new Map();
+COLS.forEach((c, i) => c.blocks.forEach((b, r) => { colOf.set(b, i); rowOf.set(b, r); }));
+// ---------- edge classification ----------
+// edge: {bus, src (block or null=clock), dst, kind: 'chan'|'top'|'bottom'|'wrap'}
+const edges = [];
+for (const [bus, cons] of consumers) {
+  const prods = producers.get(bus) || [null];
+  for (const src of prods) for (const dst of cons) {
+    if (src === dst) continue;
+    let kind;
+    if (src === null) kind = 'bottom';
+    else {
+      const cs = colOf.get(src), cd = colOf.get(dst);
+      if (cd === cs + 1) kind = busWidth.get(bus) === 1 ? 'bottom' : 'chan';
+      else if (cd > cs + 1) kind = 'bottom';
+      else if (cd === cs && rowOf.get(dst) > rowOf.get(src)) kind = 'wrap';
+      else kind = 'top';
+    }
+    edges.push({bus, src, dst, kind});
+  }
+}
+// channel tracks: channel k sits right of column k (k = -1 is left of column 0)
+const TRACK = 7, CH_PAD = 12;
+const chanBuses = Array.from({length: COLS.length + 1}, () => new Map()); // index k+1 -> bus -> track
+function useChan(k, bus) { const m = chanBuses[k+1]; if (!m.has(bus)) m.set(bus, m.size); }
+const topLanes = new Map(), bottomLanes = new Map();
+for (const e of edges) {
+  const cs = e.src === null ? -1 : colOf.get(e.src), cd = colOf.get(e.dst);
+  if (e.kind === 'chan') useChan(cs, e.bus);
+  else if (e.kind === 'wrap') { useChan(cs, e.bus); useChan(cs - 1, e.bus); }
+  else if (e.kind === 'top') { useChan(cs, e.bus); useChan(cd - 1, e.bus); if (!topLanes.has(e.bus)) topLanes.set(e.bus, topLanes.size); }
+  else { if (e.src !== null) useChan(cs, e.bus); useChan(cd - 1, e.bus); if (!bottomLanes.has(e.bus)) bottomLanes.set(e.bus, bottomLanes.size); }
+}
+const LANE = 8;
+const TOP_H = 30 + topLanes.size * LANE + 20;
+const TOP = TOP_H + 42; // stage titles between corridor and blocks
+// column x positions with channel widths
+let x = 0;
+const chanX = [];
+for (let k = -1; k < COLS.length; k++) {
+  const w = CH_PAD*2 + Math.max(0, chanBuses[k+1].size - 1) * TRACK;
+  chanX[k+1] = {x, w};
+  x += w;
+  if (k + 1 < COLS.length) { COLS[k+1].x = x; x += COLS[k+1].w; }
+}
+const totalW = x;
+function trackX(k, bus) { const c = chanX[k+1]; return c.x + CH_PAD + chanBuses[k+1].get(bus) * TRACK; }
+// ---------- block layout ----------
+const RAILW = 84, CHIPW = 46, CHIPH = 24, CGAP = 8, TITLEH = 22, BGAP = 30;
+const layout = new Map();
+let maxBottom = 0;
+for (const col of COLS) {
+  let y = TOP;
+  for (const name of col.blocks) {
+    const b = blocks.get(name);
+    const inner = col.w - 2*RAILW - 16;
+    const perRow = Math.max(1, Math.floor((inner + CGAP) / (CHIPW + CGAP)));
+    const rows = Math.ceil(b.chips.length / perRow);
+    const railRows = Math.max(b.ins.size, b.outs.size);
+    const h = TITLEH + 10 + Math.max(rows * (CHIPH + CGAP), railRows * 14) + 10;
+    layout.set(name, {x: col.x, y, w: col.w, h, perRow, reg: !!col.reg});
+    y += h + BGAP;
+  }
+  maxBottom = Math.max(maxBottom, y - BGAP);
+}
+const BOT0 = maxBottom + 40;
+const totalH = BOT0 + bottomLanes.size * LANE + 40;
+// ---------- render ----------
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+const el = (t, a={}, parent) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
+const root = el('g', {}, svg);
+const defs = el('defs', {}, root);
+for (const cls of ['', 'ctl', 'back', 'stim', 'hi']) {
+  const m = el('marker', {id:'arrow'+(cls||'data'), viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'6', markerHeight:'6', orient:'auto'}, defs);
+  el('path', {d:'M0,0 L10,5 L0,10 z', class:'arrow '+cls}, m);
+}
+const gBg = el('g', {}, root), gBuses = el('g', {}, root), gBlocks = el('g', {}, root);
+el('rect', {x:0, y:0, width:totalW, height:TOP_H, class:'corridor'}, gBg);
+el('text', {x:12, y:18, class:'corridor-label'}, gBg).textContent = 'back edges: results returning to earlier stages, and same-stage reuse';
+el('rect', {x:0, y:BOT0 - 16, width:totalW, height: totalH - BOT0 + 16, class:'corridor'}, gBg);
+el('text', {x:12, y:BOT0 - 2, class:'corridor-label'}, gBg).textContent = 'control signals forward, stage-skipping data, clock-generator strobes';
+for (const col of COLS) {
+  if (col.title) el('text', {x: col.x + col.w/2, y: TOP - 16, 'text-anchor':'middle', class:'stage-title'}, gBg).textContent = col.title;
+  if (col.reg) { const cx = col.x + col.w/2; el('line', {x1:cx, y1:TOP_H + 6, x2:cx, y2:BOT0 - 20, class:'divider'}, gBg); }
+}
+const wb = COLS[COLS.length - 1];
+['Write-back has no chips of its own:', 'MEM/WB drives WD, WDEST and WREG', 'back to the register file write port', '(blue, over the top).'].forEach((t, i) => el('text', {x: wb.x + 10, y: TOP + 14 + 16*i, class:'note'}, gBg).textContent = t);
+const ports = new Map(), chipPos = new Map(), railEls = new Map();
+for (const [name, L] of layout) {
+  const b = blocks.get(name);
+  const g = el('g', {class:'block' + (L.reg ? ' register' : '')}, gBlocks);
+  el('rect', {x:L.x, y:L.y, width:L.w, height:L.h, rx:2, class:'body'}, g);
+  el('text', {x:L.x+8, y:L.y+15, class:'title'}, g).textContent = name;
+  el('text', {x:L.x+L.w-8, y:L.y+15, 'text-anchor':'end', class:'count'}, g).textContent = b.chips.length + ' ' + kindLabel(b.chips[0]);
+  g.addEventListener('click', ev => { if (ev.target.classList.contains('body') || ev.target.classList.contains('title')) select({type:'block', name}); });
+  const cx0 = L.x + RAILW + 8, cy0 = L.y + TITLEH + 10;
+  b.chips.forEach((c, i) => {
+    const r = Math.floor(i / L.perRow), k = i % L.perRow;
+    const cx = cx0 + k*(CHIPW+CGAP), cy = cy0 + r*(CHIPH+CGAP);
+    chipPos.set(c.name, {x:cx, y:cy});
+    const gc = el('g', {class:'chip' + (c.model.kind==='gal' ? '' : ' sram'), 'data-chip':c.name}, g);
+    el('rect', {x:cx, y:cy, width:CHIPW, height:CHIPH, rx:1.5}, gc);
+    el('text', {x:cx+CHIPW/2, y:cy+CHIPH/2+3.5, 'text-anchor':'middle'}, gc).textContent = c.name;
+    gc.addEventListener('click', ev => { ev.stopPropagation(); select({type:'chip', name:c.name}); });
+    gc.addEventListener('mouseenter', () => hover({type:'chip', name:c.name}));
+    gc.addEventListener('mouseleave', () => hover(null));
+  });
+  const p = new Map(); ports.set(name, p);
+  const mkRail = (side, entries) => {
+    let i = 0;
+    for (const [bus, e] of [...entries].sort((a,b)=>a[0].localeCompare(b[0]))) {
+      const y = L.y + TITLEH + 18 + i*14; i++;
+      const xPort = side==='in' ? L.x : L.x+L.w;
+      const gr = el('g', {class:'rail', 'data-bus':bus}, g);
+      el('rect', {x: side==='in' ? L.x : L.x+L.w-RAILW, y:y-9, width:RAILW, height:13, class:'hit'}, gr);
+      el('text', {x: side==='in' ? L.x+6 : L.x+L.w-6, y, 'text-anchor': side==='in' ? 'start' : 'end'}, gr).textContent = bus;
+      el('text', {x: side==='in' ? L.x+RAILW-4 : L.x+L.w-RAILW+4, y, 'text-anchor': side==='in' ? 'end' : 'start', class:'w'}, gr).textContent = bitsLabel(e.bits);
+      el('circle', {cx:xPort, cy:y, r:2, class:'port'}, gr);
+      gr.appendChild(el('title')).textContent = `${bus}${bitsLabel(e.bits)}: ${descOf(bus)}`;
+      if (!p.has(bus)) p.set(bus, {}); p.get(bus)[side] = {x:xPort, y};
+      if (!railEls.has(bus)) railEls.set(bus, []); railEls.get(bus).push(gr);
+      gr.addEventListener('mouseenter', () => hover({type:'bus', name:bus}));
+      gr.addEventListener('mouseleave', () => hover(null));
+      gr.addEventListener('click', ev => { ev.stopPropagation(); select({type:'bus', name:bus}); });
+      for (const [chip, bits] of e.chips) {
+        const cp = chipPos.get(chip);
+        const x1 = side==='in' ? L.x+RAILW : L.x+L.w-RAILW;
+        const x2 = side==='in' ? cp.x : cp.x+CHIPW;
+        const y2 = cp.y + CHIPH/2 + (side==='in' ? -4 : 4);
+        const xm = side==='in' ? x1 + 6 + (i % 5) * 1.5 : x1 - 6 - (i % 5) * 1.5;
+        const path = el('path', {d:`M${x1},${y} H${xm} V${y2} H${x2}`, class:'pinline ' + busClass(bus), 'data-bus':bus, 'data-chip':chip}, g);
+        path.appendChild(el('title')).textContent = `${chip}: ${bus}${bitsLabel(bits)}`;
+        g.insertBefore(path, g.firstChild.nextSibling);
+      }
+    }
+  };
+  mkRail('in', b.ins);
+  mkRail('out', b.outs);
+}
+// ---------- route edges ----------
+const CLKX = 8;
+for (const e of edges) {
+  const bus = e.bus, w = busWidth.get(bus);
+  const sw = w >= 32 ? 3 : w >= 8 ? 2.2 : w >= 2 ? 1.6 : 1.1;
+  let cls = busClass(bus); if (e.kind === 'top' || e.kind === 'wrap' && false) cls = (cls === 'stim' ? 'stim' : 'back');
+  const dst = ports.get(e.dst).get(bus).in;
+  const cd = colOf.get(e.dst);
+  let d, sx, sy;
+  if (e.src === null) {
+    // clock generator: enters from the bottom-left, along a bottom lane
+    const ly = BOT0 + bottomLanes.get(bus) * LANE;
+    const tx = trackX(cd - 1, bus);
+    sx = CLKX; sy = ly;
+    d = `M${sx},${sy} H${tx} V${dst.y} H${dst.x}`;
+  } else {
+    const src = ports.get(e.src).get(bus).out; sx = src.x; sy = src.y;
+    const cs = colOf.get(e.src);
+    if (e.kind === 'chan') {
+      const tx = trackX(cs, bus);
+      d = `M${sx},${sy} H${tx} V${dst.y} H${dst.x}`;
+    } else if (e.kind === 'wrap') {
+      const tr = trackX(cs, bus), tl = trackX(cs - 1, bus);
+      const Ld = layout.get(e.dst);
+      const gy = Ld.y - BGAP/2 + (chanBuses[cs+1].get(bus) % 3) * 4 - 4;
+      d = `M${sx},${sy} H${tr} V${gy} H${tl} V${dst.y} H${dst.x}`;
+    } else if (e.kind === 'top') {
+      const tr = trackX(cs, bus), tl = trackX(cd - 1, bus);
+      const ly = 30 + topLanes.get(bus) * LANE;
+      d = `M${sx},${sy} H${tr} V${ly} H${tl} V${dst.y} H${dst.x}`;
+    } else {
+      const tr = trackX(cs, bus), tl = trackX(cd - 1, bus);
+      const ly = BOT0 + bottomLanes.get(bus) * LANE;
+      d = `M${sx},${sy} H${tr} V${ly} H${tl} V${dst.y} H${dst.x}`;
+    }
+  }
+  const path = el('path', {d, class:'bus '+cls, 'stroke-width':sw, 'marker-end':`url(#arrow${cls||'data'})`, 'data-bus':bus}, gBuses);
+  el('circle', {cx:sx, cy:sy, r:2.4, class:'src '+cls}, gBuses);
+  const hit = el('path', {d, class:'bus-hit', 'data-bus':bus}, gBuses);
+  hit.addEventListener('mouseenter', () => hover({type:'bus', name:bus}));
+  hit.addEventListener('mouseleave', () => hover(null));
+  hit.addEventListener('click', ev => { ev.stopPropagation(); select({type:'bus', name:bus}); });
+}
+el('text', {x:CLKX, y:BOT0 - 2 - 12, class:'note'}, gBg).textContent = '';
+el('text', {x:CLKX, y: totalH - 14, class:'note'}, gBg).textContent = 'clock generator (dashed): CLK, RESET, PH_RF, PH_CE, PH_SD';
+// ---------- interaction ----------
+const panel = document.getElementById('panel');
+let selected = null;
+function setHighlight(item) {
+  for (const p of gBuses.querySelectorAll('.bus')) p.classList.remove('hi','dim');
+  for (const p of gBlocks.querySelectorAll('.pinline')) p.classList.remove('hi');
+  for (const r of gBlocks.querySelectorAll('.rail')) r.classList.remove('hi');
+  for (const c of gBlocks.querySelectorAll('.chip')) c.classList.remove('sel');
+  if (!item) return;
+  const mark = nets => { for (const p of gBuses.querySelectorAll('.bus')) p.classList.add(nets.has(p.dataset.bus) ? 'hi' : 'dim'); };
+  if (item.type === 'bus') {
+    mark(new Set([item.name]));
+    for (const p of gBlocks.querySelectorAll(`.pinline[data-bus="${item.name}"]`)) p.classList.add('hi');
+    for (const r of railEls.get(item.name) || []) r.classList.add('hi');
+  } else if (item.type === 'chip') {
+    for (const c of gBlocks.querySelectorAll(`.chip[data-chip="${item.name}"]`)) c.classList.add('sel');
+    for (const p of gBlocks.querySelectorAll(`.pinline[data-chip="${item.name}"]`)) p.classList.add('hi');
+    mark(new Set(DATA.chips.find(c=>c.name===item.name).pins.map(p=>busOf(p[1]).bus)));
+  } else if (item.type === 'block') {
+    const b = blocks.get(item.name); mark(new Set([...b.ins.keys(), ...b.outs.keys()]));
+  }
+}
+function kindLabel(c) {
+  const k = c.model.kind;
+  return k === 'gal' ? 'GAL' : k === 'ds1100' ? 'delay line' : k === 'gate' ? 'gate' : k === 'supervisor' ? 'supervisor' : k === 'rom' ? 'ROM' : k === 'uart' ? 'UART' : k === 'passive' ? 'part' : 'SRAM';
+}
+function describe(item) {
+  const parts = new Map(); for (const c of DATA.chips) parts.set(c.part, (parts.get(c.part)||0)+1);
+  const bom = [...parts].sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${n} × ${p}`).join(', ');
+  if (!item) return `<h2>${DATA.name}</h2><h3>${DATA.chips.length} parts</h3><p>${DATA.description}</p><p>${bom}.</p><p>Generated from <span class="mono">boards/${DATA.name}/netlist.json</span>.</p><p>Hover a bus, rail entry or chip to trace it. Click to pin it here. Drag to pan, scroll to zoom.</p>` + legend();
+  if (item.type === 'bus') {
+    const w = busWidth.get(item.name); const prods = producers.get(item.name) || ['clock generator']; const cons = consumers.get(item.name) || [];
+    return `<h2>Bus</h2><h3 class="mono">${item.name}${w>1 ? `[${w-1}:0]` : ''}</h3><p>${descOf(item.name)}</p><p>${w} ${w===1?'signal':'bits'}${STIM.has(item.name) ? ', driven by the clock generator' : ''}.</p><p><b>From</b> ${prods.join(', ')}</p><p><b>To</b> ${cons.join(', ') || 'nothing (output only)'}</p>` + legend();
+  }
+  if (item.type === 'chip') {
+    const c = DATA.chips.find(x=>x.name===item.name);
+    const rows = c.pins.slice().sort((a,b)=>a.pin-b.pin).map(p=>`<tr><td>${p.pin}</td><td class="mono">${p.name}</td><td class="${p.kind==='out'||p.kind==='bidir'?'out':''}" title="${descOf(busOf(p.net).bus)}">${p.net}</td><td>${p.kind}</td></tr>`).join('');
+    return `<h2>${c.part}</h2><h3 class="mono">${c.name}</h3><p>${c.block}, ${c.stage}. ${c.package}. ${c.pins.length} connected pins.</p><table><tr><th>pin</th><th></th><th>net</th><th></th></tr>${rows}</table>`;
+  }
+  const b = blocks.get(item.name);
+  const list = m => [...m].sort((a,b)=>a[0].localeCompare(b[0])).map(([bus,e])=>`<tr><td class="mono">${bus}${bitsLabel(e.bits)}</td><td>${descOf(bus)}</td></tr>`).join('');
+  return `<h2>${b.stage}</h2><h3>${b.name}</h3><p>${b.chips.length} × ${b.chips[0].part}: <span class="mono">${b.chips.map(c=>c.name).join(' ')}</span></p><h2>Reads</h2><table>${list(b.ins) || '<tr><td>nothing</td></tr>'}</table><h2 style="margin-top:12px">Drives</h2><table>${list(b.outs) || '<tr><td>nothing</td></tr>'}</table>`;
+}
+function legend() {
+  return `<div class="legend">
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--copper)" stroke-width="3"/></svg>forward data bus, width by stroke</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--back)" stroke-width="2"/></svg>back edge, over the top corridor</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--slate)" stroke-width="1"/></svg>single control signal, bottom corridor</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--stim)" stroke-width="1.6" stroke-dasharray="5 3"/></svg>clock-generator strobe</div>
+  <div><svg viewBox="0 0 42 12"><rect x="2" y="1" width="38" height="10" fill="var(--reg)" stroke="var(--ink)"/></svg>pipeline register bank</div>
+  <div><svg viewBox="0 0 42 12"><rect x="10" y="1" width="22" height="10" fill="var(--chip)" stroke="var(--ink)" stroke-width="1.2"/></svg>one chip; thick border, an SRAM</div>
+  </div>`;
+}
+function hover(item) { if (selected) return; setHighlight(item); panel.innerHTML = describe(item); }
+function select(item) { selected = item; setHighlight(item); panel.innerHTML = describe(item); }
+document.getElementById('clear').addEventListener('click', () => { selected = null; setHighlight(null); panel.innerHTML = describe(null); });
+svg.addEventListener('click', ev => { if (ev.target === svg) { selected = null; setHighlight(null); panel.innerHTML = describe(null); } });
+panel.innerHTML = describe(null);
+document.getElementById('meta').textContent = `${DATA.chips.length} parts · ${busWidth.size} buses · ${DATA.period_ns} ns cycle`;
+const view = document.getElementById('view');
+let vb = {x:0, y:0, w:totalW, h:totalH};
+function fit() { const r = view.getBoundingClientRect(); const s = Math.max(totalW / r.width, totalH / r.height); vb = {x:0, y:0, w: r.width*s, h: r.height*s}; apply(); }
+function apply() { svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
+document.getElementById('fit').addEventListener('click', fit);
+view.addEventListener('wheel', ev => { ev.preventDefault(); const r = view.getBoundingClientRect(); const mx = vb.x + (ev.clientX - r.left) / r.width * vb.w, my = vb.y + (ev.clientY - r.top) / r.height * vb.h; const k = Math.exp(ev.deltaY * 0.0015); vb = {x: mx - (mx - vb.x)*k, y: my - (my - vb.y)*k, w: vb.w*k, h: vb.h*k}; apply(); }, {passive:false});
+// Pan only once the pointer has moved; a plain click reaches the wire or
+// chip under it (pointer capture would steal the click).
+let drag = null, moved = false;
+view.addEventListener('pointerdown', ev => { if (ev.button !== 0) return; drag = {x:ev.clientX, y:ev.clientY, vx:vb.x, vy:vb.y}; moved = false; });
+window.addEventListener('pointermove', ev => { if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; if (!moved && Math.hypot(dx, dy) < 4) return; moved = true; view.classList.add('dragging'); const r = view.getBoundingClientRect(); vb.x = drag.vx - dx / r.width * vb.w; vb.y = drag.vy - dy / r.height * vb.h; apply(); });
+window.addEventListener('pointerup', () => { drag = null; view.classList.remove('dragging'); });
+svg.addEventListener('click', ev => { if (moved) { moved = false; ev.stopPropagation(); } }, true);
+window.addEventListener('resize', fit);
+fit();
+</script>

@@ -25,11 +25,13 @@
 
 use crate::as7c164a::{self, As7c164a};
 use crate::cy7c131::{Cy7c131, Port};
-use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
+use crate::galpack::{Eq, GalSpec, Mode, SLit, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
 use crate::uart16550::{BusTiming, Uart16550, UartPin, uart_pin_of};
-use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
+use crate::board::{Board, ChipMeta, Column, Load, Model};
+use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
+use std::collections::BTreeMap;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -351,11 +353,6 @@ fn ctrl_block() -> Vec<Eq> {
         rw.push(vec![l("ITYPERW"), l(&ir(16 + i))]);
     }
     eqs.push(Eq::sop("XRW", Mode::Reg, rw));
-    // rs / rt numbers travel along for the forwarding control.
-    for i in 0..5 {
-        eqs.push(Eq::sop(&n("XRS", i), Mode::Reg, vec![vec![l(&ir(21 + i))]]));
-        eqs.push(Eq::sop(&n("XRT", i), Mode::Reg, vec![vec![l(&ir(16 + i))]]));
-    }
     eqs
 }
 
@@ -475,7 +472,8 @@ fn bt_block() -> (Vec<Eq>, Vec<Eq>, Vec<Eq>) {
         let mut ins: Vec<String> = (lo..=hi).map(|i| p4(i)).collect();
         ins.extend((lo..=hi).map(|i| ir(i - 2)));
         let mask = (1u32 << w) - 1;
-        for cin in 0..2u32 {
+        // Group 0 has no carry in: only its cin = 0 sum and generate.
+        for cin in 0..if k == 0 { 1 } else { 2u32 } {
             for bit in 0..w {
                 let name = format!("BS{cin}_{}", lo + bit);
                 l1.push(Eq::table(&name, Mode::Comb, &strs(&ins), move |m| {
@@ -487,9 +485,11 @@ fn bt_block() -> (Vec<Eq>, Vec<Eq>, Vec<Eq>) {
             l1.push(Eq::table(&format!("BG{k}"), Mode::Comb, &strs(&ins), move |m| {
                 Some(((m & mask) + (m >> w & mask)) >> w & 1 == 1)
             }));
-            l1.push(Eq::table(&format!("BP{k}"), Mode::Comb, &strs(&ins), move |m| {
-                Some(((m & mask) + (m >> w & mask) + 1) >> w & 1 == 1)
-            }));
+            if k > 0 {
+                l1.push(Eq::table(&format!("BP{k}"), Mode::Comb, &strs(&ins), move |m| {
+                    Some(((m & mask) + (m >> w & mask) + 1) >> w & 1 == 1)
+                }));
+            }
         }
     }
     // Carries into groups 1..4.
@@ -1283,6 +1283,374 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v
 }
 
+/// Design parameters the *wiring* depends on: what differs between the
+/// board and a test-sized variant of it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Params {
+    /// Boot region size: 2^k words (13 on the board).
+    pub code_words_log2: u32,
+    /// Data regions copied at boot (NPH + 1; 32 on the board).
+    pub data_regions: u32,
+    /// SKIP wired high: no boot copy, memories preloaded (test boards).
+    pub skip: bool,
+    /// Tap for the write-enable gate: (DS1100 total, tap index 0..5).  A
+    /// total other than [`DELAY_LINE_TOTAL`] adds a second delay line.
+    pub gate_tap: (u32, usize),
+}
+
+impl Params {
+    /// The board as built.
+    pub fn board() -> Params {
+        Params { code_words_log2: 13, data_regions: 32, skip: false, gate_tap: (40, 0) }
+    }
+    fn from_build(opt: &Build) -> Params {
+        let (code_words_log2, data_regions, skip) = match &opt.boot {
+            Boot::Preload => (13, 0, true),
+            Boot::Copy { code_words_log2, data_regions, .. } => (*code_words_log2, *data_regions, false),
+        };
+        Params { code_words_log2, data_regions, skip, gate_tap: opt.gate_tap }
+    }
+}
+
+/// The chip map's columns.
+pub fn layout() -> Vec<Column> {
+    let col = |title: &str, width: u32, blocks: &[&str], reg: bool| Column { title: title.into(), width, blocks: blocks.iter().map(|b| b.to_string()).collect(), reg };
+    vec![
+        col("IF", 300, &["PC", "PC+4", "Instruction memory", "Boot ROM", "Boot sequencer", "Boot address", "Reset supervisor", "Reset sync"], false),
+        col("", 240, &["IF/ID"], true),
+        col("ID", 330, &["Decode", "Steer", "Register file", "Branch target adder"], false),
+        col("", 240, &["ID/EX control", "Forwarding control", "ID/EX A", "ID/EX B", "ID/EX store data", "ID/EX branch target"], true),
+        col("EX", 330, &["Forward A", "Forward B", "ALU slices + carries", "Shifter", "Compare", "Next PC"], false),
+        col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Stall"], true),
+        col("MEM", 240, &["Data memory", "Boot data", "Write gate", "Delay line", "Bus wait", "UART", "Serial port"], false),
+        col("", 240, &["MEM/WB", "Write copies"], true),
+        col("WB", 170, &[], false),
+    ]
+}
+
+fn meta(part: &str, package: &str, name: &str, role: Option<String>, model: Model) -> ChipMeta {
+    let (block, stage) = block_of(name);
+    ChipMeta { part: part.into(), package: package.into(), block: block.into(), stage: stage.into(), role, model }
+}
+
+/// The board file for these parameters.
+pub fn board(p: &Params) -> Board {
+    let nl = build_netlist(p);
+    let mut params = BTreeMap::new();
+    params.insert("code_words_log2".to_string(), serde_json::json!(p.code_words_log2));
+    params.insert("data_regions".to_string(), serde_json::json!(p.data_regions));
+    params.insert("skip".to_string(), serde_json::json!(p.skip));
+    params.insert("gate_tap".to_string(), serde_json::json!([p.gate_tap.0, p.gate_tap.1]));
+    nl.export(
+        "crag",
+        "MIPS-I five-stage pipeline: ATF22V10C logic, CY7C131 register file, IS61C64AL instruction memory, CY7C1041GN data memory, SST39SF040 boot ROMs, DS1100 delay lines, MAX811L reset, TL16C550 UART.",
+        34.0,
+        params,
+        layout(),
+    )
+}
+
+/// Every chip and every connection, with board metadata; no stimulus.
+pub fn build_netlist(p: &Params) -> Netlist {
+    let mut nl = Netlist::new();
+    let specs = gal_specs();
+    for spec in specs.iter() {
+        let (id, pins) = crate::galpack::instantiate(&mut nl, spec);
+        let model = Model::Gal { clk: spec.clk.clone(), ar: spec.ar.clone(), eqs: spec.eqs.clone(), pins };
+        nl.set_meta(id, meta("ATF22V10C-7PX", "DIP-24", &spec.name, None, model));
+    }
+    let clk = nl.net("CLK");
+    nl.set_net_role(clk, "clk");
+    let reset = nl.net("RESET");
+    nl.set_net_role(reset, "reset");
+    let gnd = nl.net("GND");
+    let vcc = nl.net("VCC");
+    nl.tie(gnd, Level::L);
+    nl.tie(vcc, Level::H);
+    // Delay line on CLK: its taps clock the write-copy registers.
+    let dl = nl.add_chip("dl0", Ds1100::new(DELAY_LINE_TOTAL, Grade::Commercial));
+    nl.set_meta(dl, meta("DS1100Z-30", "SOIC-8", "dl0", Some("dl:0".into()), Model::Ds1100 { total_ns: DELAY_LINE_TOTAL }));
+    nl.connect(clk, dl, DS1100_IN);
+    for k in 0..5 {
+        let net = nl.net(&format!("T{}", k + 1));
+        nl.connect(net, dl, ds1100_tap_pin(k));
+    }
+    // The data-memory write-enable gate: NAND of a tap and the store
+    // flag.  A second delay line if the tap is from another part.
+    let (gt_total, gt_k) = p.gate_tap;
+    let tap_net = if gt_total == DELAY_LINE_TOTAL {
+        nl.net(&format!("T{}", gt_k + 1))
+    } else {
+        let dl1 = nl.add_chip("dl1", Ds1100::new(gt_total, Grade::Commercial));
+        nl.set_meta(dl1, meta(&format!("DS1100U-{gt_total}"), "uSOP-8", "dl1", Some("dl:1".into()), Model::Ds1100 { total_ns: gt_total }));
+        nl.connect(clk, dl1, DS1100_IN);
+        for k in 0..5 {
+            let net = nl.net(&format!("U{}", k + 1));
+            nl.connect(net, dl1, ds1100_tap_pin(k));
+        }
+        nl.net(&format!("U{}", gt_k + 1))
+    };
+    // Reset supervisor; MR# is the reset button (pulled up in the part).
+    let sup = nl.add_chip("rst0", ResetSupervisor::new(0, 0));
+    nl.set_meta(sup, meta("MAX811LEUS+T", "SOT-143", "rst0", Some("supervisor".into()), Model::Supervisor));
+    let rst_n = nl.net("RST_n");
+    nl.connect(rst_n, sup, 2);
+    let mr_n = nl.net("MR_n");
+    nl.connect(mr_n, sup, 3);
+    nl.pull(mr_n, Level::H);
+    nl.set_net_role(mr_n, "reset_button");
+    let gate = nl.add_chip("gate0", FastGate::new(500, 5500));
+    nl.set_meta(gate, meta("74LVC1G00QSE-7", "SOT-353", "gate0", Some("gate".into()), Model::Gate));
+    nl.connect(tap_net, gate, 1);
+    let mmwb = nl.net("MMWB");
+    nl.connect(mmwb, gate, 2);
+    let wen = nl.net("WEN");
+    nl.connect(wen, gate, 4);
+
+    // UART (TL16C550D) on the data bus, byte lane 0; register select
+    // from the bus-wait sequencer's held address; strobes and chip
+    // select from it too; master reset from RESET (active high).
+    // ADS# low (no address latch), RD2 / WR2 low, CS0 / CS1 high.
+    // Modem loop-back: RTS# -> CTS#, DTR# -> DSR# + DCD#, RI# high;
+    // BAUDOUT -> RCLK.
+    {
+        let c = nl.add_chip("uart0", Uart16550::new(BusTiming::tl16c550c(), UART_XIN_HZ));
+        nl.set_meta(c, meta("TL16C550DPTR", "LQFP-48", "uart0", Some("uart".into()), Model::Uart { xin_hz: UART_XIN_HZ }));
+        for i in 0..8u8 {
+            let net = nl.net(&n("DQ", i as usize));
+            nl.connect(net, c, uart_pin_of(UartPin::D(i)));
+        }
+        for i in 0..3u8 {
+            let net = nl.net(&n("UA", i as usize));
+            nl.connect(net, c, uart_pin_of(UartPin::A(i)));
+        }
+        for (net, p) in [("UCS_n", UartPin::Cs2N), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout)] {
+            let net = nl.net(net);
+            nl.connect(net, c, uart_pin_of(p));
+        }
+        for p in [UartPin::Cs0, UartPin::Cs1] {
+            nl.connect(vcc, c, uart_pin_of(p));
+        }
+        for p in [UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
+            nl.connect(gnd, c, uart_pin_of(p));
+        }
+        for (net, pins) in [("URTS_n", vec![32, 38]), ("UDTR_n", vec![33, 39, 40]), ("UBAUD", vec![12, 5])] {
+            let net = nl.net(net);
+            for p in pins {
+                nl.connect(net, c, p);
+            }
+        }
+        nl.connect(vcc, c, 41);
+        let xin = nl.net("XIN");
+        let xout = nl.net("XOUT");
+        nl.connect(xin, c, uart_pin_of(UartPin::Xin));
+        nl.connect(xout, c, uart_pin_of(UartPin::Xout));
+        // Crystal and load capacitors.
+        let x = nl.add_chip("x1", Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+        nl.set_meta(x, meta("X3225147456MOB4SI", "3225", "x1", None, Model::Passive));
+        nl.connect(xin, x, 1);
+        nl.connect(xout, x, 2);
+        for (name, net) in [("c5", xin), ("c6", xout)] {
+            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+            nl.set_meta(cap, meta("18pF 0603 C0G", "0603", name, None, Model::Passive));
+            nl.connect(net, cap, 1);
+            nl.connect(gnd, cap, 2);
+        }
+        // RS-232 transceiver (SP3232, TSSOP-16): 1 C1+, 2 V+, 3 C1-,
+        // 4 C2+, 5 C2-, 6 V-, 7 T2OUT, 8 R2IN, 9 R2OUT, 10 T2IN, 11 T1IN,
+        // 12 R1OUT, 13 R1IN, 14 T1OUT, 15 GND, 16 VCC.
+        let xc_names = ["C1+", "V+", "C1-", "C2+", "C2-", "V-", "T2OUT", "R2IN", "R2OUT", "T2IN", "T1IN", "R1OUT", "R1IN", "T1OUT", "GND", "VCC"];
+        let xc = nl.add_chip("xcvr0", Passive::new(xc_names.iter().enumerate().map(|(i, s)| (i + 1, s.to_string())).collect()));
+        nl.set_meta(xc, meta("SP3232EEY-L/TR", "TSSOP-16", "xcvr0", None, Model::Passive));
+        let sout = nl.net("SOUT");
+        let sin = nl.net("SIN");
+        nl.connect(sout, xc, 11);
+        nl.connect(sin, xc, 12);
+        let tx = nl.net("RS232_TX");
+        let rx = nl.net("RS232_RX");
+        nl.connect(tx, xc, 14);
+        nl.connect(rx, xc, 13);
+        nl.connect(gnd, xc, 15);
+        nl.connect(vcc, xc, 16);
+        for (name, a, b) in [("c1", 1, 3), ("c2", 4, 5)] {
+            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+            nl.set_meta(cap, meta("100nF 0603 X7R", "0603", name, None, Model::Passive));
+            let na = nl.net(&format!("XC_{name}A"));
+            let nb = nl.net(&format!("XC_{name}B"));
+            nl.connect(na, xc, a);
+            nl.connect(nb, xc, b);
+            nl.connect(na, cap, 1);
+            nl.connect(nb, cap, 2);
+        }
+        for (name, pin, rail_net) in [("c3", 2, "XC_VP"), ("c4", 6, "XC_VM")] {
+            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+            nl.set_meta(cap, meta("100nF 0603 X7R", "0603", name, None, Model::Passive));
+            let net = nl.net(rail_net);
+            nl.connect(net, xc, pin);
+            nl.connect(net, cap, 1);
+            nl.connect(gnd, cap, 2);
+        }
+        let j = nl.add_chip("j1", Passive::new(vec![(1, "GND".into()), (2, "TX".into()), (3, "RX".into())]));
+        nl.set_meta(j, meta("Header 1x3 2.54mm", "PinHeader_1x03", "j1", None, Model::Passive));
+        nl.connect(gnd, j, 1);
+        nl.connect(tx, j, 2);
+        nl.connect(rx, j, 3);
+    }
+
+    let k = p.code_words_log2;
+    let nph = p.data_regions.saturating_sub(1);
+    let skip = p.skip;
+
+    // Instruction memory: 4 lanes, address = PC[14:2].
+    for lane in 0..4 {
+        let c = nl.add_chip(&format!("imem{lane}"), As7c164a::with_timing(as7c164a::Timing::is61c64al_10()));
+        nl.set_meta(c, meta("IS61C64AL-10TLI", "TSOP-28", &format!("imem{lane}"), Some(format!("imem:{lane}")), Model::Sram8k { timing: "IS61C64AL-10".into() }));
+        for a in 0..13 {
+            let net = nl.net(&n("PC", a + 2));
+            nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
+        }
+        for b in 0..8 {
+            let net = nl.net(&n("IM", 8 * lane + b));
+            nl.connect(net, c, sram8k_pin_of(Sram8kPin::Dq(b as u8)));
+        }
+        nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::CeN));
+        let imen = nl.net("IMEN");
+        nl.connect(imen, c, sram8k_pin_of(Sram8kPin::Ce2));
+        let boot = nl.net("BOOT");
+        nl.connect(boot, c, sram8k_pin_of(Sram8kPin::OeN));
+        let wei = nl.net("BOOTWI_n");
+        nl.connect(wei, c, sram8k_pin_of(Sram8kPin::WeN));
+    }
+    // Boot ROMs: one per byte lane on the instruction bus.  Address:
+    // word index from the PC (k bits), then the region number, then
+    // CODE on A18; the rest grounded.
+    for lane in 0..4 {
+        let c = nl.add_chip(&format!("rom{lane}"), Rom::sst39sf040_70());
+        nl.set_meta(c, meta("SST39SF040-70-4C-PHE", "DIP-32", &format!("rom{lane}"), Some(format!("rom:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }));
+        for j in 0..19u32 {
+            let net = if j < k {
+                nl.net(&n("PC", j as usize + 2))
+            } else if j < k + 5 {
+                nl.net(&n("PHASE", (j - k) as usize))
+            } else if j == 18 {
+                nl.net("CODE")
+            } else {
+                gnd
+            };
+            nl.connect(net, c, rom_pin_of(RomPin::A(j as u8)));
+        }
+        for b in 0..8 {
+            let net = nl.net(&n("IM", 8 * lane + b));
+            nl.connect(net, c, rom_pin_of(RomPin::Dq(b as u8)));
+        }
+        nl.connect(gnd, c, rom_pin_of(RomPin::CeN));
+        let romoe = nl.net("ROMOE_n");
+        nl.connect(romoe, c, rom_pin_of(RomPin::OeN));
+        nl.connect(vcc, c, rom_pin_of(RomPin::WeN));
+    }
+    // Copier wiring: WRAP is the PC bit above the region; the boot
+    // address buffers land on the data-memory address nets (PC bits
+    // below the region size, then the region number, then the PC's
+    // always-zero upper bits); NPH and SKIP are wired constants.
+    {
+        let wrap = nl.net("WRAP");
+        let pc_k = nl.net(&n("PC", k as usize + 2));
+        nl.merge(pc_k, wrap);
+        let mut target: Vec<usize> = (0..k as usize).map(|j| j + 2).collect();
+        target.extend((0..5).map(|i| k as usize + 2 + i));
+        target.extend((k as usize..13).map(|m| k as usize + 7 + (m - k as usize)));
+        let mut ba_order: Vec<usize> = (0..k as usize).collect();
+        ba_order.extend(13..18);
+        ba_order.extend(k as usize..13);
+        for (ba, mr) in ba_order.into_iter().zip(target) {
+            let ba_net = nl.net(&n("BA", ba));
+            let mr_net = nl.net(&n("MR", mr));
+            nl.merge(mr_net, ba_net);
+        }
+        for i in 0..5 {
+            let net = nl.net(&n("NPH", i));
+            nl.tie(net, Level::from_bit(nph >> i & 1 == 1));
+        }
+        let sk = nl.net("SKIP");
+        nl.tie(sk, Level::from_bit(skip));
+    }
+    // Data memory: two 256K x 16 chips (low / high half-word), both byte
+    // enables on (word access only for now), deselected during boot code
+    // and I/O (DMEN_n), output-enabled except around a store (OEN);
+    // address MR[19:2]; WE# from the gate during the store's MEM cycle.
+    for half in 0..2 {
+        let c = nl.add_chip(&format!("dmem{half}"), Sram16::new(as7c164a::Timing::cy7c1041g_10()));
+        nl.set_meta(c, meta("CY7C1041GN-10ZSXI", "TSOP-44", &format!("dmem{half}"), Some(format!("dmem:{half}")), Model::Sram16 { timing: "CY7C1041G-10".into() }));
+        for a in 0..18 {
+            let net = nl.net(&n("MR", a + 2));
+            nl.connect(net, c, sram16_pin_of(Sram16Pin::A(a as u8)));
+        }
+        for b in 0..16 {
+            let net = nl.net(&n("DQ", 16 * half + b));
+            nl.connect(net, c, sram16_pin_of(Sram16Pin::Io(b as u8)));
+        }
+        let dmen = nl.net("DMEN_n");
+        nl.connect(dmen, c, sram16_pin_of(Sram16Pin::CeN));
+        nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BheN));
+        nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BleN));
+        let oen = nl.net("OEN");
+        nl.connect(oen, c, sram16_pin_of(Sram16Pin::OeN));
+        nl.connect(wen, c, sram16_pin_of(Sram16Pin::WeN));
+    }
+    // Register file: bank 0 reads rs (IR25..21) -> RA, bank 1 reads rt
+    // (IR20..16) -> RB; write port: address WDESTC (delayed copy), data
+    // WD, CE = CLK (write in the low half), R/W = WREGC_n.
+    for bank in 0..2 {
+        for lane in 0..4 {
+            let name = format!("rf{bank}{lane}");
+            let c = nl.add_chip(&name, Cy7c131::new());
+            nl.set_meta(c, meta("CY7C131-15JXC", "PLCC-52", &name, Some(format!("rf:{bank}{lane}")), Model::DualPort1k { timing: "CY7C131-15".into() }));
+            let (field, rdata, ce) = if bank == 0 { (21, "RA", "CERA_n") } else { (16, "RB", "CERB_n") };
+            for i in 0..5 {
+                let net = nl.net(&ir(field + i));
+                nl.connect(net, c, sram_pin_of(SramPin::A(Port::Left, i as u8)));
+                let net = nl.net(&n("WDESTC", i));
+                nl.connect(net, c, sram_pin_of(SramPin::A(Port::Right, i as u8)));
+            }
+            // A5 of the write port is the inverted write enable: an idle
+            // port lands on 32..63, which no read ever matches, so it
+            // never arbitrates against a read.
+            let wreg_n = nl.net("WREGC_n");
+            nl.connect(wreg_n, c, sram_pin_of(SramPin::A(Port::Right, 5)));
+            nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Left, 5)));
+            for i in 6..10 {
+                nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Left, i)));
+                nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Right, i)));
+            }
+            for b in 0..8 {
+                let net = nl.net(&n(rdata, 8 * lane + b));
+                nl.connect(net, c, sram_pin_of(SramPin::Io(Port::Left, b as u8)));
+                let net = nl.net(&n("WD", 8 * lane + b));
+                nl.connect(net, c, sram_pin_of(SramPin::Io(Port::Right, b as u8)));
+            }
+            let cen = nl.net(ce);
+            nl.connect(cen, c, sram_pin_of(SramPin::Ce(Port::Left)));
+            nl.connect(vcc, c, sram_pin_of(SramPin::Rw(Port::Left)));
+            nl.connect(gnd, c, sram_pin_of(SramPin::Oe(Port::Left)));
+            nl.connect(clk, c, sram_pin_of(SramPin::Ce(Port::Right)));
+            let rw = nl.net("WREGC_n");
+            nl.connect(rw, c, sram_pin_of(SramPin::Rw(Port::Right)));
+            nl.connect(vcc, c, sram_pin_of(SramPin::Oe(Port::Right)));
+            for (p, pname) in [
+                (SramPin::Busy(Port::Left), "BUSYL"),
+                (SramPin::Busy(Port::Right), "BUSYR"),
+                (SramPin::Int(Port::Left), "INTL"),
+                (SramPin::Int(Port::Right), "INTR"),
+            ] {
+                let net = nl.net(&format!("{pname}_{bank}{lane}"));
+                nl.pull(net, Level::H);
+                nl.connect(net, c, sram_pin_of(p));
+            }
+        }
+    }
+    nl
+}
+
 /// The running CPU.
 /// The delay line part used for the write-copy clocks: DS1100-30, taps at
 /// 6, 12, 18, 24, 30 ns.  T1 (6) clocks the second copy stage, T3 (18) the
@@ -1388,97 +1756,38 @@ impl Cpu {
     }
 
     pub fn build(program: &[u32], period_ns: f64, opt: Build) -> Cpu {
-        let grade = opt.grade;
-        let mut nl = Netlist::new();
-        let specs = gal_specs();
-        let gal_count = specs.len();
-        instantiate_all(&mut nl, &specs);
-        // Delay line on CLK: its taps clock the write-copy registers.
-        let dl = nl.add_chip("dl0", Ds1100::new(DELAY_LINE_TOTAL, grade));
-        let clk = nl.net("CLK");
-        nl.connect(clk, dl, DS1100_IN);
-        for k in 0..5 {
-            let net = nl.net(&format!("T{}", k + 1));
-            nl.connect(net, dl, ds1100_tap_pin(k));
-        }
-        // The data-memory write-enable gate: NAND of a tap and the store
-        // flag.  A second delay line if the tap is from another part.
-        let (gt_total, gt_k) = opt.gate_tap;
-        let tap_net = if gt_total == DELAY_LINE_TOTAL {
-            nl.net(&format!("T{}", gt_k + 1))
-        } else {
-            let dl1 = nl.add_chip("dl1", Ds1100::new(gt_total, grade));
-            nl.connect(clk, dl1, DS1100_IN);
-            for k in 0..5 {
-                let net = nl.net(&format!("U{}", k + 1));
-                nl.connect(net, dl1, ds1100_tap_pin(k));
-            }
-            nl.net(&format!("U{}", gt_k + 1))
-        };
-        // Reset supervisor: releases RST_n after the power-up settle and
-        // RESET_CYCLES clocks, at the requested phase.
+        let params = Params::from_build(&opt);
+        let board = board(&params);
+        Cpu::from_board(&board, program, period_ns, &opt)
+    }
+
+    /// Instantiate a board file, load the program and images, and run the
+    /// power-on reset (and the boot copy, if the board does one).
+    pub fn from_board(board: &Board, program: &[u32], period_ns: f64, opt: &Build) -> Cpu {
         let period = (period_ns * NS as f64).round() as Time;
-        let release = (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns);
-        let sup = nl.add_chip("rst0", ResetSupervisor::new(release, Self::ns(MR_TIMEOUT_NS)));
-        let rst_n = nl.net("RST_n");
-        nl.connect(rst_n, sup, 2);
-        // MR#: the reset button, to ground, pulled up inside the part.
-        // [`Cpu::press_reset`] pulls it low.
-        let mr_n = nl.net("MR_n");
-        nl.connect(mr_n, sup, 3);
-        nl.pull(mr_n, Level::H);
-        let gate = nl.add_chip("gate0", FastGate::new(opt.gate_tpd.0, opt.gate_tpd.1));
-        nl.connect(tap_net, gate, 1);
-        let mmwb = nl.net("MMWB");
-        nl.connect(mmwb, gate, 2);
-        let wen = nl.net("WEN");
-        nl.connect(wen, gate, 4);
-
-        let gnd = nl.net("GND");
-        let vcc = nl.net("VCC");
-
-        // UART (TL16C550C) on the data bus, byte lane 0; register select
-        // from the bus-wait sequencer's held address; strobes and chip
-        // select from it too; master reset from RESET (active high).
-        // ADS# low (no address latch), RD2 / WR2 low, CS0 / CS1 high.
-        {
-            let mut u = Uart16550::new(BusTiming::tl16c550c(), opt.uart_xin_hz);
-            u.core.send(&opt.uart_rx);
-            let c = nl.add_chip("uart0", u);
-            for i in 0..8u8 {
-                let net = nl.net(&n("DQ", i as usize));
-                nl.connect(net, c, uart_pin_of(UartPin::D(i)));
-            }
-            for i in 0..3u8 {
-                let net = nl.net(&n("UA", i as usize));
-                nl.connect(net, c, uart_pin_of(UartPin::A(i)));
-            }
-            for (net, p) in [("UCS_n", UartPin::Cs2N), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr)] {
-                let net = nl.net(net);
-                nl.connect(net, c, uart_pin_of(p));
-            }
-            for p in [UartPin::Cs0, UartPin::Cs1] {
-                nl.connect(vcc, c, uart_pin_of(p));
-            }
-            for p in [UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
-                nl.connect(gnd, c, uart_pin_of(p));
-            }
-        }
-        nl.tie(gnd, Level::L);
-        nl.tie(vcc, Level::H);
-
-        // Boot: region size and wiring of the copier.
-        let (k, nph, skip, data_regions, data_image): (u32, u32, bool, u32, Vec<u32>) = match &opt.boot {
-            Boot::Preload => (13, 0, true, 0, Vec::new()),
-            Boot::Copy { code_words_log2, data_regions, data } => (*code_words_log2, data_regions.saturating_sub(1), false, *data_regions, data.clone()),
+        let load = Load {
+            grade: opt.grade,
+            gate_tpd: opt.gate_tpd,
+            reset_release: (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns),
+            mr_timeout: Self::ns(MR_TIMEOUT_NS),
+            uart_xin_hz: Some(opt.uart_xin_hz),
+            dmem_timing: Some(opt.dmem),
         };
+        let mut nl = board.instantiate(&load);
+        let k = board.param_u64("code_words_log2").expect("code_words_log2") as u32;
         let words = 1usize << k;
-
-        // Instruction memory: 4 lanes, address = PC[14:2].  Preloaded, or
-        // left unknown for the copier to fill.
-        let mut imem = Vec::new();
-        for lane in 0..4 {
-            let mut chip = As7c164a::with_timing(as7c164a::Timing::is61c64al_10());
+        let skip = board.param_bool("skip").unwrap_or(false);
+        let data_regions = board.param_u64("data_regions").unwrap_or(0) as u32;
+        let data_image: Vec<u32> = match &opt.boot {
+            Boot::Copy { data, .. } => data.clone(),
+            Boot::Preload => Vec::new(),
+        };
+        // Instruction memory: preloaded, or left unknown for the copier.
+        let mut imem: Vec<(String, usize)> = nl.chips_with_role("imem:").into_iter().map(|(id, r)| (r, id)).collect();
+        imem.sort();
+        let imem: Vec<usize> = imem.into_iter().map(|(_, id)| id).collect();
+        for (lane, &id) in imem.iter().enumerate() {
+            let chip = nl.chip_mut::<As7c164a>(id);
             if skip {
                 for (w, &word) in program.iter().enumerate() {
                     chip.preload(w as u32, (word >> (8 * lane)) as u8);
@@ -1487,30 +1796,12 @@ impl Cpu {
                     chip.preload(w as u32, 0);
                 }
             }
-            let c = nl.add_chip(&format!("imem{lane}"), chip);
-            imem.push(c);
-            for a in 0..13 {
-                let net = nl.net(&n("PC", a + 2));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
-            }
-            for b in 0..8 {
-                let net = nl.net(&n("IM", 8 * lane + b));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::Dq(b as u8)));
-            }
-            nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::CeN));
-            let imen = nl.net("IMEN");
-            nl.connect(imen, c, sram8k_pin_of(Sram8kPin::Ce2));
-            let boot = nl.net("BOOT");
-            nl.connect(boot, c, sram8k_pin_of(Sram8kPin::OeN));
-            let wei = nl.net("BOOTWI_n");
-            nl.connect(wei, c, sram8k_pin_of(Sram8kPin::WeN));
         }
-        // Boot ROMs: one per byte lane on the instruction bus.  Address:
-        // word index from the PC (k bits), then the region number, then
-        // CODE on A18; the rest grounded.  Image: code at A18 = 1, data
-        // region p at p << k.
-        for lane in 0..4 {
-            let mut rom = Rom::sst39sf040_70();
+        // Boot ROM images: code at A18 = 1, data region p at p << k.
+        let mut roms: Vec<(String, usize)> = nl.chips_with_role("rom:").into_iter().map(|(id, r)| (r, id)).collect();
+        roms.sort();
+        for (lane, (_, id)) in roms.into_iter().enumerate() {
+            let rom = nl.chip_mut::<Rom>(id);
             for (w, &word) in program.iter().enumerate() {
                 assert!(w < words, "program longer than the boot code region");
                 rom.preload((1 << 18) | w as u32, (word >> (8 * lane)) as u8);
@@ -1524,147 +1815,39 @@ impl Cpu {
                     rom.preload((p << k) | w as u32, (v >> (8 * lane)) as u8);
                 }
             }
-            let c = nl.add_chip(&format!("rom{lane}"), rom);
-            for j in 0..19u32 {
-                let net = if j < k {
-                    nl.net(&n("PC", j as usize + 2))
-                } else if j < k + 5 {
-                    nl.net(&n("PHASE", (j - k) as usize))
-                } else if j == 18 {
-                    nl.net("CODE")
-                } else {
-                    gnd
-                };
-                nl.connect(net, c, rom_pin_of(RomPin::A(j as u8)));
-            }
-            for b in 0..8 {
-                let net = nl.net(&n("IM", 8 * lane + b));
-                nl.connect(net, c, rom_pin_of(RomPin::Dq(b as u8)));
-            }
-            nl.connect(gnd, c, rom_pin_of(RomPin::CeN));
-            let romoe = nl.net("ROMOE_n");
-            nl.connect(romoe, c, rom_pin_of(RomPin::OeN));
-            nl.connect(vcc, c, rom_pin_of(RomPin::WeN));
         }
-        // Copier wiring: WRAP is the PC bit above the region; the boot
-        // address buffers land on the data-memory address nets (PC bits
-        // below the region size, then the region number, then the PC's
-        // always-zero upper bits); NPH and SKIP are wired constants.
-        {
-            let wrap = nl.net("WRAP");
-            let pc_k = nl.net(&n("PC", k as usize + 2));
-            nl.merge(pc_k, wrap);
-            let mut target: Vec<usize> = (0..k as usize).map(|j| j + 2).collect();
-            target.extend((0..5).map(|i| k as usize + 2 + i));
-            target.extend((k as usize..13).map(|m| k as usize + 7 + (m - k as usize)));
-            let mut ba_order: Vec<usize> = (0..k as usize).collect();
-            ba_order.extend(13..18);
-            ba_order.extend(k as usize..13);
-            for (ba, mr) in ba_order.into_iter().zip(target) {
-                let ba_net = nl.net(&n("BA", ba));
-                let mr_net = nl.net(&n("MR", mr));
-                nl.merge(mr_net, ba_net);
-            }
-            for i in 0..5 {
-                let net = nl.net(&n("NPH", i));
-                nl.tie(net, Level::from_bit(nph >> i & 1 == 1));
-            }
-            let sk = nl.net("SKIP");
-            nl.tie(sk, Level::from_bit(skip));
-        }
-        // Data memory: two 256K x 16 chips (low / high half-word), always
-        // selected with both byte enables on (word access only for now),
-        // output-enabled except around a store (OEN); address MR[19:2];
-        // WE# from the gate during the store's MEM cycle.  DQ is driven by
-        // the SRAMs during loads and by the EX/MEM store-data drivers
-        // during a store.
-        let mut dmem = Vec::new();
-        for half in 0..2 {
-            let mut chip = Sram16::new(opt.dmem);
+        // Data memory starts zeroed; the register file too, except r0,
+        // which powers up as garbage and must be zeroed by reset.
+        let mut dmem: Vec<(String, usize)> = nl.chips_with_role("dmem:").into_iter().map(|(id, r)| (r, id)).collect();
+        dmem.sort();
+        let dmem: Vec<usize> = dmem.into_iter().map(|(_, id)| id).collect();
+        for &id in &dmem {
+            let chip = nl.chip_mut::<Sram16>(id);
             for w in 0..(1u32 << 18) {
                 chip.preload(w, 0);
             }
-            let c = nl.add_chip(&format!("dmem{half}"), chip);
-            dmem.push(c);
-            for a in 0..18 {
-                let net = nl.net(&n("MR", a + 2));
-                nl.connect(net, c, sram16_pin_of(Sram16Pin::A(a as u8)));
-            }
-            for b in 0..16 {
-                let net = nl.net(&n("DQ", 16 * half + b));
-                nl.connect(net, c, sram16_pin_of(Sram16Pin::Io(b as u8)));
-            }
-            let dmen = nl.net("DMEN_n");
-            nl.connect(dmen, c, sram16_pin_of(Sram16Pin::CeN));
-            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BheN));
-            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BleN));
-            let oen = nl.net("OEN");
-            nl.connect(oen, c, sram16_pin_of(Sram16Pin::OeN));
-            nl.connect(wen, c, sram16_pin_of(Sram16Pin::WeN));
         }
-        // Register file: bank 0 reads rs (IR25..21) -> RA, bank 1 reads rt
-        // (IR20..16) -> RB; write port: address WDESTC (delayed copy), data
-        // WD, CE = CLK (write in the low half), R/W = WREGC_n.
-        let mut rf = Vec::new();
-        for bank in 0..2 {
-            for lane in 0..4 {
-                let mut chip = Cy7c131::new();
-                for r in 0..32 {
-                    chip.preload(r, 0);
-                }
-                // r0 powers up as garbage; the reset sequence must zero it.
-                chip.preload(0, 0xA5);
-                let c = nl.add_chip(&format!("rf{bank}{lane}"), chip);
-                rf.push(c);
-                let (field, rdata, ce) = if bank == 0 { (21, "RA", "CERA_n") } else { (16, "RB", "CERB_n") };
-                for i in 0..5 {
-                    let net = nl.net(&ir(field + i));
-                    nl.connect(net, c, sram_pin_of(SramPin::A(Port::Left, i as u8)));
-                    let net = nl.net(&n("WDESTC", i));
-                    nl.connect(net, c, sram_pin_of(SramPin::A(Port::Right, i as u8)));
-                }
-                // A5 of the write port is the inverted write enable: an idle
-                // port lands on 32..63, which no read ever matches, so it
-                // never arbitrates against a read.
-                let wreg_n = nl.net("WREGC_n");
-                nl.connect(wreg_n, c, sram_pin_of(SramPin::A(Port::Right, 5)));
-                nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Left, 5)));
-                for i in 6..10 {
-                    nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Left, i)));
-                    nl.connect(gnd, c, sram_pin_of(SramPin::A(Port::Right, i)));
-                }
-                for b in 0..8 {
-                    let net = nl.net(&n(rdata, 8 * lane + b));
-                    nl.connect(net, c, sram_pin_of(SramPin::Io(Port::Left, b as u8)));
-                    let net = nl.net(&n("WD", 8 * lane + b));
-                    nl.connect(net, c, sram_pin_of(SramPin::Io(Port::Right, b as u8)));
-                }
-                let cen = nl.net(ce);
-                nl.connect(cen, c, sram_pin_of(SramPin::Ce(Port::Left)));
-                nl.connect(vcc, c, sram_pin_of(SramPin::Rw(Port::Left)));
-                nl.connect(gnd, c, sram_pin_of(SramPin::Oe(Port::Left)));
-                nl.connect(clk, c, sram_pin_of(SramPin::Ce(Port::Right)));
-                let rw = nl.net("WREGC_n");
-                nl.connect(rw, c, sram_pin_of(SramPin::Rw(Port::Right)));
-                nl.connect(vcc, c, sram_pin_of(SramPin::Oe(Port::Right)));
-                for (p, name) in [
-                    (SramPin::Busy(Port::Left), "BUSYL"),
-                    (SramPin::Busy(Port::Right), "BUSYR"),
-                    (SramPin::Int(Port::Left), "INTL"),
-                    (SramPin::Int(Port::Right), "INTR"),
-                ] {
-                    let net = nl.net(&format!("{name}_{bank}{lane}"));
-                    nl.pull(net, Level::H);
-                    nl.connect(net, c, sram_pin_of(p));
-                }
+        let mut rf: Vec<(String, usize)> = nl.chips_with_role("rf:").into_iter().map(|(id, r)| (r, id)).collect();
+        rf.sort();
+        let rf: Vec<usize> = rf.into_iter().map(|(_, id)| id).collect();
+        for &id in &rf {
+            let chip = nl.chip_mut::<Cy7c131>(id);
+            for r in 0..32 {
+                chip.preload(r, 0);
             }
+            chip.preload(0, 0xA5);
         }
+        if let Some(id) = nl.chips_with_role("uart").first().map(|(id, _)| *id) {
+            nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
+        }
+        let gal_count = board.chips.iter().filter(|c| matches!(c.model, Model::Gal { .. })).count();
         let sim = nl.build();
+        let clk = sim.net_id("CLK");
         let mr_n = sim.net_id("MR_n");
         let pc = (2..=14).map(|i| sim.net_id(&n("PC", i))).collect();
         let mut cpu = Cpu {
             sim,
-            period: (period_ns * NS as f64).round() as Time,
+            period,
             cycles: 0,
             pc_trace: Vec::new(),
             clk,
@@ -1673,7 +1856,7 @@ impl Cpu {
             dmem,
             rf,
             gal_count,
-            grade,
+            grade: opt.grade,
             reset_release: 0,
             mr_n,
             boot_budget: RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) },
@@ -1854,19 +2037,6 @@ impl Cpu {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Structure export (for diagrams)
-
-/// One chip of the CPU with its pin-to-net map, block and stage.
-pub struct ChipInfo {
-    pub name: String,
-    pub kind: &'static str,
-    pub block: &'static str,
-    pub stage: &'static str,
-    /// (pin, net, is_output)
-    pub pins: Vec<(usize, String, bool)>,
-}
-
 /// Block and stage of a chip, from its name prefix.
 fn block_of(name: &str) -> (&'static str, &'static str) {
     let prefix: String = name.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
@@ -1909,139 +2079,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "rom" => ("Boot ROM", "IF"),
         "rst" => ("Reset supervisor", "IF"),
         "gate" => ("Write gate", "MEM"),
+        "x" | "c" | "xcvr" | "j" => ("Serial port", "MEM"),
         _ => ("?", "?"),
     }
-}
-
-/// Every chip in the CPU with its wiring, as built by [`Cpu::new`].
-pub fn chip_infos() -> Vec<ChipInfo> {
-    let mut out = Vec::new();
-    for spec in gal_specs() {
-        let mut nl = Netlist::new();
-        let (_, pins) = crate::galpack::instantiate(&mut nl, &spec);
-        let outs: Vec<&str> = spec.eqs.iter().map(|e| e.out.as_str()).collect();
-        let (block, stage) = block_of(&spec.name);
-        out.push(ChipInfo {
-            name: spec.name.clone(),
-            kind: "ATF22V10C",
-            block,
-            stage,
-            pins: pins.into_iter().map(|(p, n)| (p, n.clone(), outs.contains(&n.as_str()))).collect(),
-        });
-    }
-    // SRAMs: replicate the wiring of Cpu::new.
-    for lane in 0..4 {
-        let mut pins = Vec::new();
-        for a in 0..13 {
-            pins.push((sram8k_pin_of(Sram8kPin::A(a as u8)), n("PC", a + 2), false));
-        }
-        for b in 0..8 {
-            pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("IM", 8 * lane + b), true));
-        }
-        let (block, stage) = block_of("imem");
-        out.push(ChipInfo { name: format!("imem{lane}"), kind: "IS61C64AL-10", block, stage, pins });
-    }
-    for half in 0..2 {
-        let mut pins = Vec::new();
-        for a in 0..18 {
-            pins.push((sram16_pin_of(Sram16Pin::A(a as u8)), n("MR", a + 2), false));
-        }
-        for b in 0..16 {
-            pins.push((sram16_pin_of(Sram16Pin::Io(b as u8)), n("DQ", 16 * half + b), true));
-        }
-        pins.push((sram16_pin_of(Sram16Pin::OeN), "OEN".into(), false));
-        pins.push((sram16_pin_of(Sram16Pin::WeN), "WEN".into(), false));
-        let (block, stage) = block_of("dmem");
-        out.push(ChipInfo { name: format!("dmem{half}"), kind: "CY7C1041GN-10", block, stage, pins });
-    }
-    {
-        let mut pins = vec![(DS1100_IN, "CLK".to_string(), false)];
-        for k in 0..5 {
-            pins.push((ds1100_tap_pin(k), format!("T{}", k + 1), true));
-        }
-        let (block, stage) = block_of("dl");
-        out.push(ChipInfo { name: "dl0".into(), kind: "DS1100-30", block, stage, pins });
-        let (block, stage) = block_of("rst");
-        out.push(ChipInfo { name: "rst0".into(), kind: "MAX811LEUS+T", block, stage, pins: vec![(2, "RST_n".to_string(), true), (3, "MR_n".to_string(), false)] });
-        let (block, stage) = block_of("uart");
-        let mut pins = Vec::new();
-        for i in 0..8u8 {
-            pins.push((uart_pin_of(UartPin::D(i)), n("DQ", i as usize), true));
-        }
-        for i in 0..3u8 {
-            pins.push((uart_pin_of(UartPin::A(i)), n("UA", i as usize), false));
-        }
-        for (net, p) in [("UCS_n", UartPin::Cs2N), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr)] {
-            pins.push((uart_pin_of(p), net.to_string(), false));
-        }
-        out.push(ChipInfo { name: "uart0".into(), kind: "TL16C550C", block, stage, pins });
-        // Boot ROMs, wired for the board's 8K-word regions.
-        for lane in 0..4 {
-            let mut pins = Vec::new();
-            for j in 0..19u32 {
-                let net = if j < 13 { n("PC", j as usize + 2) } else if j < 18 { n("PHASE", (j - 13) as usize) } else { "CODE".to_string() };
-                pins.push((rom_pin_of(RomPin::A(j as u8)), net, false));
-            }
-            for b in 0..8 {
-                pins.push((rom_pin_of(RomPin::Dq(b as u8)), n("IM", 8 * lane + b), true));
-            }
-            pins.push((rom_pin_of(RomPin::OeN), "ROMOE_n".to_string(), false));
-            let (block, stage) = block_of("rom");
-            out.push(ChipInfo { name: format!("rom{lane}"), kind: "SST39SF040", block, stage, pins });
-        }
-        let (block, stage) = block_of("dl");
-        let (gt_total, gt_k) = Build::default().gate_tap;
-        if gt_total != DELAY_LINE_TOTAL {
-            let mut pins = vec![(DS1100_IN, "CLK".to_string(), false)];
-            for k in 0..5 {
-                pins.push((ds1100_tap_pin(k), format!("U{}", k + 1), true));
-            }
-            out.push(ChipInfo { name: "dl1".into(), kind: "DS1100-40", block, stage, pins });
-        }
-        let tap = if gt_total == DELAY_LINE_TOTAL { format!("T{}", gt_k + 1) } else { format!("U{}", gt_k + 1) };
-        let pins = vec![(1, tap, false), (2, "MMWB".to_string(), false), (4, "WEN".to_string(), true)];
-        let (block, stage) = block_of("gate");
-        out.push(ChipInfo { name: "gate0".into(), kind: "74LVC1G00Q", block, stage, pins });
-    }
-    for bank in 0..2 {
-        for lane in 0..4 {
-            let (field, rdata, ce) = if bank == 0 { (21, "RA", "CERA_n") } else { (16, "RB", "CERB_n") };
-            let mut pins = Vec::new();
-            for i in 0..5 {
-                pins.push((sram_pin_of(SramPin::A(Port::Left, i as u8)), ir(field + i), false));
-                pins.push((sram_pin_of(SramPin::A(Port::Right, i as u8)), n("WDESTC", i), false));
-            }
-            pins.push((sram_pin_of(SramPin::A(Port::Right, 5)), "WREGC_n".into(), false));
-            for b in 0..8 {
-                pins.push((sram_pin_of(SramPin::Io(Port::Left, b as u8)), n(rdata, 8 * lane + b), true));
-                pins.push((sram_pin_of(SramPin::Io(Port::Right, b as u8)), n("WD", 8 * lane + b), false));
-            }
-            pins.push((sram_pin_of(SramPin::Ce(Port::Left)), ce.into(), false));
-            pins.push((sram_pin_of(SramPin::Ce(Port::Right)), "CLK".into(), false));
-            pins.push((sram_pin_of(SramPin::Rw(Port::Right)), "WREGC_n".into(), false));
-            let (block, stage) = block_of("rf");
-            out.push(ChipInfo { name: format!("rf{bank}{lane}"), kind: "CY7C131", block, stage, pins });
-        }
-    }
-    out
-}
-
-/// The structure as JSON: `{"chips":[{name,kind,block,stage,pins:[[pin,net,out]]}]}`.
-pub fn structure_json() -> String {
-    let mut s = String::from("{\"chips\":[");
-    for (i, c) in chip_infos().iter().enumerate() {
-        if i > 0 {
-            s.push(',');
-        }
-        s.push_str(&format!("{{\"name\":\"{}\",\"kind\":\"{}\",\"block\":\"{}\",\"stage\":\"{}\",\"pins\":[", c.name, c.kind, c.block, c.stage));
-        for (j, (p, net, o)) in c.pins.iter().enumerate() {
-            if j > 0 {
-                s.push(',');
-            }
-            s.push_str(&format!("[{p},\"{net}\",{o}]"));
-        }
-        s.push_str("]}");
-    }
-    s.push_str("]}");
-    s
 }

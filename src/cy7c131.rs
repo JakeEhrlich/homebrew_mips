@@ -271,6 +271,12 @@ pub struct Timing {
 
 impl Timing {
     /// CY7C131-15 (commercial), datasheet 38-00027-L page 4-5.
+    pub fn by_name(name: &str) -> Timing {
+        match name {
+            "CY7C131-15" => Timing::grade_15(),
+            _ => panic!("unknown dual-port timing {name}"),
+        }
+    }
     pub const fn grade_15() -> Timing {
         Timing {
             taa: 15 * NS,
