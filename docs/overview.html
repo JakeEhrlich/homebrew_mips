@@ -78,7 +78,7 @@ dd .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12p
 <dt>Branch target adder</dt><dd>13-bit add of PC+4 and the branch offset, in ID, so the target is ready when the branch is decided in EX.</dd>
 <dt>ALU</dt><dd>32-bit add, subtract (B inverted, carry-in 1), and, or, xor, nor, slt, sltu, and pass-B for links. The result mux beside it picks the shifter instead for shift instructions; in the chips that mux is folded into the EX/MEM register. The compare beside it decides BEQ and BNE from the same forwarded operands; BLEZ, BGTZ, BLTZ and BGEZ use the sign bit of A and the compare against r0.</dd>
 <dt>Register file</dt><dd>Two read ports (rs, rt) and one write port. The write port's data is the write-back wire; its address and enable are a copy delayed by two delay-line taps so they hold past the clock edge that ends the write.</dd>
-<dt>Instruction and data memory</dt><dd>Instruction memory is 32 KB of single-port SRAM and only reads. Data memory is single-port SRAM too (32 KB with AS7C164A parts at 37 ns, 128 KB with IS61C256AH parts at 34 ns), always selected. A store writes during its own MEM cycle with a pulse made from a delay-line tap gated by the store flag in one fast gate; the memory's outputs are turned off a cycle early so the store-data drivers can take the bus. A load right behind a store, or a store right behind a load, waits one cycle in ID. See docs/memory-timing.md.</dd>
+<dt>Instruction and data memory</dt><dd>Instruction memory is 32 KB of single-port SRAM and only reads. Data memory is single-port SRAM too, two CY7C1041GN-10 (256K x 16, 1 MB in all), always selected; their byte enables are the hook for SB and SH later. A store writes during its own MEM cycle with a pulse made from a delay-line tap gated by the store flag in one fast gate; the memory's outputs are turned off a cycle early so the store-data drivers can take the bus. A load right behind a store, or a store right behind a load, waits one cycle in ID. See docs/memory-timing.md.</dd>
 </dl>
 <p style="color:var(--ink-2);max-width:90ch">Not drawn: decode, which turns the instruction into the select and enable signals that steer every unit above, and the forwarding and steer comparators that compute those selects one stage early.</p>
 </section>
@@ -114,7 +114,7 @@ function mux(x, y, h, label) { // trapezoid, inputs on the left edge
 }
 unit(150, 325, 60, 50, 'PC', '13');
 unit(240, 210, 90, 50, 'PC + 4', '13-bit inc');
-unit(240, 320, 100, 80, 'Instruction', 'memory 32 KB');
+unit(240, 320, 100, 80, 'Instruction', 'memory 32 KB, 10 ns');
 mux(60, 270, 160, 'PC sel');
 unit(450, 200, 120, 60, 'Branch target', 'adder, 13-bit');
 unit(450, 300, 120, 140, 'Register file', '32 x 32, 2R 1W');
@@ -128,7 +128,7 @@ unit(980, 290, 80, 120, 'ALU', '32-bit');
 unit(980, 425, 80, 70, 'Shifter', 'B by A[4:0]');
 mux(1085, 336, 80, 'res');
 unit(980, 200, 80, 50, 'A = B ?', 'compare');
-unit(1220, 320, 110, 130, 'Data memory', '32 KB / 128 KB');
+unit(1220, 320, 110, 130, 'Data memory', '1 MB, 2 x 256K x 16');
 mux(1360, 340, 70, 'WB');
 // wires: name, class, points, label position
 const wires = [];

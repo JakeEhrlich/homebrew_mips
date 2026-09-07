@@ -7,8 +7,9 @@ called out as PCB requirements with the margin they must fit into.
 
 Status: simulated clean with every CPU test program (`cargo test --release`,
 `tests/memory_timing.rs`, `tests/cpu.rs`) at commercial-grade delay-line
-tolerance (0..70 C): from 33 ns with the IS61C256AH-12 data SRAM, from 37 ns
-with the AS7C164A-15. The register file is clean from 32 ns.
+tolerance (0..70 C): from 33 ns with the CY7C1041G-10 data SRAM (also with
+the IS61C256AH-12), from 37 ns with the AS7C164A-15. The register file is
+clean from 32 ns.
 
 ## 1. The problem this solves
 
@@ -58,13 +59,13 @@ are off.
 | Function | Part | Notes |
 |---|---|---|
 | Register file | 8 x CY7C131-15 (1K x 8 dual-port) | unchanged |
-| Instruction memory | 4 x AS7C164A-15 (8K x 8) | unchanged, read only, no strobes |
-| Data memory | 4 x IS61C256AH-12 (32K x 8, 5 V, DIP-28) at 34 ns, or 4 x AS7C164A-15 (8K x 8) at 37 ns | same JEDEC footprint: pins 1 and 26 are A14 / A13 on the 32K part, NC / CE2 on the 8K part; jumper both to ground (CE2 high for the 8K part) |
+| Instruction memory | 4 x IS61C64AL-10 (8K x 8, 5 V, 10 ns) | read only, no strobes; fetch data at 15.5 ns instead of 20.5. Timing modelled with the IS61C256AH-10 column (same ISSI family); confirm against the 61C64AL datasheet |
+| Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# tied low for now (word access), available for SB / SH later. Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
 | Write gate | 1 x 2-input NAND, 74LVC1G00 or NC7SZ00 class, SOT-23-5 | **new**; modelled as 1.0 to 4.5 ns propagation, confirm against the part's 5 V datasheet |
 | Logic | 136 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 from the hold input on PC, IF/ID and the bubble on ID/EX control |
 
-Total 154 chips plus the gate.
+Total 152 chips plus the gate.
 
 ## 4. The clock
 
@@ -163,13 +164,14 @@ completes inside the instruction's own WB cycle.
 
 ## 6. Data memory
 
-Four single-port SRAMs, one per byte lane, always selected (CE# low, CE2
-high). Pins:
+Two 256K x 16 single-port SRAMs (dmem0 = bits 15:0, dmem1 = bits 31:16),
+always selected with both byte enables low. Pins:
 
 | Pin | Net | Source |
 |---|---|---|
-| A0-12 | MR[14:2] | EX/MEM result: load address, or store address during the store's MEM cycle |
-| DQ | DQ[31:0] | driven by the SRAMs during loads (and whenever OE# is low), by the EX/MEM store-data drivers (chips msd*) during a store's MEM cycle |
+| A0-17 | MR[19:2] | EX/MEM result: load address, or store address during the store's MEM cycle |
+| I/O0-15 | DQ[15:0] / DQ[31:16] | driven by the SRAMs during loads (and whenever OE# is low), by the EX/MEM store-data drivers (chips msd*) during a store's MEM cycle |
+| CE#, BHE#, BLE# | GND | always selected; the byte enables become the SB / SH lane selects later (they act like CE per byte: tDBE 4.5, tHZBE 6, tBW 7) |
 | OE# | OEN | registered (chip stl0): high during a store's EX cycle, its MEM cycle and the cycle after |
 | WE# | WEN | the gate: NAND(U1, MMW), U1 = CLK delayed 8 ns (DS1100-40 tap 1), MMW = store in MEM |
 
@@ -182,9 +184,9 @@ Windows at commercial grade (tap +-3 ns, gate 1.0 to 4.5 ns), 34 ns period:
 | Event | Window | Constraint | Margin |
 |---|---|---|---|
 | Write start | 6 to 15.5 | address (MR) valid at 5.5, tAS 0; data (msd) valid at 5.5 | 0.5 |
-| Write end | 23 to 32.5 | before MR changes at 36 (tWR 0) | 3.5 - skew |
-| Pulse width | >= 23 - 15.5 = 7.5 at 34 ns; grows by half the period increase | tPWE 8 (IS61C256AH-12), 10 (AS7C164A-15) | met at 33 ns / 37 ns |
-| Data setup to write end | msd valid 5.5, end >= 23 | tSD 7 / 8 | 9.5 |
+| Write end | 23 to 32.5 | before MR changes at 36 (tHA 0) | 3.5 - skew |
+| Pulse width | >= 23 - 15.5 = 7.5 at 34 ns; grows by half the period increase | tPWE 7 (CY7C1041G-10), 8 (IS61C256AH-12), 10 (AS7C164A-15) | met at 33 / 33 / 37 ns |
+| Data setup to write end | msd valid 5.5, end >= 23 | tSD 5 / 7 / 8 | 12.5 |
 
 The pulse width is the binding constraint and the reason the two parts have
 different operating points: half a period minus twice the tap tolerance minus
@@ -192,9 +194,9 @@ the gate's delay range must exceed the part's minimum pulse.
 
 ### 6.2 Reads and bus turnaround
 
-Loads: address at 5.5, data at 17.5 (12 ns part) or 20.5 (15 ns part),
-captured at the edge with 3.5 ns setup. Data holds 2 to 3 ns after the
-address changes at 36 (tOHA): 2 - skew, the machine's standard hold margin.
+Loads: address at 5.5, data at 15.5 (10 ns part), captured at the edge with
+3.5 ns setup: 15 ns of margin. Data holds 3 ns after the address changes at
+36 (tOHA): 2 - skew, the machine's standard hold margin.
 
 Around a store the bus changes hands once each way, and both handovers are
 kept a full cycle apart from any read:
@@ -296,7 +298,8 @@ Not covered:
 - [ ] Gate placed next to the delay line and the SRAMs; WEN to all four WE#.
 - [ ] Register-file write-port A5 wired to the write flag copy (park address).
 - [ ] BUSY and INT pins of the register-file chips pulled up.
-- [ ] Data SRAM footprint: pins 1 and 26 jumpered for the 32K or 8K part.
+- [ ] Data SRAM byte enables tied low (or driven, once SB / SH exist).
+- [ ] IS61C64AL datasheet numbers entered and simulation re-run.
 - [ ] Gate datasheet numbers entered and simulation re-run.
 - [ ] Bench: scope CLK at one SRAM enable pin and one GAL clock pin of each
       group in section 4.1, record skew and edge rate, set the tap jumper.

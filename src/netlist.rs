@@ -419,6 +419,163 @@ impl Chip for FastGate {
 }
 
 // ---------------------------------------------------------------------------
+// Chip impl: 256K x 16 single-port SRAM with byte enables (CY7C1041G,
+// 44-pin TSOP II / SOJ, datasheet figure 6), modelled as two byte-lane
+// cores sharing address, OE# and WE#; a byte enable acts on its lane like
+// the chip enable (tDBE <= tACE, tHZBE, tBW = tSCE in the timing grade).
+
+pub struct Sram16 {
+    pub lo: As7c164a,
+    pub hi: As7c164a,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Sram16Pin {
+    A(u8),
+    Io(u8),
+    CeN,
+    OeN,
+    WeN,
+    BheN,
+    BleN,
+    Vcc,
+    Vss,
+    Nc,
+}
+
+pub fn sram16_pin(pin: usize) -> Sram16Pin {
+    match pin {
+        1..=5 => Sram16Pin::A((pin - 1) as u8),
+        6 => Sram16Pin::CeN,
+        7..=10 => Sram16Pin::Io((pin - 7) as u8),
+        11 => Sram16Pin::Vcc,
+        12 => Sram16Pin::Vss,
+        13..=16 => Sram16Pin::Io((pin - 13 + 4) as u8),
+        17 => Sram16Pin::WeN,
+        18..=22 => Sram16Pin::A((pin - 18 + 5) as u8),
+        23..=27 => Sram16Pin::A((pin - 23 + 10) as u8),
+        28 => Sram16Pin::Nc,
+        29..=32 => Sram16Pin::Io((pin - 29 + 8) as u8),
+        33 => Sram16Pin::Vcc,
+        34 => Sram16Pin::Vss,
+        35..=38 => Sram16Pin::Io((pin - 35 + 12) as u8),
+        39 => Sram16Pin::BleN,
+        40 => Sram16Pin::BheN,
+        41 => Sram16Pin::OeN,
+        42..=44 => Sram16Pin::A((pin - 42 + 15) as u8),
+        _ => Sram16Pin::Nc,
+    }
+}
+pub fn sram16_pin_of(f: Sram16Pin) -> usize {
+    (1..=44).find(|&p| sram16_pin(p) == f).expect("no such pin")
+}
+
+impl Sram16 {
+    pub fn new(t: as7c164a::Timing) -> Sram16 {
+        Sram16 { lo: As7c164a::with_timing_and_size(t, 18), hi: As7c164a::with_timing_and_size(t, 18) }
+    }
+    pub fn preload(&mut self, addr: u32, word: u16) {
+        self.lo.preload(addr, word as u8);
+        self.hi.preload(addr, (word >> 8) as u8);
+    }
+    pub fn peek(&self, addr: u32) -> Option<u16> {
+        Some(self.lo.peek(addr)? as u16 | (self.hi.peek(addr)? as u16) << 8)
+    }
+}
+
+/// A lane is selected when CE# and its byte enable are both low.
+fn or_n(a: Level, b: Level) -> Level {
+    match (a, b) {
+        (Level::H, _) | (_, Level::H) => Level::H,
+        (Level::L, Level::L) => Level::L,
+        _ => Level::X,
+    }
+}
+
+impl Chip for Sram16 {
+    fn pin_count(&self) -> usize {
+        44
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        match sram16_pin(pin) {
+            Sram16Pin::A(i) => format!("A{i}"),
+            Sram16Pin::Io(i) => format!("IO{i}"),
+            Sram16Pin::CeN => "CE#".into(),
+            Sram16Pin::OeN => "OE#".into(),
+            Sram16Pin::WeN => "WE#".into(),
+            Sram16Pin::BheN => "BHE#".into(),
+            Sram16Pin::BleN => "BLE#".into(),
+            Sram16Pin::Vcc => "VCC".into(),
+            Sram16Pin::Vss => "VSS".into(),
+            Sram16Pin::Nc => "NC".into(),
+        }
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        let mut lo = as7c164a::Inputs::default();
+        let mut hi = as7c164a::Inputs::default();
+        let (mut ce, mut bhe, mut ble) = (Level::Z, Level::Z, Level::Z);
+        for (pin, &v) in ext.iter().enumerate().take(45).skip(1) {
+            match sram16_pin(pin) {
+                Sram16Pin::A(i) => {
+                    lo.addr[i as usize] = v;
+                    hi.addr[i as usize] = v;
+                }
+                Sram16Pin::Io(i) if i < 8 => lo.data[i as usize] = v,
+                Sram16Pin::Io(i) => hi.data[i as usize - 8] = v,
+                Sram16Pin::CeN => ce = v,
+                Sram16Pin::BheN => bhe = v,
+                Sram16Pin::BleN => ble = v,
+                Sram16Pin::OeN => {
+                    lo.oe_n = v;
+                    hi.oe_n = v;
+                }
+                Sram16Pin::WeN => {
+                    lo.we_n = v;
+                    hi.we_n = v;
+                }
+                _ => {}
+            }
+        }
+        lo.ce_n = or_n(ce, ble);
+        hi.ce_n = or_n(ce, bhe);
+        lo.ce2 = Level::H;
+        hi.ce2 = Level::H;
+        self.lo.set_inputs(t, lo);
+        self.hi.set_inputs(t, hi);
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        let (ol, oh) = (self.lo.output(t), self.hi.output(t));
+        for (pin, slot) in out.iter_mut().enumerate().take(45).skip(1) {
+            *slot = match sram16_pin(pin) {
+                Sram16Pin::Io(i) => {
+                    let (o, b) = if i < 8 { (ol, i) } else { (oh, i - 8) };
+                    match o {
+                        Bus::Z => Level::Z,
+                        Bus::X => Level::X,
+                        Bus::V(v) => Level::from_bit(v >> b & 1 == 1),
+                    }
+                }
+                _ => Level::Z,
+            };
+        }
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        match (self.lo.next_event(t), self.hi.next_event(t)) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
+    }
+    fn warnings(&self) -> Vec<String> {
+        let mut w: Vec<String> = self.lo.warnings().iter().map(|x| format!("lo: {x}")).collect();
+        w.extend(self.hi.warnings().iter().map(|x| format!("hi: {x}")));
+        w
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Chip impl: AS7C164A (28-pin DIP/SOJ)
 
 /// Pin functions of the AS7C164A, from the datasheet pin configuration.
@@ -489,6 +646,10 @@ impl Chip for As7c164a {
                 Sram8kPin::WeN => inp.we_n = v,
                 _ => {}
             }
+        }
+        // The 8K part has thirteen address pins; the model carries eighteen.
+        for b in 13..as7c164a::ADDR_BITS {
+            inp.addr[b] = Level::L;
         }
         As7c164a::set_inputs(self, t, inp);
     }

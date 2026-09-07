@@ -19,7 +19,7 @@ impl Bench {
     fn new() -> Self {
         let mut chip = As7c164a::new();
         for a in 0..8192u16 {
-            chip.preload(a, (a as u8) ^ 0xA5);
+            chip.preload(a as u32, (a as u8) ^ 0xA5);
         }
         let inp = Inputs::idle();
         chip.set_inputs(0, inp);

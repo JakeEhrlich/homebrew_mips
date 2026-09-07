@@ -81,7 +81,7 @@ fn kinds(w: &[String]) -> Vec<String> {
 /// Which (part, tap, period) combinations are clean; prints a table.
 #[test]
 fn part_tap_period_sweep() {
-    let parts = [("AS7C164A-15", Timing::grade_15()), ("IS61C256AH-12", Timing::is61c256ah_12())];
+    let parts = [("CY7C1041G-10", Timing::cy7c1041g_10()), ("IS61C256AH-12", Timing::is61c256ah_12()), ("AS7C164A-15", Timing::grade_15())];
     let taps: [(u32, usize); 4] = [(DELAY_LINE_TOTAL, 0), (DELAY_LINE_TOTAL, 1), (40, 0), (50, 0)];
     for (name, dmem) in parts {
         for tap in taps {
@@ -105,12 +105,12 @@ fn part_tap_period_sweep() {
 /// (0..70 C) delay-line grades; industrial is reported only.
 #[test]
 fn documented_operating_points() {
-    for (name, dmem, period) in [("AS7C164A-15", Timing::grade_15(), 37.0), ("IS61C256AH-12", Timing::is61c256ah_12(), 34.0)] {
+    for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 37.0)] {
         let (w, rw, ok) = run_with(period, Build { grade: Grade::Industrial, dmem, ..Build::default() });
         eprintln!("{name} industrial grade at {period} ns: {}", if w.is_empty() && rw.is_empty() && ok { "clean" } else { "not clean" });
     }
     for grade in [Grade::Room, Grade::Commercial] {
-        for (name, dmem, period) in [("AS7C164A-15", Timing::grade_15(), 37.0), ("IS61C256AH-12", Timing::is61c256ah_12(), 34.0)] {
+        for (name, dmem, period) in [("CY7C1041G-10", Timing::cy7c1041g_10(), 34.0), ("AS7C164A-15", Timing::grade_15(), 37.0)] {
             let opt = Build { grade, dmem, ..Build::default() };
             let (w, rw, ok) = run_with(period, opt);
             assert!(rw.is_empty(), "{name} {grade:?} {period}: reset warnings {rw:?}");

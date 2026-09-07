@@ -29,7 +29,7 @@ use crate::cy7c131::{Bus, Timeline};
 /// DQ pins (`Z` when nobody drives them).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Inputs {
-    pub addr: [Level; 13],
+    pub addr: [Level; ADDR_BITS],
     pub ce_n: Level,
     pub ce2: Level,
     pub oe_n: Level,
@@ -39,7 +39,7 @@ pub struct Inputs {
 
 impl Default for Inputs {
     fn default() -> Self {
-        Inputs { addr: [Level::Z; 13], ce_n: Level::Z, ce2: Level::Z, oe_n: Level::Z, we_n: Level::Z, data: [Level::Z; 8] }
+        Inputs { addr: [Level::Z; ADDR_BITS], ce_n: Level::Z, ce2: Level::Z, oe_n: Level::Z, we_n: Level::Z, data: [Level::Z; 8] }
     }
 }
 
@@ -55,7 +55,7 @@ impl Inputs {
             data: [Level::Z; 8],
         }
     }
-    pub fn with_addr(mut self, a: u16) -> Self {
+    pub fn with_addr(mut self, a: u32) -> Self {
         self.addr = addr_levels(a);
         self
     }
@@ -81,13 +81,17 @@ impl Inputs {
     }
 }
 
-pub fn addr_levels(a: u16) -> [Level; 13] {
+/// Address lines carried by the model: enough for a 256K-word part.  A
+/// smaller part leaves the upper bits low.
+pub const ADDR_BITS: usize = 18;
+
+pub fn addr_levels(a: u32) -> [Level; ADDR_BITS] {
     std::array::from_fn(|i| Level::from_bit(a >> i & 1 == 1))
 }
-fn levels_value<const N: usize>(l: &[Level; N]) -> Option<u16> {
-    let mut v = 0u16;
+fn levels_value<const N: usize>(l: &[Level; N]) -> Option<u32> {
+    let mut v = 0u32;
     for (i, b) in l.iter().enumerate() {
-        v |= (b.bit()? as u16) << i;
+        v |= (b.bit()? as u32) << i;
     }
     Some(v)
 }
@@ -167,6 +171,58 @@ impl Timing {
     }
 }
 
+impl Timing {
+    /// CY7C1041G-10 (Cypress/Infineon 256K x 16, 5 V, 10 ns; datasheet
+    /// 001-xxxxx saved as `docs/CY7C1041G_datasheet.pdf`, AC table).  Used
+    /// per byte lane; the byte enables behave like CE (tDBE 4.5 <= tACE,
+    /// tHZBE 6, tBW 7 = tSCE).  tOW is the datasheet's tLZWE.
+    pub const fn cy7c1041g_10() -> Timing {
+        Timing {
+            taa: 10 * NS,
+            tace: 10 * NS,
+            toe: 4500,
+            tclz: 3 * NS,
+            tolz: 0,
+            tchz: 6 * NS, // max(tHZCE 5, tHZBE 6)
+            tohz: 5 * NS,
+            toh: 3 * NS,
+            taw: 7 * NS,
+            tcw: 7 * NS,
+            tas: 0,
+            twp: 7 * NS,
+            twr: 0,
+            tdw: 5 * NS,
+            tdh: 0,
+            tow: 3 * NS,
+            twhz: 5 * NS,
+        }
+    }
+    /// IS61C64AL-10 (ISSI 8K x 8, 5 V, 10 ns).  Numbers are the -10 column
+    /// of the IS61C256AH datasheet on disk, the same family and generation;
+    /// confirm against the 61C64AL datasheet before layout.
+    pub const fn is61c64al_10() -> Timing {
+        Timing {
+            taa: 10 * NS,
+            tace: 10 * NS,
+            toe: 5 * NS,
+            tclz: 2 * NS,
+            tolz: 0,
+            tchz: 5 * NS,
+            tohz: 5 * NS,
+            toh: 2 * NS,
+            taw: 9 * NS,
+            tcw: 9 * NS,
+            tas: 0,
+            twp: 8 * NS,
+            twr: 0,
+            tdw: 7 * NS,
+            tdh: 0,
+            tow: 0,
+            twhz: 6 * NS,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Warning {
     pub time: Time,
@@ -207,7 +263,7 @@ impl fmt::Display for Warning {
 enum DataOut {
     Z,
     X,
-    Read(u16),
+    Read(u32),
 }
 
 /// Three-valued AND of "active" conditions: `Some(false)` as soon as any
@@ -239,6 +295,7 @@ fn read_driving(i: &Inputs) -> Option<bool> {
 pub struct As7c164a {
     t: Timing,
     now: Time,
+    addr_bits: usize,
     mem: Vec<Option<u8>>,
     inp: Inputs,
     addr_since: Time,
@@ -262,10 +319,17 @@ impl As7c164a {
         Self::with_timing(Timing::grade_15())
     }
     pub fn with_timing(t: Timing) -> Self {
+        Self::with_timing_and_size(t, 13)
+    }
+    /// A part with `addr_bits` address lines (13 for 8K x 8, 15 for 32K x 8,
+    /// 18 for a 256K-word part).
+    pub fn with_timing_and_size(t: Timing, addr_bits: usize) -> Self {
+        assert!(addr_bits <= ADDR_BITS);
         As7c164a {
             t,
             now: 0,
-            mem: vec![None; 8192],
+            addr_bits,
+            mem: vec![None; 1 << addr_bits],
             inp: Inputs::default(),
             addr_since: 0,
             sel_since: 0,
@@ -279,16 +343,20 @@ impl As7c164a {
             warnings: Vec::new(),
         }
     }
-    pub fn preload(&mut self, addr: u16, data: u8) {
-        self.mem[addr as usize & 0x1FFF] = Some(data);
+    fn mask(&self) -> usize {
+        (1 << self.addr_bits) - 1
     }
-    pub fn preload_slice(&mut self, addr: u16, data: &[u8]) {
+    pub fn preload(&mut self, addr: u32, data: u8) {
+        let m = self.mask();
+        self.mem[addr as usize & m] = Some(data);
+    }
+    pub fn preload_slice(&mut self, addr: u32, data: &[u8]) {
         for (i, &d) in data.iter().enumerate() {
-            self.preload(addr + i as u16, d);
+            self.preload(addr + i as u32, d);
         }
     }
-    pub fn peek(&self, addr: u16) -> Option<u8> {
-        self.mem[addr as usize & 0x1FFF]
+    pub fn peek(&self, addr: u32) -> Option<u8> {
+        self.mem[addr as usize & self.mask()]
     }
     pub fn timing(&self) -> &Timing {
         &self.t

@@ -28,7 +28,7 @@ use crate::cy7c131::{Cy7c131, Port};
 use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Sim, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of};
+use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of, sram16_pin_of};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1025,8 +1025,7 @@ pub const DELAY_LINE_TOTAL: u32 = 30;
 pub struct Build {
     /// Delay-line tolerance grade.
     pub grade: Grade,
-    /// Data memory timing: IS61C256AH-12 (default, 34 ns) or AS7C164A-15
-    /// (37 ns); same footprint.
+    /// Data memory timing grade (default CY7C1041G-10, two 256K x 16 chips).
     pub dmem: as7c164a::Timing,
     /// Tap for the write-enable gate: (DS1100 total, tap index 0..5).  A
     /// total other than [`DELAY_LINE_TOTAL`] adds a second delay line.
@@ -1037,7 +1036,7 @@ pub struct Build {
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::is61c256ah_12(), gate_tap: (40, 0), gate_tpd: (NS, 4500) }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (NS, 4500) }
     }
 }
 
@@ -1127,12 +1126,12 @@ impl Cpu {
         // Instruction memory: 4 lanes, address = PC[14:2].
         let mut imem = Vec::new();
         for lane in 0..4 {
-            let mut chip = As7c164a::new();
+            let mut chip = As7c164a::with_timing(as7c164a::Timing::is61c64al_10());
             for (w, &word) in program.iter().enumerate() {
-                chip.preload(w as u16, (word >> (8 * lane)) as u8);
+                chip.preload(w as u32, (word >> (8 * lane)) as u8);
             }
             for w in program.len()..8192 {
-                chip.preload(w as u16, 0);
+                chip.preload(w as u32, 0);
             }
             let c = nl.add_chip(&format!("imem{lane}"), chip);
             imem.push(c);
@@ -1149,31 +1148,34 @@ impl Cpu {
             nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::OeN));
             nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::WeN));
         }
-        // Data memory: four byte lanes, always selected, output-enabled
-        // except around a store (OEN); address MR[14:2]; WE# from the gate
-        // during the store's MEM cycle.  DQ is driven by the SRAMs during
-        // loads and by the EX/MEM store-data drivers during a store.
+        // Data memory: two 256K x 16 chips (low / high half-word), always
+        // selected with both byte enables on (word access only for now),
+        // output-enabled except around a store (OEN); address MR[19:2];
+        // WE# from the gate during the store's MEM cycle.  DQ is driven by
+        // the SRAMs during loads and by the EX/MEM store-data drivers
+        // during a store.
         let mut dmem = Vec::new();
-        for lane in 0..4 {
-            let mut chip = As7c164a::with_timing(opt.dmem);
-            for w in 0..8192 {
+        for half in 0..2 {
+            let mut chip = Sram16::new(opt.dmem);
+            for w in 0..(1u32 << 18) {
                 chip.preload(w, 0);
             }
-            let c = nl.add_chip(&format!("dmem{lane}"), chip);
+            let c = nl.add_chip(&format!("dmem{half}"), chip);
             dmem.push(c);
-            for a in 0..13 {
+            for a in 0..18 {
                 let net = nl.net(&n("MR", a + 2));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
+                nl.connect(net, c, sram16_pin_of(Sram16Pin::A(a as u8)));
             }
-            for b in 0..8 {
-                let net = nl.net(&n("DQ", 8 * lane + b));
-                nl.connect(net, c, sram8k_pin_of(Sram8kPin::Dq(b as u8)));
+            for b in 0..16 {
+                let net = nl.net(&n("DQ", 16 * half + b));
+                nl.connect(net, c, sram16_pin_of(Sram16Pin::Io(b as u8)));
             }
-            nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::CeN));
-            nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::Ce2));
+            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::CeN));
+            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BheN));
+            nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BleN));
             let oen = nl.net("OEN");
-            nl.connect(oen, c, sram8k_pin_of(Sram8kPin::OeN));
-            nl.connect(wen, c, sram8k_pin_of(Sram8kPin::WeN));
+            nl.connect(oen, c, sram16_pin_of(Sram16Pin::OeN));
+            nl.connect(wen, c, sram16_pin_of(Sram16Pin::WeN));
         }
         // Register file: bank 0 reads rs (IR25..21) -> RA, bank 1 reads rt
         // (IR20..16) -> RB; write port: address WDESTC (delayed copy), data
@@ -1353,9 +1355,9 @@ impl Cpu {
     /// Data memory word.
     pub fn dmem_word(&self, addr: u32) -> Option<u32> {
         let mut w = 0u32;
-        for lane in 0..4 {
-            let chip = self.sim.chip(self.dmem[lane]).downcast_ref::<As7c164a>().unwrap();
-            w |= (chip.peek((addr >> 2) as u16)? as u32) << (8 * lane);
+        for half in 0..2 {
+            let chip = self.sim.chip(self.dmem[half]).downcast_ref::<Sram16>().unwrap();
+            w |= (chip.peek(addr >> 2)? as u32) << (16 * half);
         }
         Some(w)
     }
@@ -1444,18 +1446,20 @@ pub fn chip_infos() -> Vec<ChipInfo> {
             pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("IM", 8 * lane + b), true));
         }
         let (block, stage) = block_of("imem");
-        out.push(ChipInfo { name: format!("imem{lane}"), kind: "AS7C164A", block, stage, pins });
+        out.push(ChipInfo { name: format!("imem{lane}"), kind: "IS61C64AL-10", block, stage, pins });
+    }
+    for half in 0..2 {
         let mut pins = Vec::new();
-        for a in 0..13 {
-            pins.push((sram8k_pin_of(Sram8kPin::A(a as u8)), n("MR", a + 2), false));
+        for a in 0..18 {
+            pins.push((sram16_pin_of(Sram16Pin::A(a as u8)), n("MR", a + 2), false));
         }
-        for b in 0..8 {
-            pins.push((sram8k_pin_of(Sram8kPin::Dq(b as u8)), n("DQ", 8 * lane + b), true));
+        for b in 0..16 {
+            pins.push((sram16_pin_of(Sram16Pin::Io(b as u8)), n("DQ", 16 * half + b), true));
         }
-        pins.push((sram8k_pin_of(Sram8kPin::OeN), "OEN".into(), false));
-        pins.push((sram8k_pin_of(Sram8kPin::WeN), "WEN".into(), false));
+        pins.push((sram16_pin_of(Sram16Pin::OeN), "OEN".into(), false));
+        pins.push((sram16_pin_of(Sram16Pin::WeN), "WEN".into(), false));
         let (block, stage) = block_of("dmem");
-        out.push(ChipInfo { name: format!("dmem{lane}"), kind: "AS7C164A / IS61C256AH", block, stage, pins });
+        out.push(ChipInfo { name: format!("dmem{half}"), kind: "CY7C1041GN-10", block, stage, pins });
     }
     {
         let mut pins = vec![(DS1100_IN, "CLK".to_string(), false)];
