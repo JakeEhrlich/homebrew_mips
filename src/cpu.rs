@@ -878,6 +878,71 @@ fn memwb_block() -> Vec<Eq> {
 // ---------------------------------------------------------------------------
 // Assembly
 
+/// Add a hold input to registered equations: `Q <- HOLD ? Q : f`.  Used to
+/// cost a global pipeline stall (bus wait).
+pub fn with_hold(eqs: Vec<Eq>, hold: &str) -> Vec<Eq> {
+    eqs.into_iter()
+        .map(|mut e| {
+            // MR0 (16 terms) has no room; it would need re-minimising with
+            // HOLD as a table input.  Count it as unchanged.
+            if e.mode != Mode::Reg || e.terms.len() >= 16 {
+                return e;
+            }
+            let mut terms: Vec<Vec<SLit>> = e
+                .terms
+                .iter()
+                .map(|t| {
+                    let mut t = t.clone();
+                    t.push(nl_(hold));
+                    t
+                })
+                .collect();
+            // Recirculate the pin's logical level (polarity-aware feedback).
+            terms.push(vec![l(hold), (e.out.clone(), !e.active_low)]);
+            e.terms = terms;
+            e
+        })
+        .collect()
+}
+
+/// The CPU's GALs with a global HOLD on every pipeline register (PC, IF/ID,
+/// ID/EX, EX/MEM) and a bubble in MEM/WB; only for counting the cost.
+pub fn gal_specs_with_hold() -> Vec<GalSpec> {
+    let clk = Some("CLK");
+    let rst = Some("RESET");
+    let (bt1, bt2, btr) = bt_block();
+    let (fa, fb) = fwd_mux_block();
+    let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLD");
+    let mut v = Vec::new();
+    v.extend(pack("pc", clk, rst, h(pc_block())));
+    v.extend(pack("inc", None, None, inc_block()));
+    v.extend(pack("ifid", clk, rst, h(ifid_block())));
+    v.extend(pack("dec", None, None, dec_block()));
+    v.extend(pack("ctl", clk, rst, h(ctrl_block())));
+    v.extend(pack("steer", None, None, steer_block()));
+    v.extend(pack("fwdc", clk, rst, h(fwdctl_block())));
+    v.extend(pack("xa", clk, None, h(idex_a_block())));
+    v.extend(pack("xb", clk, None, h(idex_b_block())));
+    v.extend(pack("xsd", clk, None, h(idex_sd_block())));
+    v.extend(pack("bt1", None, None, bt1));
+    v.extend(pack("bt2", None, None, bt2));
+    v.extend(pack("xbt", clk, None, h(btr)));
+    v.extend(pack("fa", None, None, fa));
+    v.extend(pack("fb", None, None, fb));
+    v.extend(pack("alu1", None, None, alu_l1_block()));
+    v.extend(pack("alu2", None, None, alu_l2_block()));
+    v.extend(pack("sh1", None, None, shift1_block()));
+    v.extend(pack("shm", None, None, shift_mask_block()));
+    v.extend(pack("sh2", None, None, shift2_block()));
+    v.extend(pack("mr", clk, None, h(exmem_result_block())));
+    v.extend(pack("msd", clk, None, h(exmem_sd_block())));
+    v.extend(pack("mctl", clk, rst, h(exmem_ctrl_block())));
+    v.extend(pack("cmp", None, None, cmp_block()));
+    v.extend(pack("nxt", None, None, taken_block()));
+    v.extend(pack("wb", clk, rst, memwb_block()));
+    v
+}
+
 /// Every GAL of the CPU, packed.
 pub fn gal_specs() -> Vec<GalSpec> {
     // Minimising the tables takes seconds; every CPU instance shares one

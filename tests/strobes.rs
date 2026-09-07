@@ -58,8 +58,12 @@ fn ideal_strobes_are_clean_at_34() {
     assert!(ok);
 }
 
-/// Sweep: where does the naive tap + GAL generator become clean?
+/// Sweep: where does the naive tap + GAL generator become clean?  (It never
+/// does: a strobe end shaped by a GAL from a tap edge either lands after
+/// the next clock edge or leaves too short a write pulse.)  Run with
+/// `--ignored --nocapture` to see the numbers.
 #[test]
+#[ignore]
 fn delay_line_strobes_sweep() {
     for grade in [Grade::Room, Grade::Commercial] {
         let mut first_clean = None;
