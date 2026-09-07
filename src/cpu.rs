@@ -25,9 +25,10 @@
 
 use crate::as7c164a::As7c164a;
 use crate::cy7c131::{Cy7c131, Port};
-use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate_all, lit, nlit, pack};
+use crate::galpack::{Eq, GalSpec, Mode, SLit, instantiate, instantiate_all, lit, nlit, pack};
 use crate::isa::Instr;
-use crate::netlist::{Level, NetId, Netlist, Sim, SramPin, Sram8kPin, Time, NS, sram_pin_of, sram8k_pin_of};
+use crate::ds1100::{Ds1100, Grade};
+use crate::netlist::{DS1100_IN, Level, NetId, Netlist, Sim, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, sram_pin_of, sram8k_pin_of};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -866,8 +867,11 @@ fn memwb_block() -> Vec<Eq> {
     for i in 0..5 {
         eqs.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
     }
-    eqs.push(Eq::sop("WREG", Mode::Reg, vec![vec![l("MRW")]]));
-    eqs.push(Eq::sop("WREG_n", Mode::Reg, vec![vec![l("MRW")]]).active_low());
+    // Polarity chosen so that reset (registers cleared) means "writing r0
+    // with WD = 0": the register file's r0 is zeroed by the reset sequence
+    // itself, and the steer keeps the read ports off r0 meanwhile.
+    eqs.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
+    eqs.push(Eq::sop("WREG_n", Mode::Reg, vec![vec![nl_("MRW")]]));
     eqs
 }
 
@@ -918,11 +922,45 @@ fn build_gal_specs() -> Vec<GalSpec> {
 }
 
 /// The running CPU.
+/// Where the memory strobes come from.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Strobes {
+    /// Ideal testbench stimulus at the [`phases`] times.
+    Ideal,
+    /// A DS1100-`total` delay line on CLK feeding one combinational GAL
+    /// (`clkgen0`) that shapes PH_RF / PH_CE / PH_SD from the taps.
+    DelayLine { total: u32, grade: Grade, taps: StrobeTaps },
+}
+
+/// Which tap edges shape each strobe.  A strobe's active window is
+/// `[fall, half + rise]` in nominal ns, where `fall` is the tap index whose
+/// rising edge starts it and `rise` the tap whose falling edge ends it
+/// (index 0 = CLK itself, 1..=5 = TAP1..TAP5).  Built as
+/// `CLK & !T(fall) | !CLK & !T(rise)`, which is high outside the window.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct StrobeTaps {
+    pub ce: (u8, u8),
+    pub rf: (u8, u8),
+    pub sd: (u8, u8),
+}
+
+impl StrobeTaps {
+    /// Nearest taps to the ideal phases for a DS1100-`total`.
+    pub fn nearest(total: u32) -> StrobeTaps {
+        let step = total as f64 / 5.0;
+        let tap = |ns: f64| ((ns / step).round() as u8).clamp(0, 5);
+        StrobeTaps { ce: (tap(10.0), tap(14.0)), rf: (tap(15.0), tap(14.0)), sd: (tap(8.0), tap(15.0)) }
+    }
+}
+
 pub struct Cpu {
     pub sim: Sim,
     pub period: Time,
     pub cycles: u64,
     pub pc_trace: Vec<Option<u32>>,
+    pub strobes: Strobes,
+    /// When RESET was released (ps).
+    pub reset_release: Time,
     clk: NetId,
     ph_rf: NetId,
     ph_ce: NetId,
@@ -950,17 +988,69 @@ pub struct Cpu {
 pub fn phases(period_ns: f64) -> [(f64, f64); 3] {
     [(15.0, period_ns - 3.0), (10.0, period_ns + 1.0), (8.0, period_ns - 2.0)]
 }
+/// Strobe generator: one combinational GAL on CLK and the delay-line taps.
+/// Each strobe is `CLK & !T(fall) | !CLK & !T(rise)`: with a 50% clock and
+/// T(k) a delayed copy of CLK, that is high from the edge until T(fall)
+/// rises and again from T(rise)'s falling edge (half period + rise) until
+/// the next edge.  PH_SD is the same shape inverted (active high).
+pub fn clkgen_spec(taps: StrobeTaps) -> GalSpec {
+    let t = |k: u8| if k == 0 { "CLK".to_string() } else { format!("T{k}") };
+    let shape = |(fall, rise): (u8, u8)| -> Vec<Vec<SLit>> {
+        let mut v = Vec::new();
+        if fall != 0 {
+            v.push(vec![l("CLK"), nl_(&t(fall))]);
+        }
+        v.push(vec![nl_("CLK"), nl_(&t(rise))]);
+        v
+    };
+    let eqs = vec![
+        Eq::sop("PH_CE", Mode::Comb, shape(taps.ce)),
+        Eq::sop("PH_RF", Mode::Comb, shape(taps.rf)),
+        Eq::sop("PH_SD", Mode::Comb, shape(taps.sd)).active_low(),
+    ];
+    GalSpec { name: "clkgen0".into(), clk: None, ar: None, eqs }
+}
+
+/// Time stamp of a chip warning (`t=123.500ns` inside the text).
+fn warning_time(w: &str) -> Option<Time> {
+    let i = w.find("t=")?;
+    let rest = &w[i + 2..];
+    let end = rest.find("ns")?;
+    rest[..end].parse::<f64>().ok().map(|ns| (ns * NS as f64).round() as Time)
+}
+
+/// Clock cycles RESET is held with the clock running.
+pub const RESET_CYCLES: usize = 4;
+
 pub const PH_RF: usize = 0;
 pub const PH_CE: usize = 1;
 pub const PH_SD: usize = 2;
 
 impl Cpu {
-    /// Build the netlist with `program` in instruction memory at address 0.
+    /// Build the netlist with `program` in instruction memory at address 0,
+    /// strobes from ideal stimulus.
     pub fn new(program: &[u32], period_ns: f64) -> Cpu {
+        Cpu::with_strobes(program, period_ns, Strobes::Ideal)
+    }
+
+    pub fn with_strobes(program: &[u32], period_ns: f64, strobes: Strobes) -> Cpu {
         let mut nl = Netlist::new();
         let specs = gal_specs();
-        let gal_count = specs.len();
+        let mut gal_count = specs.len();
         instantiate_all(&mut nl, &specs);
+        if let Strobes::DelayLine { total, grade, taps } = strobes {
+            let dl = nl.add_chip("dl0", Ds1100::new(total, grade));
+            let clk = nl.net("CLK");
+            nl.connect(clk, dl, DS1100_IN);
+            for k in 0..5 {
+                let net = nl.net(&format!("T{}", k + 1));
+                nl.connect(net, dl, ds1100_tap_pin(k));
+            }
+            let spec = clkgen_spec(taps);
+            spec.fits().unwrap();
+            instantiate(&mut nl, &spec);
+            gal_count += 1;
+        }
 
         let gnd = nl.net("GND");
         let vcc = nl.net("VCC");
@@ -1028,6 +1118,8 @@ impl Cpu {
                 for r in 0..32 {
                     chip.preload(r, 0);
                 }
+                // r0 powers up as garbage; the reset sequence must zero it.
+                chip.preload(0, 0xA5);
                 let c = nl.add_chip(&format!("rf{bank}{lane}"), chip);
                 rf.push(c);
                 let (field, rdata, ce) = if bank == 0 { (21, "RA", "CERA_n") } else { (16, "RB", "CERB_n") };
@@ -1089,17 +1181,55 @@ impl Cpu {
             dmem,
             rf,
             gal_count,
+            strobes,
+            reset_release: 0,
         };
+        // Power-on: RESET asserted from the start (a supervisor holds it
+        // through power-up), clock low.
         let reset = cpu.sim.net_id("RESET");
-        cpu.sim.schedule(0, reset, Level::L);
+        cpu.sim.schedule(0, reset, Level::H);
         cpu.sim.schedule(0, cpu.clk, Level::L);
-        cpu.sim.schedule(0, cpu.ph_rf, Level::H);
-        cpu.sim.schedule(0, cpu.ph_ce, Level::H);
-        cpu.sim.schedule(0, cpu.ph_sd, Level::L);
-        // Power-up: let every combinational chain settle before the first
-        // edge (the reset period in hardware).
+        if strobes == Strobes::Ideal {
+            cpu.sim.schedule(0, cpu.ph_rf, Level::H);
+            cpu.sim.schedule(0, cpu.ph_ce, Level::H);
+            cpu.sim.schedule(0, cpu.ph_sd, Level::L);
+        }
+        // Power-up: let every combinational chain settle, then hold RESET
+        // with the clock and strobes running (the pipeline registers stay
+        // cleared; the write-back stage writes r0 = 0), and release RESET
+        // early in a cycle so the reset path settles and recovers before
+        // the next edge.
         cpu.sim.run_until(3 * cpu.period);
+        for _ in 0..RESET_CYCLES {
+            cpu.step();
+        }
+        let release = cpu.sim.now() + cpu.period / 4;
+        cpu.sim.schedule(release, reset, Level::L);
+        cpu.step();
+        cpu.reset_release = release;
+        cpu.cycles = 0;
+        cpu.pc_trace.clear();
         cpu
+    }
+
+    /// Chip warnings from RESET release onwards.  Before that, registers
+    /// without a reset capture whatever is on their inputs, which the model
+    /// reports as unknown captures; [`Cpu::reset_warnings`] checks those.
+    pub fn warnings(&self) -> Vec<String> {
+        self.sim.warnings().into_iter().filter(|w| warning_time(w).is_none_or(|t| t >= self.reset_release)).collect()
+    }
+
+    /// Warnings raised while RESET was held, minus the expected unknown
+    /// captures of data registers that have no reset.  Anything left is a
+    /// real problem in the reset sequence (a glitch write, a bus conflict,
+    /// a timing violation).
+    pub fn reset_warnings(&self) -> Vec<String> {
+        self.sim
+            .warnings()
+            .into_iter()
+            .filter(|w| warning_time(w).is_some_and(|t| t < self.reset_release))
+            .filter(|w| !w.contains("CapturedX") && !w.contains("AddrUnknown"))
+            .collect()
     }
 
     fn ns(t: f64) -> Time {
@@ -1114,12 +1244,14 @@ impl Cpu {
         let ph = phases(self.period as f64 / NS as f64);
         self.sim.schedule(base, self.clk, Level::H);
         self.sim.schedule(half, self.clk, Level::L);
-        self.sim.schedule(t(ph[PH_RF].0), self.ph_rf, Level::L);
-        self.sim.schedule(t(ph[PH_RF].1), self.ph_rf, Level::H);
-        self.sim.schedule(t(ph[PH_CE].0), self.ph_ce, Level::L);
-        self.sim.schedule(t(ph[PH_CE].1), self.ph_ce, Level::H);
-        self.sim.schedule(t(ph[PH_SD].0), self.ph_sd, Level::H);
-        self.sim.schedule(t(ph[PH_SD].1), self.ph_sd, Level::L);
+        if self.strobes == Strobes::Ideal {
+            self.sim.schedule(t(ph[PH_RF].0), self.ph_rf, Level::L);
+            self.sim.schedule(t(ph[PH_RF].1), self.ph_rf, Level::H);
+            self.sim.schedule(t(ph[PH_CE].0), self.ph_ce, Level::L);
+            self.sim.schedule(t(ph[PH_CE].1), self.ph_ce, Level::H);
+            self.sim.schedule(t(ph[PH_SD].0), self.ph_sd, Level::H);
+            self.sim.schedule(t(ph[PH_SD].1), self.ph_sd, Level::L);
+        }
         // Sample the PC just before the next edge (what IF is fetching).
         self.sim.run_until(base + self.period - Self::ns(3.5));
         self.pc_trace.push(self.sim.read_bus(&self.pc).map(|w| w << 2));
@@ -1176,9 +1308,6 @@ impl Cpu {
         }
         Some(w)
     }
-    pub fn warnings(&self) -> Vec<String> {
-        self.sim.warnings()
-    }
     fn chip_sram(&self, id: usize) -> &Cy7c131 {
         self.sim.chip(id).downcast_ref::<Cy7c131>().unwrap()
     }
@@ -1233,6 +1362,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "mctl" => ("EX/MEM control", "EX/MEM"),
         "dmem" => ("Data memory", "MEM"),
         "wb" => ("MEM/WB", "MEM/WB"),
+        "clkgen" | "dl" => ("Clock generator", "CLK"),
         _ => ("?", "?"),
     }
 }

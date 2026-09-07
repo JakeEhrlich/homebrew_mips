@@ -577,6 +577,19 @@ impl Gal22v10 {
             self.queue.iter().filter(|(_, ev)| matches!(ev, Ev::OeX(j) | Ev::OeSettle(j, _) if *j == k)).map(|(t, ev)| (t.0, format!("{ev:?}"))).collect::<Vec<_>>())
     }
 
+    /// Debug view of the array: `(input, level, since)` for inputs that are X.
+    pub fn debug_x_inputs(&self) -> Vec<(usize, Level, Time)> {
+        (0..ARRAY_INPUTS).filter(|&i| self.arr[i] == Level::X).map(|i| (i, self.arr[i], self.arr_since[i])).collect()
+    }
+    /// Debug: async reset level, when it took that level, last clock edge, clock level.
+    pub fn debug_ar(&self) -> (Level, Time, Option<Time>, Level) {
+        (self.ar, self.ar_since, self.last_edge, self.clk)
+    }
+    /// Debug: `(q, out, fb)` of every macrocell.
+    pub fn debug_olmcs(&self) -> Vec<(Level, Level, Level)> {
+        self.olmc.iter().map(|o| (o.q, o.out, o.fb)).collect()
+    }
+
     fn pin_drive(&self, k: usize) -> Level {
         let o = &self.olmc[k];
         match o.oe {
@@ -781,17 +794,28 @@ impl Gal22v10 {
     /// the same for every assignment of the (up to 6) X inputs it is that
     /// value, else X.
     fn eval_sop(&self, terms: &[Term]) -> Level {
+        // Three-valued pass first: a term with a definite-0 literal is 0
+        // whatever its X inputs, a term that is definitely 1 decides the
+        // sum.  Only the terms left undecided need enumeration, and only
+        // over their own X inputs.
+        let mut live: Vec<&Term> = Vec::new();
+        for t in terms {
+            match self.eval_term(t) {
+                Level::H => return Level::H,
+                Level::X => live.push(t),
+                _ => {}
+            }
+        }
+        if live.is_empty() {
+            return Level::L;
+        }
+        let terms = live;
         let xs: Vec<usize> = (0..ARRAY_INPUTS)
             .filter(|&i| self.arr[i] == Level::X && terms.iter().any(|t| t.0.iter().any(|l| l.input == i)))
             .collect();
-        if xs.is_empty() {
-            let mut v = Level::L;
-            for t in terms {
-                v = or3(v, self.eval_term(t));
-            }
-            return v;
-        }
         if xs.len() > 6 {
+            // Too many to enumerate: the three-valued answer (sound, just
+            // less sharp: it cannot see that a & !a is 0).
             return Level::X;
         }
         let mut arr = self.arr;
@@ -801,7 +825,7 @@ impl Gal22v10 {
                 arr[j] = if c >> b & 1 == 1 { Level::H } else { Level::L };
             }
             let mut v = Level::L;
-            for t in terms {
+            for t in &terms {
                 let mut tv = Level::H;
                 for l in &t.0 {
                     let a = arr[l.input];

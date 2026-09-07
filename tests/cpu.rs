@@ -19,8 +19,12 @@ fn run_program(src: &str, period_ns: f64, max_cycles: u64) -> (Cpu, Iss) {
 
 fn check(src: &str, period_ns: f64) -> Cpu {
     let (cpu, iss) = run_program(src, period_ns, 2000);
+    let w = cpu.reset_warnings();
+    assert!(w.is_empty(), "warnings during reset:\n{}", w.join("\n"));
     let w = cpu.warnings();
     assert!(w.is_empty(), "chip warnings:\n{}", w.join("\n"));
+    // r0 powers up as garbage and is zeroed by the reset sequence.
+    assert_eq!(cpu.reg(0), Some(0), "r0 after reset");
     for r in 1..32 {
         assert_eq!(cpu.reg(r), Some(iss.regs[r as usize]), "register {r}; PC trace {:?}", cpu.pc_trace);
     }

@@ -1,6 +1,7 @@
 //! Chip models and (later) netlist simulation for a discrete MIPS-I build.
 pub mod as7c164a;
 pub mod cy7c131;
+pub mod ds1100;
 pub mod regfile;
 pub mod gal22v10;
 pub mod netlist;

@@ -20,6 +20,7 @@ use std::fmt::Write as _;
 
 use crate::as7c164a::{self, As7c164a};
 use crate::cy7c131::{self, Bus, Cy7c131, Inputs, PortInputs};
+use crate::ds1100::Ds1100;
 use crate::gal22v10::Gal22v10;
 pub use crate::cy7c131::{Level, Time, NS};
 
@@ -37,6 +38,52 @@ pub trait Chip {
     fn warnings(&self) -> Vec<String>;
     /// For downcasting to the concrete model (to peek memory contents etc.).
     fn as_any(&self) -> &dyn std::any::Any;
+}
+
+// ---------------------------------------------------------------------------
+// Chip impl: DS1100 delay line (8-pin DIP): 1 IN, 7 TAP1, 2 TAP2, 6 TAP3,
+// 3 TAP4, 5 TAP5, 4 GND, 8 VCC.
+
+/// Pin of tap `k` (0-based).
+pub fn ds1100_tap_pin(k: usize) -> usize {
+    [7, 2, 6, 3, 5][k]
+}
+pub const DS1100_IN: usize = 1;
+
+impl Chip for Ds1100 {
+    fn pin_count(&self) -> usize {
+        8
+    }
+    fn pin_name(&self, pin: usize) -> String {
+        match pin {
+            1 => "IN".into(),
+            7 => "TAP1".into(),
+            2 => "TAP2".into(),
+            6 => "TAP3".into(),
+            3 => "TAP4".into(),
+            5 => "TAP5".into(),
+            4 => "GND".into(),
+            8 => "VCC".into(),
+            _ => format!("?{pin}"),
+        }
+    }
+    fn set_inputs(&mut self, t: Time, ext: &[Level]) {
+        self.set_input(t, ext[DS1100_IN]);
+    }
+    fn drive(&mut self, t: Time, out: &mut [Level]) {
+        for k in 0..5 {
+            out[ds1100_tap_pin(k)] = self.tap(k, t);
+        }
+    }
+    fn next_event(&self, t: Time) -> Option<Time> {
+        Ds1100::next_event(self, t)
+    }
+    fn warnings(&self) -> Vec<String> {
+        self.warnings().iter().map(|w| format!("DS1100 {:?} at {} ps: {}", w.kind, w.t, w.detail)).collect()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 // ---------------------------------------------------------------------------
