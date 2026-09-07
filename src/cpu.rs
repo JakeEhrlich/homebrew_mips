@@ -104,6 +104,14 @@ struct Dec {
     sra: bool,
     /// ... constant amount from the shamt field (SLL, SRL, SRA).
     shimm: bool,
+    /// Byte-sized memory access (LB, LBU, SB).
+    szb: bool,
+    /// Halfword-sized (LH, LHU, SH).
+    szh: bool,
+    /// Signed narrow load (LB, LH): fill with the sign.
+    lsx: bool,
+    /// Narrow store (SB, SH).
+    nstore: bool,
 }
 
 fn decode(word: u32) -> Option<Dec> {
@@ -140,6 +148,10 @@ fn decode(word: u32) -> Option<Dec> {
         shr: false,
         sra: false,
         shimm: false,
+        szb: false,
+        szh: false,
+        lsx: false,
+        nstore: false,
     };
     match op {
         Nop => {}
@@ -161,11 +173,11 @@ fn decode(word: u32) -> Option<Dec> {
             d.jr = true;
             d.link = true;
         }
-        Addiu | Andi | Ori | Xori | Slti | Sltiu | Lui | Lw => {
+        Addiu | Andi | Ori | Xori | Slti | Sltiu | Lui | Lw | Lb | Lbu | Lh | Lhu => {
             d.itype_rw = true;
             d.selimm = true;
         }
-        Sw => {
+        Sw | Sb | Sh => {
             d.selimm = true;
             d.store = true;
         }
@@ -187,11 +199,15 @@ fn decode(word: u32) -> Option<Dec> {
     d.brs = matches!(op, Blez | Bgtz | Bltz | Bgez | Bltzal | Bgezal);
     d.bz = matches!(op, Blez | Bgtz);
     d.binv = matches!(op, Bgtz | Bgez | Bgezal);
-    d.sext = matches!(op, Addiu | Slti | Sltiu | Lw | Sw);
+    d.sext = matches!(op, Addiu | Slti | Sltiu | Lw | Sw | Lb | Lbu | Lh | Lhu | Sb | Sh);
+    d.szb = matches!(op, Lb | Lbu | Sb);
+    d.szh = matches!(op, Lh | Lhu | Sh);
+    d.lsx = matches!(op, Lb | Lh);
+    d.nstore = matches!(op, Sb | Sh);
     d.lui = op == Lui;
     // XADD: the result is the adder output (SLT/SLTU use the adder but
     // produce only the compare bit).  XSUB: invert B, carry-in 1.
-    d.add = matches!(op, Addu | Addiu | Subu | Lui | Lw | Sw | Jr | Nop);
+    d.add = matches!(op, Addu | Addiu | Subu | Lui | Lw | Sw | Lb | Lbu | Lh | Lhu | Sb | Sh | Jr | Nop);
     d.sub = matches!(op, Subu | Slt | Sltu | Slti | Sltiu);
     d.and = matches!(op, And | Andi);
     d.or = matches!(op, Or | Ori);
@@ -201,7 +217,7 @@ fn decode(word: u32) -> Option<Dec> {
     d.sltu = matches!(op, Sltu | Sltiu);
     d.beq = op == Beq;
     d.bne = op == Bne;
-    d.load = op == Lw;
+    d.load = matches!(op, Lw | Lb | Lbu | Lh | Lhu);
     Some(d)
 }
 
@@ -320,7 +336,32 @@ fn dec_block() -> Vec<Eq> {
         dec_table_or_regimm_link("LINK", Mode::Comb, |d| d.link),
         dec_table("SHIMM", Mode::Comb, |d| d.shimm),
         dec_table("LOAD", Mode::Comb, |d| d.load),
+        // Byte-sized access: the ID/EX store data replicates the byte
+        // into lane 1.  Narrow store: the forward-hold (see sf_block).
+        dec_table("SZB", Mode::Comb, |d| d.szb),
+        dec_table("NSTORE", Mode::Comb, |d| d.nstore),
     ]
+}
+
+/// Narrow-store forward hold.  A byte or halfword store replicates its
+/// data across the lanes from the register file (ID/EX lane 1, EX/MEM
+/// lanes 2 and 3); a value that would have to be forwarded from EX/MEM
+/// or MEM/WB is not replicated, so such a store waits in ID until its
+/// producer has reached WB and the steer supplies it.  SFE / SFM: the
+/// narrow store in ID names, as rt, the destination of the instruction
+/// in EX / in MEM.  Active-low sums (the complement of a 5-bit equality
+/// is ten terms), like the forwarding control.
+fn sf_block() -> Vec<Eq> {
+    let mut eqs = Vec::new();
+    for (name, dest, rw) in [("SFE", "XDEST", "XRW"), ("SFM", "MDEST", "MRW")] {
+        let mut terms: Vec<Vec<SLit>> = vec![vec![nl_("NSTORE")], vec![nl_(rw)]];
+        for i in 0..5 {
+            terms.push(vec![l(&ir(16 + i)), nl_(&n(dest, i))]);
+            terms.push(vec![nl_(&ir(16 + i)), l(&n(dest, i))]);
+        }
+        eqs.push(Eq::sop(name, Mode::Comb, terms).active_low());
+    }
+    eqs
 }
 
 /// ID/EX control: ALU op and branch bits straight from the opcode/funct
@@ -354,6 +395,12 @@ fn ctrl_block() -> Vec<Eq> {
         dec_table("XJR", Mode::Reg, |d| d.jr),
         dec_table("XMR", Mode::Reg, |d| d.load),
         dec_table("XMW", Mode::Reg, |d| d.store),
+        // Access size (byte enables, load lane select), sign extension,
+        // and "narrow" for the EX/MEM store-data lanes 2 and 3.
+        dec_table("XSZB", Mode::Reg, |d| d.szb),
+        dec_table("XSZH", Mode::Reg, |d| d.szh),
+        dec_table("XLSX", Mode::Reg, |d| d.lsx),
+        dec_table("XNAR", Mode::Reg, |d| d.szb || d.szh),
     ];
     // Destination: rd for R-type, rt for I-type, 31 for JAL.
     for i in 0..5 {
@@ -462,15 +509,23 @@ fn idex_b_block() -> Vec<Eq> {
         .collect()
 }
 
-/// ID/EX store data: rt from the register file or MEM/WB.
+/// ID/EX store data: rt from the register file or MEM/WB.  Lane 1 takes
+/// the low byte for a byte-sized access (SB puts its byte on every lane;
+/// lanes 2 and 3 are filled from lanes 0 and 1 by the EX/MEM drivers).
 fn idex_sd_block() -> Vec<Eq> {
     (0..32)
         .map(|i| {
-            Eq::sop(
-                &n("XSD", i),
-                Mode::Reg,
-                vec![vec![nl_("STB"), l(&n("RB", i))], vec![l("STB"), l(&n("WD", i))]],
-            )
+            let terms = if (8..16).contains(&i) {
+                vec![
+                    vec![nl_("SZB"), nl_("STB"), l(&n("RB", i))],
+                    vec![nl_("SZB"), l("STB"), l(&n("WD", i))],
+                    vec![l("SZB"), nl_("STB"), l(&n("RB", i - 8))],
+                    vec![l("SZB"), l("STB"), l(&n("WD", i - 8))],
+                ]
+            } else {
+                vec![vec![nl_("STB"), l(&n("RB", i))], vec![l("STB"), l(&n("WD", i))]]
+            };
+            Eq::sop(&n("XSD", i), Mode::Reg, terms)
         })
         .collect()
 }
@@ -823,18 +878,97 @@ fn exmem_result_block() -> Vec<Eq> {
 fn exmem_sd_block() -> Vec<Eq> {
     (0..32)
         .map(|i| {
-            Eq::sop(
-                &n("DQ", i),
-                Mode::Reg,
+            // Lanes 2 and 3 of a narrow store repeat lanes 0 and 1 (which
+            // ID/EX has already made "the byte" or "the halfword").
+            let mut terms = if i >= 16 {
                 vec![
-                    vec![nl_("XFSE"), nl_("XFSM"), l(&n("XSD", i))],
-                    vec![l("XFSE"), l(&n("MR", i))],
-                    vec![nl_("XFSE"), l("XFSM"), l(&n("WD", i))],
-                ],
-            )
-            .with_oe(vec![l("MMW")])
+                    vec![nl_("XFSE"), nl_("XFSM"), nl_("XNAR"), l(&n("XSD", i))],
+                    vec![nl_("XFSE"), nl_("XFSM"), l("XNAR"), l(&n("XSD", i - 16))],
+                ]
+            } else {
+                vec![vec![nl_("XFSE"), nl_("XFSM"), l(&n("XSD", i))]]
+            };
+            terms.push(vec![l("XFSE"), l(&n("MR", i))]);
+            terms.push(vec![nl_("XFSE"), l("XFSM"), l(&n("WD", i))]);
+            Eq::sop(&n("DQ", i), Mode::Reg, terms).with_oe(vec![l("MMW")])
         })
         .collect()
+}
+
+/// MEM-stage access control, registered at the EX/MEM edge: the data
+/// memory's byte enables (active low; a narrow store leaves the other
+/// lanes' enables high, everything else keeps all four low), the
+/// MEM-stage copies of the size / sign flags and of the two low address
+/// bits (the EX/MEM result register's, but forced to lane 0 and word
+/// for an I/O access, whose byte arrives on lane 0 whatever the
+/// address), and the selected element's sign bit for the load extension.
+fn mem_access_block() -> Vec<Eq> {
+    let mut eqs = Vec::new();
+    // Address low bits: the group-0 sum with carry-in 0 (loads and
+    // stores add).  FA31 = the access is I/O.
+    let (a0, a1) = (n("S0_", 0), n("S0_", 1));
+    for j in 0..4usize {
+        let (j0, j1) = (j & 1 == 1, j >> 1 & 1 == 1);
+        let mut terms = Vec::new();
+        // Byte store not at lane j: the three other lanes.
+        for a in 0..4usize {
+            if a != j {
+                terms.push(vec![l("XMW"), l("XSZB"), (a0.clone(), a & 1 == 1), (a1.clone(), a >> 1 & 1 == 1)]);
+            }
+        }
+        // Halfword store in the other half.
+        terms.push(vec![l("XMW"), l("XSZH"), (a1.clone(), !j1)]);
+        let _ = j0;
+        eqs.push(Eq::sop(&format!("MBE{j}_n"), Mode::Reg, terms));
+    }
+    eqs.push(Eq::sop("MSZB", Mode::Reg, vec![vec![l("XSZB"), nl_(&n("FA", 31))]]));
+    eqs.push(Eq::sop("MSZH", Mode::Reg, vec![vec![l("XSZH"), nl_(&n("FA", 31))]]));
+    eqs.push(Eq::sop("MLSX", Mode::Reg, vec![vec![l("XLSX"), nl_(&n("FA", 31))]]));
+    eqs.push(Eq::sop("MA0", Mode::Reg, vec![vec![l(&a0), nl_(&n("FA", 31))]]));
+    eqs.push(Eq::sop("MA1", Mode::Reg, vec![vec![l(&a1), nl_(&n("FA", 31))]]));
+    // Sign of the selected byte (MSZB) or halfword.
+    eqs.push(Eq::sop(
+        "LSGN",
+        Mode::Comb,
+        vec![
+            vec![l("MSZB"), nl_("MA1"), nl_("MA0"), l(&n("DQ", 7))],
+            vec![l("MSZB"), nl_("MA1"), l("MA0"), l(&n("DQ", 15))],
+            vec![l("MSZB"), l("MA1"), nl_("MA0"), l(&n("DQ", 23))],
+            vec![l("MSZB"), l("MA1"), l("MA0"), l(&n("DQ", 31))],
+            vec![nl_("MSZB"), nl_("MA1"), l(&n("DQ", 15))],
+            vec![nl_("MSZB"), l("MA1"), l(&n("DQ", 31))],
+        ],
+    ));
+    eqs
+}
+
+/// MEM/WB load-data selects, combinational in MEM (one-hot per source,
+/// all off during a bus wait so the register recirculates): which DQ
+/// byte lands in each byte of WD, and the sign fills.
+fn mem_select_block() -> Vec<Eq> {
+    let live = || vec![l("MMR"), nl_("WAIT")];
+    let with = |extra: Vec<SLit>| {
+        let mut t = live();
+        t.extend(extra);
+        t
+    };
+    vec![
+        // Not a load (and not waiting): WD takes the ALU result.
+        Eq::sop("MNR", Mode::Comb, vec![vec![nl_("MMR"), nl_("WAIT")]]),
+        // Bits 7:0 from DQ lane 0 / 1 / 2 / 3.
+        Eq::sop("ML0", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH")]), with(vec![l("MSZH"), nl_("MA1")]), with(vec![l("MSZB"), nl_("MA1"), nl_("MA0")])]),
+        Eq::sop("ML1", Mode::Comb, vec![with(vec![l("MSZB"), nl_("MA1"), l("MA0")])]),
+        Eq::sop("ML2", Mode::Comb, vec![with(vec![l("MSZH"), l("MA1")]), with(vec![l("MSZB"), l("MA1"), nl_("MA0")])]),
+        Eq::sop("ML3", Mode::Comb, vec![with(vec![l("MSZB"), l("MA1"), l("MA0")])]),
+        // Bits 15:8: own lane (word, or halfword from the low half), the
+        // high half's low byte, or the byte's sign.
+        Eq::sop("MW8", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("MIO")]), with(vec![l("MSZH"), nl_("MA1")])]),
+        Eq::sop("MH1", Mode::Comb, vec![with(vec![l("MSZH"), l("MA1")])]),
+        Eq::sop("MSB", Mode::Comb, vec![with(vec![l("MSZB"), l("MLSX")])]),
+        // Bits 31:16: own lane (word) or the sign.
+        Eq::sop("MW16", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH"), nl_("MIO")])]),
+        Eq::sop("MSN", Mode::Comb, vec![with(vec![l("MSZB"), l("MLSX")]), with(vec![l("MSZH"), l("MLSX")])]),
+    ]
 }
 
 /// Reset synchroniser: two GAL registers on CLK turn the supervisor's
@@ -981,7 +1115,16 @@ fn stall_block() -> Vec<Eq> {
 
 /// The interlock and boot terms of HOLD.
 fn hold_terms() -> Vec<Vec<SLit>> {
-    vec![vec![l("STORE"), l("XMR")], vec![l("LOAD"), l("XMW")], vec![l("BOOTCNT"), nl_("STEP2")], vec![l("BOOTCNT"), l("STEP1")], vec![l("BOOTCNT"), l("STEP0")]]
+    vec![
+        vec![l("STORE"), l("XMR")],
+        vec![l("LOAD"), l("XMW")],
+        // A narrow store whose data would have to be forwarded (sf_block).
+        vec![l("SFE")],
+        vec![l("SFM")],
+        vec![l("BOOTCNT"), nl_("STEP2")],
+        vec![l("BOOTCNT"), l("STEP1")],
+        vec![l("BOOTCNT"), l("STEP0")],
+    ]
 }
 
 /// WAIT = MIO & (CNT != IO_CYCLES - 1).
@@ -1103,23 +1246,54 @@ fn taken_block() -> Vec<Eq> {
 /// MEM/WB: load data or ALU result, destination, write enable (both
 /// polarities; the active-low one drives the register file's R/W).
 fn memwb_block() -> Vec<Eq> {
-    // Bits 8..31 of an I/O load are zero: the UART drives DQ[7:0] only.
+    // Load data by lane, from the one-hot selects (mem_select_block):
+    // bits 7:0 from any DQ byte, bits 15:8 from their own lane or the
+    // high half or the sign, bits 31:16 from their own lane or the
+    // sign.  Bits 8..31 of an I/O load are zero (the selects see MIO).
+    // With no select active (a bus wait) the register recirculates.
     let mut eqs: Vec<Eq> = (0..32)
         .map(|i| {
-            let mut dq = vec![l("MMR"), l(&n("DQ", i))];
-            if i >= 8 {
-                dq.push(nl_("MIO"));
-            }
-            Eq::sop(&n("WD", i), Mode::Reg, vec![dq, vec![nl_("MMR"), l(&n("MR", i))]])
+            let mut terms = vec![vec![l("MNR"), l(&n("MR", i))]];
+            let sels: Vec<&str> = if i < 8 {
+                terms.push(vec![l("ML0"), l(&n("DQ", i))]);
+                terms.push(vec![l("ML1"), l(&n("DQ", i + 8))]);
+                terms.push(vec![l("ML2"), l(&n("DQ", i + 16))]);
+                terms.push(vec![l("ML3"), l(&n("DQ", i + 24))]);
+                vec!["MNR", "ML0", "ML1", "ML2", "ML3"]
+            } else if i < 16 {
+                terms.push(vec![l("MW8"), l(&n("DQ", i))]);
+                terms.push(vec![l("MH1"), l(&n("DQ", i + 16))]);
+                terms.push(vec![l("MSB"), l("LSGN")]);
+                vec!["MNR", "MW8", "MH1", "MSB"]
+            } else {
+                terms.push(vec![l("MW16"), l(&n("DQ", i))]);
+                terms.push(vec![l("MSN"), l("LSGN")]);
+                vec!["MNR", "MW16", "MSN"]
+            };
+            // Bits 7:0 always have exactly one select active outside a
+            // wait, so "none" is the wait; the upper bytes are zero for an
+            // unsigned narrow load, so they hold on WAIT itself.
+            let hold: Vec<SLit> = if i < 8 {
+                let mut h: Vec<SLit> = sels.iter().map(|s| nl_(s)).collect();
+                h.push(l(&n("WD", i)));
+                h
+            } else {
+                vec![l("WAIT"), l(&n("WD", i))]
+            };
+            terms.push(hold);
+            Eq::sop(&n("WD", i), Mode::Reg, terms)
         })
         .collect();
+    // Destination and write flag hold on WAIT the plain way.
+    let mut tail = Vec::new();
     for i in 0..5 {
-        eqs.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
+        tail.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
     }
     // Polarity chosen so that reset (registers cleared) reads as "writing
     // r0": the steer then keeps the read ports off r0 while the write copy
     // (also reset) zeroes it.
-    eqs.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
+    tail.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
+    eqs.extend(with_hold(tail, "WAIT"));
     eqs
 }
 
@@ -1293,7 +1467,10 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("bdat", None, None, bdat_block()));
     v.extend(pack("cmp", None, None, cmp_block()));
     v.extend(pack("nxt", None, None, taken_block()));
-    v.extend(pack("wb", clk, rst, with_hold(memwb_block(), "WAIT")));
+    v.extend(pack("wb", clk, rst, memwb_block()));
+    v.extend(pack("macc", clk, None, mem_access_block()));
+    v.extend(pack("msel", None, None, mem_select_block()));
+    v.extend(pack("sf", None, None, sf_block()));
     v.extend(pack("wseq", clk, None, with_bubble(wseq_block(), "RESET")));
     v.extend(pack("wc1", Some("T3"), None, wcopy1_block()));
     v.extend(pack("wc2", Some("T1"), None, wcopy2_block()));
@@ -1335,11 +1512,11 @@ pub fn layout() -> Vec<Column> {
     vec![
         col("IF", 300, &["PC", "PC+4", "Instruction memory", "Boot ROM", "Boot sequencer", "Boot address", "Reset supervisor", "Reset sync"], false),
         col("", 240, &["IF/ID"], true),
-        col("ID", 330, &["Decode", "Steer", "Register file", "Branch target adder"], false),
+        col("ID", 330, &["Decode", "Steer", "Narrow-store hold", "Register file", "Branch target adder"], false),
         col("", 240, &["ID/EX control", "Forwarding control", "ID/EX A", "ID/EX B", "ID/EX store data", "ID/EX branch target"], true),
         col("EX", 330, &["Forward A", "Forward B", "ALU slices + carries", "Shifter", "Compare", "Next PC"], false),
-        col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Stall"], true),
-        col("MEM", 240, &["Data memory", "Boot data", "Write gate", "Delay line", "Bus wait", "UART", "Serial port"], false),
+        col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Access size", "Stall"], true),
+        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "Bus wait", "UART", "Serial port"], false),
         col("", 240, &["MEM/WB", "Write copies"], true),
         col("WB", 170, &[], false),
     ]
@@ -1608,8 +1785,11 @@ pub fn build_netlist(p: &Params) -> Netlist {
         }
         let dmen = nl.net("DMEN_n");
         nl.connect(dmen, c, sram16_pin_of(Sram16Pin::CeN));
-        nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BheN));
-        nl.connect(gnd, c, sram16_pin_of(Sram16Pin::BleN));
+        // Byte enables: lane 2*half (low byte) and 2*half + 1 (high byte).
+        let ble = nl.net(&format!("MBE{}_n", 2 * half));
+        nl.connect(ble, c, sram16_pin_of(Sram16Pin::BleN));
+        let bhe = nl.net(&format!("MBE{}_n", 2 * half + 1));
+        nl.connect(bhe, c, sram16_pin_of(Sram16Pin::BheN));
         let oen = nl.net("OEN");
         nl.connect(oen, c, sram16_pin_of(Sram16Pin::OeN));
         nl.connect(wen, c, sram16_pin_of(Sram16Pin::WeN));
@@ -2088,6 +2268,9 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
         "wseq" => ("Bus wait", "MEM"),
+        "macc" => ("Access size", "EX/MEM"),
+        "msel" => ("Load lane select", "MEM"),
+        "sf" => ("Narrow-store hold", "ID"),
         "uart" => ("UART", "MEM"),
         "rsync" => ("Reset sync", "IF"),
         "bseq" => ("Boot sequencer", "IF"),

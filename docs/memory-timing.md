@@ -60,15 +60,15 @@ are off.
 |---|---|---|
 | Register file | 8 x CY7C131-15 (1K x 8 dual-port) | unchanged |
 | Instruction memory | 4 x IS61C64AL-10 (8K x 8, 5 V, 10 ns) | read only, no strobes; fetch data at 15.5 ns instead of 20.5. Timing modelled with the IS61C256AH-10 column (same ISSI family); confirm against the 61C64AL datasheet |
-| Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# tied low for now (word access), available for SB / SH later. Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
+| Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# driven by the access-size chip (section 6.4). Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
 | Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
 | Reset supervisor | 1 x MAX811LEUS+T (SOT-143, 4.63 V threshold, 140 ms minimum timeout, debounced MR# input) | **new**; reset button from MR# to ground. The 4.75 V minimum of the GALs and delay lines sits above the threshold: that only matters for a brownout that stalls between 4.63 and 4.75 V, which ends in a hang, not damage. Set the 5 V rail to about 5.1 V and sense the supervisor at the far end of the plane |
 | Boot ROM | 4 x SST39SF040 class (512K x 8, 5 V) | **new**; see docs/boot.md |
 | UART | 1 x TL16C550D (LQFP-48) with SP3232 RS-232 transceiver and 14.7456 MHz crystal | **new**; see docs/uart.md |
-| Logic | 150 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble, +1 bus wait sequencer, +6 from the wait's hold inputs (forwarding control +2, operand B +1, branch target +1, stall +1, MEM/WB +1), -1 after the board-file completeness check found ten dead ID/EX outputs (the rs / rt numbers) and three dead branch-adder intermediates |
+| Logic | 160 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble, +1 bus wait sequencer, +6 from the wait's hold inputs (forwarding control +2, operand B +1, branch target +1, stall +1, MEM/WB +1), -1 after the board-file completeness check found ten dead ID/EX outputs (the rs / rt numbers) and three dead branch-adder intermediates, +10 byte / halfword access (section 6.4) |
 
-Total 172 chips plus the gate and the RS-232 transceiver.  The
+Total 182 chips plus the gate and the RS-232 transceiver.  The
 authoritative list is `boards/crag/netlist.json` (see boards/README.md).
 
 ## 4. The clock
@@ -169,13 +169,15 @@ completes inside the instruction's own WB cycle.
 ## 6. Data memory
 
 Two 256K x 16 single-port SRAMs (dmem0 = bits 15:0, dmem1 = bits 31:16),
-always selected with both byte enables low. Pins:
+selected except during boot code and I/O, byte enables low except for the
+lanes a narrow store leaves alone. Pins:
 
 | Pin | Net | Source |
 |---|---|---|
 | A0-17 | MR[19:2] | EX/MEM result: load address, or store address during the store's MEM cycle |
 | I/O0-15 | DQ[15:0] / DQ[31:16] | driven by the SRAMs during loads (and whenever OE# is low), by the EX/MEM store-data drivers (chips msd*) during a store's MEM cycle |
-| CE#, BHE#, BLE# | GND | always selected; the byte enables become the SB / SH lane selects later (they act like CE per byte: tDBE 4.5, tHZBE 6, tBW 7) |
+| CE# | DMEN_n | high during the boot code phase and an I/O access |
+| BLE#, BHE# | MBE0_n, MBE1_n (dmem0); MBE2_n, MBE3_n (dmem1) | registered at the EX/MEM edge with the address (chip macc0): high for the lanes a byte or halfword store does not write, low otherwise (they act like CE per byte: tDBE 4.5, tHZBE 6, tBW 7) |
 | OE# | OEN | registered (chip stl0): high during a store's EX cycle, its MEM cycle and the cycle after |
 | WE# | WEN | the gate: NAND(U1, MMW), U1 = CLK delayed 8 ns (DS1100-40 tap 1), MMW = store in MEM |
 
@@ -232,7 +234,59 @@ it. One consequence: a store in a load's delay slot that stores the loaded
 register sees the new value rather than the old one. MIPS I leaves that read
 undefined and the test programs avoid it.
 
-This is also the machinery a bus-wait for slow peripherals will reuse.
+This is also the machinery the bus wait (docs/uart.md) and the narrow-store
+hold below reuse.
+
+### 6.4 Byte and halfword access
+
+LB, LBU, LH, LHU, SB, SH.  Little-endian lanes: byte a of a word is DQ
+bits 8a+7..8a.  Ten GALs (150 -> 160): +1 ID/EX store data, +2 EX/MEM
+store data, +4 MEM/WB, +1 access size (macc0), +1 load lane select
+(msel0), +1 narrow-store hold (sf0).
+
+**Stores replicate, the byte enables select.**  A byte store puts its byte
+on all four lanes and a halfword store its halfword on both halves, so no
+lane ever has to be chosen from the address on the data path.  Lane 1 is
+filled in ID/EX (`XSD[15:8]` = the low byte when SZB), lanes 2 and 3 by
+the EX/MEM drivers from lanes 0 and 1 (`XNAR`).  The byte enables
+`MBE[3:0]_n` are registered at the EX/MEM edge from the ALU's group-0
+sum bits (the address bits 1:0), the size and the store flag, so they
+have exactly the address's timing (valid 2 to 5.5 ns into the MEM
+cycle, held until 2 ns after the next edge): the same margins as CE#
+against tBW = 7 ns and the write pulse.  A lane whose enable is high is
+deselected for the whole pulse.  Loads, boot writes and I/O keep all
+four low.
+
+**Loads pick the lane in MEM/WB.**  The write-back register's D-terms
+take, per byte: bits 7:0 from any of the four DQ bytes (one-hot selects
+`ML0..3`), bits 15:8 from their own lane, the high half's low byte or
+the sign, bits 31:16 from their own lane or the sign.  The selects
+(msel0) are combinational in MEM from the registered MEM-stage copies
+of size / sign / address bits 1:0 (`MSZB`, `MSZH`, `MLSX`, `MA0`,
+`MA1`, chip macc0) and fold the bus wait: with no select active the
+register recirculates.  The sign, `LSGN`, is the selected element's top
+bit, muxed once in macc0 and shared by the 24 upper bits: its path is
+DQ valid (15.5 ns) + 7.5 + 3.5 setup = 26.5 ns, 7.5 ns of margin (a
+GAL's setup time is measured from the input pin, so the register's own
+array is not a second level).  An I/O access is forced to word, lane 0
+(the copies are gated by FA31), so a narrow load of the UART returns
+its byte zero-extended whatever the address.
+
+**A narrow store whose data would be forwarded waits.**  Replication
+happens on the register-file path only; a value arriving from EX/MEM or
+MEM/WB is a plain word.  So a byte or halfword store in ID that names,
+as rt, the destination of the instruction in EX or in MEM is held there
+(`SFE`, `SFM`, chip sf0: the fwdc comparison, combinational) until the
+producer reaches WB and the steer supplies the value: one or two cycles,
+only for that pattern.  The alternative, replicating in the EX/MEM
+drivers, costs eight more chips (nine data inputs per lane-3 bit).
+Timing of the hold: IR 5.5 + NSTORE decode 7.5 + SFE 7.5 + HOLDW 7.5 +
+setup 3.5 = 31.5 ns at 34.
+
+Unaligned addresses are undefined (the low address bits select the lane
+regardless; nothing traps).  The reference simulator does the same.
+Test: `tests/cpu.rs` `bytes_and_halfwords` (every alignment, signed and
+unsigned, the three forward distances, a store behind a load).
 
 ## 7. Reset
 
@@ -346,7 +400,8 @@ Not covered:
 - [ ] Gate placed next to the delay line and the SRAMs; WEN to all four WE#.
 - [ ] Register-file write-port A5 wired to the write flag copy (park address).
 - [ ] BUSY and INT pins of the register-file chips pulled up.
-- [ ] Data SRAM byte enables tied low (or driven, once SB / SH exist).
+- [ ] Data SRAM byte enables from macc0 (MBE0_n / MBE1_n to dmem0's BLE# /
+      BHE#, MBE2_n / MBE3_n to dmem1's); same length as the address lines.
 - [ ] IS61C64AL datasheet numbers entered and simulation re-run.
 - [ ] Bench: scope CLK at one SRAM enable pin and one GAL clock pin of each
       group in section 4.1, record skew and edge rate, set the tap jumper.

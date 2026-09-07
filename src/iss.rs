@@ -153,24 +153,47 @@ impl Cpu {
                     Op::Slti => self.set_reg(rt_n, ((rs as i32) < (sext as i32)) as u32),
                     Op::Sltiu => self.set_reg(rt_n, (rs < sext) as u32),
                     Op::Lui => self.set_reg(rt_n, zext << 16),
-                    Op::Lw => {
+                    Op::Lw | Op::Lb | Op::Lbu | Op::Lh | Op::Lhu => {
                         let addr = rs.wrapping_add(sext);
                         let v = if is_io(rs) {
+                            // I/O: the UART byte, on lane 0 whatever the size.
                             let v = self.uart.read((addr >> 2 & 7) as u8) as u32;
                             self.uart.drain();
                             v
                         } else {
-                            self.load_word(addr)
+                            // Little-endian lanes; unaligned addresses are
+                            // undefined on the board, so they are not
+                            // masked here either: the low bits select.
+                            let word = self.load_word(addr);
+                            match op {
+                                Op::Lw => word,
+                                Op::Lb => (word >> (8 * (addr & 3))) as u8 as i8 as i32 as u32,
+                                Op::Lbu => (word >> (8 * (addr & 3))) as u8 as u32,
+                                Op::Lh => (word >> (16 * (addr >> 1 & 1))) as u16 as i16 as i32 as u32,
+                                _ => (word >> (16 * (addr >> 1 & 1))) as u16 as u32,
+                            }
                         };
                         self.load_delay = Some((rt_n, v));
                     }
-                    Op::Sw => {
+                    Op::Sw | Op::Sb | Op::Sh => {
                         let addr = rs.wrapping_add(sext);
                         if is_io(rs) {
                             self.uart.write((addr >> 2 & 7) as u8, rt as u8);
                             self.uart.drain();
                         } else {
-                            self.store_word(addr, rt);
+                            let old = self.load_word(addr);
+                            let v = match op {
+                                Op::Sw => rt,
+                                Op::Sb => {
+                                    let sh = 8 * (addr & 3);
+                                    (old & !(0xFF << sh)) | ((rt & 0xFF) << sh)
+                                }
+                                _ => {
+                                    let sh = 16 * (addr >> 1 & 1);
+                                    (old & !(0xFFFF << sh)) | ((rt & 0xFFFF) << sh)
+                                }
+                            };
+                            self.store_word(addr, v);
                         }
                     }
                     Op::Beq | Op::Bne | Op::Blez | Op::Bgtz | Op::Bltz | Op::Bgez | Op::Bltzal | Op::Bgezal => {

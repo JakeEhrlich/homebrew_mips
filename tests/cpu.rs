@@ -46,7 +46,7 @@ fn chip_count() {
         }
     }
     eprintln!("GALs: {} total: {:?}", specs.len(), by_prefix);
-    assert!(specs.len() < 160, "{}", specs.len());
+    assert!(specs.len() <= 170, "{}", specs.len());
 }
 
 #[test]
@@ -293,6 +293,74 @@ fn rs_conditioned_branches() {
         nop
         li   $s3, 6
     g:  nop
+        nop
+        nop
+    stop:
+        nop
+        nop
+        nop
+        nop
+        ",
+        34.0,
+    );
+}
+
+/// Byte and halfword access: stores at every alignment (the data
+/// replicated across the lanes, the byte enables selecting), loads signed
+/// and unsigned at every alignment (lane select and sign fill in MEM/WB),
+/// narrow stores whose data must come from the instruction just ahead
+/// (held in ID until the steer supplies it) and from a load.
+#[test]
+fn bytes_and_halfwords() {
+    check(
+        "
+        lui   $t0, 0x8765
+        ori   $t0, $t0, 0x4321      # 0x87654321
+        sw    $zero, 0($zero)
+        sw    $zero, 4($zero)
+        sw    $zero, 8($zero)
+        sw    $zero, 12($zero)
+        sb    $t0, 0($zero)         # 21
+        sb    $t0, 5($zero)         # ..21..
+        sb    $t0, 10($zero)
+        sb    $t0, 15($zero)
+        sh    $t0, 16($zero)        # 4321
+        sh    $t0, 22($zero)        # 4321 in the high half
+        lui   $t1, 0x8000
+        ori   $t1, $t1, 0x80FF      # 0x800080FF
+        sw    $t1, 24($zero)
+        lb    $s0, 24($zero)        # FF -> -1
+        lbu   $s1, 24($zero)        # 255
+        lb    $s2, 25($zero)        # 80 -> -128
+        lbu   $s3, 27($zero)        # 0x80 -> 128
+        lh    $s4, 24($zero)        # 80FF -> sign
+        lhu   $s5, 24($zero)
+        lh    $s6, 26($zero)        # 8000
+        lhu   $s7, 26($zero)
+        lb    $t2, 26($zero)        # 00
+        lbu   $t3, 1($zero)         # 0 (untouched lane)
+        lb    $t4, 5($zero)         # 21
+        # narrow store of a value produced one, two and three ahead
+        addiu $t5, $zero, 0x5A
+        sb    $t5, 28($zero)        # producer in EX: held
+        addiu $t6, $zero, 0x3C
+        nop
+        sb    $t6, 29($zero)        # producer in MEM: held
+        addiu $t7, $zero, 0x7E
+        nop
+        nop
+        sh    $t7, 30($zero)        # producer in WB: steered
+        lw    $t8, 24($zero)
+        nop                         # (the delay slot itself is undefined)
+        sb    $t8, 32($zero)        # load in MEM: held once more
+        lh    $t9, 30($zero)
+        nop
+        sh    $t9, 34($zero)
+        lbu   $t8, 25($zero)
+        nop
+        nop
+        sb    $t8, 36($zero)        # load in WB: steered
+        nop
         nop
         nop
     stop:

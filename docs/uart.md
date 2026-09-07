@@ -55,7 +55,8 @@ is address bits 4:2, i.e. the 16550's eight registers at word offsets:
 | 28 | SCR | SCR |
 
 I/O loads return the byte zero-extended (MEM/WB clears bits 31:8 when
-`MIO`); I/O stores write bits 7:0.  A second device would take a second
+`MIO`) whatever the load's size; I/O stores of any size write bits 7:0
+(a byte store's replication puts the byte on lane 0 anyway).  A second device would take a second
 chip-select term on the same wait.
 
 ## 3. The wait
