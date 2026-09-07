@@ -575,14 +575,24 @@ impl Chip for Sram16 {
 }
 
 // ---------------------------------------------------------------------------
-// Chip impl: reset supervisor (MAX811 / DS1233 class, SOT-143: 1 GND,
-// 2 RESET#, 3 MR#, 4 VCC).  Holds RESET# low from power-on for its reset
-// timeout (hundreds of ms on the real part), then releases it at a time
-// that has nothing to do with the clock.  `release` is that instant; the
-// tests sweep it across a clock period.
+// Chip impl: reset supervisor, MAX811L (SOT-143: 1 GND, 2 RESET#, 3 MR#,
+// 4 VCC).  Holds RESET# low from power-on for its reset timeout (140 ms
+// minimum on the real part), then releases it at a time that has nothing
+// to do with the clock.  `release` is that instant; the tests sweep it
+// across a clock period.  MR# is the debounced manual-reset input (the
+// board's button, to ground): RESET# is low whenever MR# is low, and for
+// another timeout after it rises, which the model folds into `release`
+// (a manual reset simply restarts the copier, so its length is immaterial).
 
 pub struct ResetSupervisor {
     pub release: Time,
+    mr: Level,
+}
+
+impl ResetSupervisor {
+    pub fn new(release: Time) -> Self {
+        Self { release, mr: Level::H }
+    }
 }
 
 impl Chip for ResetSupervisor {
@@ -592,9 +602,16 @@ impl Chip for ResetSupervisor {
     fn pin_name(&self, pin: usize) -> String {
         ["?", "GND", "RESET#", "MR#", "VCC"][pin.min(4)].into()
     }
-    fn set_inputs(&mut self, _t: Time, _ext: &[Level]) {}
+    fn set_inputs(&mut self, _t: Time, ext: &[Level]) {
+        self.mr = ext[3];
+    }
     fn drive(&mut self, t: Time, out: &mut [Level]) {
-        out[2] = if t >= self.release { Level::H } else { Level::L };
+        out[2] = match self.mr {
+            Level::L => Level::L,
+            _ if t < self.release => Level::L,
+            Level::H => Level::H,
+            other => other,
+        };
     }
     fn next_event(&self, t: Time) -> Option<Time> {
         (self.release > t).then_some(self.release)

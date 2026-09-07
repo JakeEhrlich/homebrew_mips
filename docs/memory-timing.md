@@ -63,7 +63,7 @@ are off.
 | Data memory | 2 x CY7C1041GN-10 (256K x 16, 5 V, 10 ns, TSOP II-44) | 1 MB; byte enables BHE# / BLE# tied low for now (word access), available for SB / SH later. Datasheet 001-91368 saved as `docs/CY7C1041G_datasheet.pdf`; timing from its 10 ns column. Alternatives in the simulator: 4 x IS61C256AH-12 (33 ns), 4 x AS7C164A-15 (37 ns) |
 | Delay lines | DS1100-30 (taps 6, 12, 18, 24, 30 ns) for the register-file copies; DS1100-40 (8, 16, 24, 32, 40 ns) tap 1 for the write gate | **new** |
 | Write gate | 1 x Diodes 74LVC1G00Q (2-input NAND, SOT-25 / SOT-353) | **new**; 0.5 to 5.5 ns at 5 V over -40..+125 C (datasheet June 2020), which is what the simulator uses |
-| Reset supervisor | 1 x MAX811 / DS1233 class | **new** |
+| Reset supervisor | 1 x MAX811LEUS+T (SOT-143, 4.63 V threshold, 140 ms minimum timeout, debounced MR# input) | **new**; reset button from MR# to ground. The 4.75 V minimum of the GALs and delay lines sits above the threshold: that only matters for a brownout that stalls between 4.63 and 4.75 V, which ends in a hang, not damage. Set the 5 V rail to about 5.1 V and sense the supervisor at the far end of the plane |
 | Boot ROM | 4 x SST39SF040 class (512K x 8, 5 V) | **new**; see docs/boot.md |
 | Logic | 144 x ATF22V10C-7 | was 132; +2 write copies, +1 stall / output enable, +1 reset synchroniser, +9 boot copier, -1 forwarding control repack, +1 hold / bubble |
 
@@ -236,11 +236,18 @@ This is also the machinery a bus-wait for slow peripherals will reuse.
 
 Modelled as chips now, not stimulus:
 
-- **Supervisor** (`rst0`, MAX811 / DS1233 class, active-low RESET#): holds
-  RST_n low from power-on for its reset timeout, then releases at an
-  instant unrelated to the clock. The board part's timeout (hundreds of ms)
-  only has to exceed the oscillator's start-up time; enter the chosen part's
-  number in the parts list.
+- **Supervisor** (`rst0`, MAX811LEUS+T, active-low RESET# on pin 2): holds
+  RST_n low from power-on for its reset timeout (140 ms minimum, starting
+  once the rail passes 4.63 V), then releases at an instant unrelated to
+  the clock. The timeout only has to exceed the oscillator's start-up
+  time. The rail itself reaches 5 V a few milliseconds after the regulator
+  starts (the decoupling is some hundreds of microfarads, charged at the
+  regulator's current-limit surplus), so give the regulator headroom over
+  the board's 10 A rather than sizing it at the load. MR# (pin 3) is the
+  reset button: debounced in the part, RESET# low while pressed and for
+  another timeout after release. The model takes MR# as an input (wired
+  high) and folds the post-release timeout into `release`; a manual reset
+  restarts the boot copier, so its length is immaterial.
 - **Synchroniser** (`rsync0`, one GAL on CLK, no async reset of its own):
   two registers in series, RST_n -> RS1 -> RESET. Both are active-low
   outputs of registers that the ATF22V10C clears at power-up, so RESET is
@@ -312,8 +319,10 @@ Not covered:
       nets; SRAM side never longer.
 - [ ] Jumper for the GAL clock-tree tap (0 / 6 / 12 ns).
 - [ ] Oscillator socket; 45/55 duty or divide-by-two.
-- [ ] Reset supervisor (active-low output) into the rsync GAL's RST_n pin;
-      its reset timeout longer than the oscillator start-up.
+- [ ] MAX811LEUS+T: RESET# (pin 2) into the rsync GAL's RST_n pin, MR#
+      (pin 3) to the reset button and a 0.1 uF decoupling capacitor at VCC;
+      no pull-up needed on MR# (internal). Sense point at the far end of
+      the 5 V plane from the regulator; rail trimmed to about 5.1 V.
 - [ ] DS1100-30 and DS1100-40 with local decoupling; T1 / T3 to the copy
       chips, U1 to the gate.
 - [ ] Gate placed next to the delay line and the SRAMs; WEN to all four WE#.

@@ -1261,9 +1261,13 @@ impl Cpu {
         // RESET_CYCLES clocks, at the requested phase.
         let period = (period_ns * NS as f64).round() as Time;
         let release = (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns);
-        let sup = nl.add_chip("rst0", ResetSupervisor { release });
+        let sup = nl.add_chip("rst0", ResetSupervisor::new(release));
         let rst_n = nl.net("RST_n");
         nl.connect(rst_n, sup, 2);
+        // MR#: the reset button, to ground; released (high) here.
+        let mr_n = nl.net("MR_n");
+        nl.connect(mr_n, sup, 3);
+        nl.tie(mr_n, Level::H);
         let gate = nl.add_chip("gate0", FastGate::new(opt.gate_tpd.0, opt.gate_tpd.1));
         nl.connect(tap_net, gate, 1);
         let mmwb = nl.net("MMWB");
@@ -1730,7 +1734,7 @@ pub fn chip_infos() -> Vec<ChipInfo> {
         let (block, stage) = block_of("dl");
         out.push(ChipInfo { name: "dl0".into(), kind: "DS1100-30", block, stage, pins });
         let (block, stage) = block_of("rst");
-        out.push(ChipInfo { name: "rst0".into(), kind: "MAX811-class", block, stage, pins: vec![(2, "RST_n".to_string(), true)] });
+        out.push(ChipInfo { name: "rst0".into(), kind: "MAX811LEUS+T", block, stage, pins: vec![(2, "RST_n".to_string(), true), (3, "MR_n".to_string(), false)] });
         // Boot ROMs, wired for the board's 8K-word regions.
         for lane in 0..4 {
             let mut pins = Vec::new();

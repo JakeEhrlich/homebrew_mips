@@ -85,7 +85,10 @@ per word, 34 ns: about 46 ms, comfortably inside a supervisor's reset
 timeout only if the supervisor is *not* what ends the boot: it is not.
 RESET is released by DONE, however long the copy takes.
 
-A manual reset (RST_n low again) restarts the whole sequence and recopies.
+A manual reset (the button on the MAX811L's MR#, RST_n low again)
+restarts the whole sequence and recopies. The part debounces the button,
+and a short low that only lands between clock edges is simply missed by
+the synchroniser, never captured as unknown.
 
 ## 4. Timing points the simulator checks
 
