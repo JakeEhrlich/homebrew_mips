@@ -95,16 +95,17 @@ td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px;
 <text x="462" y="300" class="bus s">drive index on D[5:1] (RA1, RB1, WI)</text>
 
 <!-- decode -->
-<rect x="660" y="60" width="200" height="130" rx="3" class="blk"/>
-<text x="672" y="82" class="t">Decode</text><text x="850" y="82" text-anchor="end" class="s">1 GAL</text>
-<text x="672" y="102" class="m">F1: CLS[2:0] from D[15:10]</text>
-<text x="672" y="118" class="m">F2: ALUF[1:0] from D[5:0]</text>
-<text x="672" y="150" class="s">class: R, I, lw, sw, beq, j;</text>
-<text x="672" y="164" class="s">function: add, and, nor</text>
-<text x="672" y="178" class="s">both to control and the ALU</text>
-<line x1="760" y1="192" x2="760" y2="370" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<rect x="660" y="60" width="210" height="136" rx="3" class="blk"/>
+<text x="672" y="82" class="t">Decode</text><text x="860" y="82" text-anchor="end" class="s">1 GAL</text>
+<text x="672" y="102" class="m">LDH  D[15:10] op -> CLS[2:0]</text>
+<text x="672" y="118" class="m">LDL  D[5:0] funct -> ALUF[1:0]</text>
+<text x="672" y="146" class="s">the opcode and funct half of the IR,</text>
+<text x="672" y="160" class="s">latched as class (R, I, lw, sw, beq, j)</text>
+<text x="672" y="174" class="s">and function (add, and, nor); 5 flops</text>
+<text x="672" y="188" class="s">to control and the ALU instead of 12 bits</text>
+<line x1="760" y1="198" x2="760" y2="370" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="767" y="290" class="bus s">load (F1, F2)</text>
-<line x1="862" y1="100" x2="1078" y2="100" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
+<line x1="872" y1="100" x2="1078" y2="100" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
 <text x="970" y="94" text-anchor="middle" class="s">CLS, ALUF</text>
 
 <!-- clock and reset -->
