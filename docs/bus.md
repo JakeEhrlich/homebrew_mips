@@ -13,8 +13,8 @@ the program writes, a status or data register it reads back some known
 number of instructions later.  "Block until finished" is a two-instruction
 poll loop, which is what the software does anyway.
 
-Simulated in `tests/uart.rs` (the serial port, a device built from GALs,
-end to end over the wire) and `tests/bus.rs` (an empty slot).
+Simulated in `tests/uart.rs` (the 16550 behind its bridge) and
+`tests/bus.rs` (an empty slot).
 
 ## 1. The contract
 
@@ -60,7 +60,7 @@ off in time.  The effective address selects the device:
 | 22:2 | within the device |
 | 1:0 | byte lane |
 
-Slot 0 is the serial port (docs/uart.md).  A slot with nothing in it
+Slot 0 is the serial bridge (docs/uart.md).  A slot with nothing in it
 reads whatever the floating bus holds and ignores writes; nothing hangs.
 Software base addresses: 0x8000_0000 + slot * 0x0080_0000.
 
@@ -84,12 +84,13 @@ device is one cycle, and no pipeline register has a hold input for I/O.
 
 ## 5. Devices that are not memories
 
-- **Slow chip behind registers.**  The program writes a command (an
-  address, a byte) into a register; the device works at its own pace and
-  the program reads a status bit, or simply reads the result after a
-  known number of instructions, in the spirit of the load delay slot.
-  A flash chip: write the address, read the word three instructions
-  later.  The serial port: write a byte, poll busy.
+- **Slow chip behind a bridge.**  The program writes a command (an
+  address, a byte, a direction) into a register; a small sequencer runs
+  the chip's own strobes at its own pace; the program reads a busy bit,
+  or simply reads the result after a known number of instructions, in
+  the spirit of the load delay slot.  Built once, for the 16550
+  (docs/uart.md, six GALs); a flash would be the same bridge with a
+  wider address latch.
 - **Display.**  A framebuffer the program writes into a cycle at a time,
   a swap register; the card scans its own memory out.
 - **Input.**  A latch the program reads; the card blocks its own updates
@@ -124,4 +125,5 @@ that early), then as fixed wait states.  Both were removed: the machine
 polls its peripherals and its only slow chips are memories with fixed
 access times, so every device can be a memory-shaped register file, and
 the CPU is simpler without any I/O stall at all (154 GALs instead of
-162, before the serial port's own ten).
+162, before the serial bridge's six).  A UART built from GALs was tried
+in between; the 16550 came back for its FIFOs and flow control.

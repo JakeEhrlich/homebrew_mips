@@ -1,48 +1,88 @@
-//! The serial port (a UART built from GALs, bus slot 0): a program sets
-//! the divisor, echoes three characters as the terminal types them (each
-//! incremented) and waits for the transmitter to finish, polling the
-//! status register.  Checked against the reference simulator (registers,
-//! memory) and against what the terminal on the wire decoded.
+//! The UART behind the slow-device bridge (bus slot 0, docs/uart.md): a
+//! program configures the 16550 through command words, echoes three
+//! characters as the terminal sends them (each incremented), and drains
+//! the transmitter, polling the bridge's busy bit and the chip's line
+//! status.  Checked against the reference simulator (registers, memory),
+//! the chip model's datasheet bus timing (no warnings), and the
+//! transmitted characters.
 use mips32::asm::assemble;
 use mips32::cpu::{Boot, Build, Cpu};
 use mips32::iss::Cpu as Iss;
+use mips32::uart16550::Bridge;
 
-fn program(div: u8) -> String {
+/// `cmd` issues one bridge command and waits for it to finish; `rd`
+/// then reads the result into $t1.
+fn cmd(word: u32) -> String {
     format!(
         "
-        lui   $s0, 0x8000          # I/O base: bit 31 set, slot 0 (the serial port)
-        li    $t0, {div}
-        sw    $t0, 8($s0)          # DIV
-        li    $t0, 0x5A
+        li    $t0, {word:#x}
+        sw    $t0, 0($s0)
+    {l}:
+        lw    $t0, 4($s0)          # STATUS
+        nop
+        andi  $t0, $t0, 1          # BUSY
+        bne   $t0, $zero, {l}
+        nop",
+        l = format!("w{word:x}_{}", COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+    )
+}
+static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn program() -> String {
+    let w = |a: u8, v: u8| cmd(Bridge::write_cmd(a, v));
+    let r = |a: u8| cmd(Bridge::read_cmd(a));
+    format!(
+        "
+        lui   $s0, 0x8000          # I/O base: bit 31 set, slot 0
+        {lcr_dlab}
+        {dll}
+        {dlm}
+        {lcr}
+        {fcr}
+        {mcr}
         li    $s1, 0
         li    $s2, 3
     rx:
-        lw    $t0, 4($s0)          # STATUS
+        {rd_lsr}
+        lw    $t1, 0($s0)          # RDATA = LSR
         nop
-        andi  $t0, $t0, 2          # RXVALID
-        beq   $t0, $zero, rx
+        andi  $t1, $t1, 1          # DR
+        beq   $t1, $zero, rx
         nop
-        lw    $t1, 0($s0)          # RXD
+        {rd_rbr}
+        lw    $t1, 0($s0)          # RDATA = the character
         sll   $t2, $s1, 2
-        sw    $t1, 256($t2)        # keep the character in memory
-        addiu $t1, $t1, 1
+        sw    $t1, 256($t2)        # keep it in memory
+        addiu $t3, $t1, 1
     tx:
+        {rd_lsr2}
+        lw    $t1, 0($s0)
+        nop
+        andi  $t1, $t1, 0x20       # THRE
+        beq   $t1, $zero, tx
+        nop
+        ori   $t0, $t3, 0          # write THR: address 0, data = t3
+        sw    $t0, 0($s0)
+    wt:
         lw    $t0, 4($s0)
         nop
-        andi  $t0, $t0, 1          # TXBUSY
-        bne   $t0, $zero, tx
+        andi  $t0, $t0, 1
+        bne   $t0, $zero, wt
         nop
-        sw    $t1, 0($s0)          # TXD
         addiu $s1, $s1, 1
         bne   $s1, $s2, rx
         nop
     drain:
-        lw    $t0, 4($s0)
+        {rd_lsr3}
+        lw    $t1, 0($s0)
         nop
-        andi  $t0, $t0, 1
-        bne   $t0, $zero, drain
+        andi  $t1, $t1, 0x40       # TEMT
+        beq   $t1, $zero, drain
         nop
-        lb    $s3, 4($s0)          # a byte load of the status: 0
+        {rd_scr}
+        lw    $s3, 0($s0)          # the scratch register back
+        {rd_msr}
+        lb    $s4, 0($s0)          # modem status (byte load): CTS from RTS
         nop
         nop
         nop
@@ -51,23 +91,36 @@ fn program(div: u8) -> String {
         nop
         nop
         nop
-        "
+        ",
+        lcr_dlab = w(3, 0x83),
+        dll = w(0, 1),
+        dlm = w(1, 0),
+        lcr = w(3, 0x03),
+        fcr = w(2, 0x07),
+        mcr = w(4, 0x22),          // RTS on, autoflow
+        rd_lsr = r(5),
+        rd_rbr = r(0),
+        rd_lsr2 = r(5),
+        rd_lsr3 = r(5),
+        rd_scr = { let s = w(7, 0x5A); s + &r(7) },
+        rd_msr = r(6),
     )
 }
 
 const RX: &[u8] = b"abc";
 
-fn run(period_ns: f64, div: u8, max_cycles: u64) -> (Cpu, Iss) {
-    let p = assemble(&program(div), 0).unwrap();
+fn run(period_ns: f64, xin_hz: f64) -> (Cpu, Iss) {
+    let src = program();
+    let p = assemble(&src, 0).unwrap();
     let stop = p.labels["stop"];
     let mut iss = Iss::new();
     iss.load_program(0, &p.words);
-    iss.serial.send(RX);
+    iss.serial.core.send(RX);
     iss.run_until(stop, 100_000).unwrap();
     assert_eq!(iss.pc, stop, "reference did not reach stop");
-    let opt = Build { boot: Boot::Preload, uart_div: div, uart_rx: RX.to_vec(), uart_rx_after: 12, ..Build::default() };
+    let opt = Build { boot: Boot::Preload, uart_xin_hz: xin_hz, uart_rx: RX.to_vec(), ..Build::default() };
     let mut cpu = Cpu::build(&p.words, period_ns, opt);
-    assert!(cpu.run_until_pc(stop, max_cycles), "did not reach stop; pc {:?}", &cpu.pc_trace[cpu.pc_trace.len().saturating_sub(40)..]);
+    assert!(cpu.run_until_pc(stop, 6000), "did not reach stop; pc {:?}", &cpu.pc_trace[cpu.pc_trace.len().saturating_sub(40)..]);
     (cpu, iss)
 }
 
@@ -85,21 +138,22 @@ fn check(cpu: &Cpu, iss: &Iss) {
         assert_eq!(iss.load_word(a), RX[i] as u32);
     }
     assert_eq!(cpu.uart_tx(), b"bcd".to_vec());
-    assert_eq!(iss.serial.tx, b"bcd".to_vec());
-    assert_eq!(cpu.reg(19), Some(0), "status after the drain");
+    assert_eq!(iss.serial.core.tx, b"bcd".to_vec());
+    assert_eq!(cpu.reg(19), Some(0x5A), "scratch register");
+    assert_eq!(cpu.reg(20), Some(0x10), "modem status: CTS follows RTS");
 }
 
-/// Eight clocks per bit (the smallest divisor the receiver samples
-/// mid-bit at): a character is 80 cycles.
 #[test]
 fn echo_three_characters() {
-    let (cpu, iss) = run(34.0, 7, 4000);
+    // A fast crystal keeps the character time at a handful of cycles.
+    let (cpu, iss) = run(34.0, 1.0e9);
     check(&cpu, &iss);
 }
 
-/// Sixteen clocks per bit.
+/// The same at the board crystal: the transmitter takes 1 / 921600 s
+/// per bit at divisor 1, so the drain loop polls for real.
 #[test]
-fn echo_at_a_slower_rate() {
-    let (cpu, iss) = run(34.0, 15, 8000);
+fn echo_at_board_crystal() {
+    let (cpu, iss) = run(34.0, mips32::cpu::UART_XIN_HZ);
     check(&cpu, &iss);
 }

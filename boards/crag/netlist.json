@@ -94,6 +94,7 @@
         "Boot data",
         "Write gate",
         "Delay line",
+        "Serial bridge",
         "UART",
         "Serial port"
       ],
@@ -92879,10 +92880,10 @@
       ]
     },
     {
-      "name": "uart0",
+      "name": "sbr0",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "UART",
+      "block": "Serial bridge",
       "stage": "MEM",
       "model": {
         "kind": "gal",
@@ -92914,7 +92915,7 @@
             ]
           },
           {
-            "out": "UWRT",
+            "out": "SBCMD",
             "mode": "comb",
             "terms": [
               [
@@ -92942,35 +92943,7 @@
             ]
           },
           {
-            "out": "UWRD",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "MIO",
-                  true
-                ],
-                [
-                  "SLOT0",
-                  true
-                ],
-                [
-                  "MMW",
-                  true
-                ],
-                [
-                  "MR3",
-                  true
-                ],
-                [
-                  "MR2",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "URDD",
+            "out": "SBRDD",
             "mode": "comb",
             "terms": [
               [
@@ -92998,7 +92971,7 @@
             ]
           },
           {
-            "out": "USRD",
+            "out": "SBRDS",
             "mode": "comb",
             "terms": [
               [
@@ -93031,11 +93004,27 @@
             "terms": [
               [
                 [
-                  "UWRT",
+                  "SBCMD",
                   true
                 ],
                 [
-                  "TXBUSY",
+                  "BUSY",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "UDOE",
+            "mode": "comb",
+            "terms": [
+              [
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "SBRW",
                   false
                 ]
               ]
@@ -93068,12 +93057,12 @@
             ]
           },
           {
-            "out": "UDIV0",
+            "out": "UD0",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "UWRD",
+                  "START",
                   true
                 ],
                 [
@@ -93087,17 +93076,23 @@
               ],
               [
                 [
-                  "UWRD",
+                  "START",
                   false
                 ],
                 [
-                  "UDIV0",
+                  "UD0",
                   true
                 ],
                 [
                   "RESET",
                   false
                 ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
               ]
             ]
           }
@@ -93109,51 +93104,55 @@
           ],
           [
             2,
-            "DQ0"
+            "BUSY"
           ],
           [
             3,
-            "MIO"
+            "DQ0"
           ],
           [
             4,
-            "MMR"
+            "MIO"
           ],
           [
             5,
-            "MMW"
+            "MMR"
           ],
           [
             6,
-            "MR2"
+            "MMW"
           ],
           [
             7,
-            "MR23"
+            "MR2"
           ],
           [
             8,
-            "MR24"
+            "MR23"
           ],
           [
             9,
-            "MR25"
+            "MR24"
           ],
           [
             10,
-            "MR26"
+            "MR25"
           ],
           [
             11,
-            "MR3"
+            "MR26"
           ],
           [
             13,
-            "RESET"
+            "MR3"
           ],
           [
             23,
-            "TXBUSY"
+            "RESET"
+          ],
+          [
+            14,
+            "SBRW"
           ],
           [
             18,
@@ -93161,23 +93160,23 @@
           ],
           [
             20,
-            "UWRT"
+            "SBCMD"
           ],
           [
             17,
-            "UWRD"
+            "SBRDD"
           ],
           [
             21,
-            "URDD"
+            "SBRDS"
           ],
           [
             16,
-            "USRD"
+            "START"
           ],
           [
             22,
-            "START"
+            "UDOE"
           ],
           [
             15,
@@ -93185,7 +93184,7 @@
           ],
           [
             19,
-            "UDIV0"
+            "UD0"
           ]
         ]
       },
@@ -93198,62 +93197,62 @@
         },
         {
           "pin": 2,
+          "name": "BUSY",
+          "net": "BUSY",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
           "name": "DQ0",
           "net": "DQ0",
           "kind": "in"
         },
         {
-          "pin": 3,
+          "pin": 4,
           "name": "MIO",
           "net": "MIO",
           "kind": "in"
         },
         {
-          "pin": 4,
+          "pin": 5,
           "name": "MMR",
           "net": "MMR",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 6,
           "name": "MMW",
           "net": "MMW",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 7,
           "name": "MR2",
           "net": "MR2",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 8,
           "name": "MR23",
           "net": "MR23",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 9,
           "name": "MR24",
           "net": "MR24",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 10,
           "name": "MR25",
           "net": "MR25",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 11,
           "name": "MR26",
           "net": "MR26",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "MR3",
-          "net": "MR3",
           "kind": "in"
         },
         {
@@ -93264,8 +93263,14 @@
         },
         {
           "pin": 13,
-          "name": "RESET",
-          "net": "RESET",
+          "name": "MR3",
+          "net": "MR3",
+          "kind": "in"
+        },
+        {
+          "pin": 14,
+          "name": "SBRW",
+          "net": "SBRW",
           "kind": "in"
         },
         {
@@ -93276,14 +93281,14 @@
         },
         {
           "pin": 16,
-          "name": "USRD",
-          "net": "USRD",
+          "name": "START",
+          "net": "START",
           "kind": "out"
         },
         {
           "pin": 17,
-          "name": "UWRD",
-          "net": "UWRD",
+          "name": "SBRDD",
+          "net": "SBRDD",
           "kind": "out"
         },
         {
@@ -93294,32 +93299,32 @@
         },
         {
           "pin": 19,
-          "name": "UDIV0",
-          "net": "UDIV0",
+          "name": "UD0",
+          "net": "UD0",
           "kind": "out"
         },
         {
           "pin": 20,
-          "name": "UWRT",
-          "net": "UWRT",
+          "name": "SBCMD",
+          "net": "SBCMD",
           "kind": "out"
         },
         {
           "pin": 21,
-          "name": "URDD",
-          "net": "URDD",
+          "name": "SBRDS",
+          "net": "SBRDS",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "START",
-          "net": "START",
+          "name": "UDOE",
+          "net": "UDOE",
           "kind": "out"
         },
         {
           "pin": 23,
-          "name": "TXBUSY",
-          "net": "TXBUSY",
+          "name": "RESET",
+          "net": "RESET",
           "kind": "in"
         },
         {
@@ -93331,10 +93336,10 @@
       ]
     },
     {
-      "name": "uart1",
+      "name": "sbr1",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "UART",
+      "block": "Serial bridge",
       "stage": "MEM",
       "model": {
         "kind": "gal",
@@ -93342,12 +93347,12 @@
         "ar": null,
         "eqs": [
           {
-            "out": "UDIV1",
+            "out": "UD1",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "UWRD",
+                  "START",
                   true
                 ],
                 [
@@ -93361,3172 +93366,12 @@
               ],
               [
                 [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV4",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "UDIV7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "UWRD",
-                  true
-                ],
-                [
-                  "DQ7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "UWRD",
-                  false
-                ],
-                [
-                  "UDIV7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "DQ1"
-          ],
-          [
-            3,
-            "DQ2"
-          ],
-          [
-            4,
-            "DQ3"
-          ],
-          [
-            5,
-            "DQ4"
-          ],
-          [
-            6,
-            "DQ5"
-          ],
-          [
-            7,
-            "DQ6"
-          ],
-          [
-            8,
-            "DQ7"
-          ],
-          [
-            9,
-            "RESET"
-          ],
-          [
-            10,
-            "UWRD"
-          ],
-          [
-            19,
-            "UDIV1"
-          ],
-          [
-            18,
-            "UDIV2"
-          ],
-          [
-            20,
-            "UDIV3"
-          ],
-          [
-            17,
-            "UDIV4"
-          ],
-          [
-            21,
-            "UDIV5"
-          ],
-          [
-            16,
-            "UDIV6"
-          ],
-          [
-            22,
-            "UDIV7"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "DQ1",
-          "net": "DQ1",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "DQ2",
-          "net": "DQ2",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "DQ3",
-          "net": "DQ3",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "DQ4",
-          "net": "DQ4",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "DQ5",
-          "net": "DQ5",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "DQ6",
-          "net": "DQ6",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "DQ7",
-          "net": "DQ7",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "UWRD",
-          "net": "UWRD",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 16,
-          "name": "UDIV6",
-          "net": "UDIV6",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "UDIV4",
-          "net": "UDIV4",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "UDIV2",
-          "net": "UDIV2",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "UDIV1",
-          "net": "UDIV1",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "UDIV3",
-          "net": "UDIV3",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "UDIV5",
-          "net": "UDIV5",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "UDIV7",
-          "net": "UDIV7",
-          "kind": "out"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart2",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": null,
-        "eqs": [
-          {
-            "out": "TXTICK",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "TXB4",
-                  false
-                ],
-                [
-                  "TXB5",
-                  false
-                ],
-                [
-                  "TXB6",
-                  false
-                ],
-                [
-                  "TXB7",
-                  false
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB0",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB4",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB4",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB5",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "TXB4",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB6",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "TXB4",
-                  false
-                ],
-                [
-                  "TXB5",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXB7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "UDIV7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "UDIV7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  true
-                ],
-                [
-                  "TXB6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXB7",
-                  false
-                ],
-                [
-                  "TXB0",
-                  false
-                ],
-                [
-                  "TXB1",
-                  false
-                ],
-                [
-                  "TXB2",
-                  false
-                ],
-                [
-                  "TXB3",
-                  false
-                ],
-                [
-                  "TXB4",
-                  false
-                ],
-                [
-                  "TXB5",
-                  false
-                ],
-                [
-                  "TXB6",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "RESET"
-          ],
-          [
-            3,
-            "TXBUSY"
-          ],
-          [
-            4,
-            "UDIV0"
-          ],
-          [
-            5,
-            "UDIV1"
-          ],
-          [
-            6,
-            "UDIV2"
-          ],
-          [
-            7,
-            "UDIV3"
-          ],
-          [
-            8,
-            "UDIV4"
-          ],
-          [
-            9,
-            "UDIV5"
-          ],
-          [
-            10,
-            "UDIV6"
-          ],
-          [
-            11,
-            "UDIV7"
-          ],
-          [
-            23,
-            "TXTICK"
-          ],
-          [
-            15,
-            "TXB0"
-          ],
-          [
-            22,
-            "TXB1"
-          ],
-          [
-            16,
-            "TXB2"
-          ],
-          [
-            21,
-            "TXB3"
-          ],
-          [
-            17,
-            "TXB4"
-          ],
-          [
-            20,
-            "TXB5"
-          ],
-          [
-            18,
-            "TXB6"
-          ],
-          [
-            19,
-            "TXB7"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "TXBUSY",
-          "net": "TXBUSY",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "UDIV0",
-          "net": "UDIV0",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "UDIV1",
-          "net": "UDIV1",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "UDIV2",
-          "net": "UDIV2",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "UDIV3",
-          "net": "UDIV3",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "UDIV4",
-          "net": "UDIV4",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "UDIV5",
-          "net": "UDIV5",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "UDIV6",
-          "net": "UDIV6",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "UDIV7",
-          "net": "UDIV7",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 15,
-          "name": "TXB0",
-          "net": "TXB0",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "TXB2",
-          "net": "TXB2",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "TXB4",
-          "net": "TXB4",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "TXB6",
-          "net": "TXB6",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "TXB7",
-          "net": "TXB7",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "TXB5",
-          "net": "TXB5",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "TXB3",
-          "net": "TXB3",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "TXB1",
-          "net": "TXB1",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "TXTICK",
-          "net": "TXTICK",
-          "kind": "out"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart3",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": null,
-        "eqs": [
-          {
-            "out": "SOUT",
-            "mode": "reg",
-            "active_low": true,
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
                   "START",
                   false
                 ],
                 [
-                  "TXTICK",
+                  "UD1",
                   true
-                ],
-                [
-                  "TXS1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "SOUT",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ0",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ1",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ2",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS4",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ3",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ4",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ5",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ6",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS8",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS8",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "DQ7",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXS9",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS8",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXS9",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXS9",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "DQ0"
-          ],
-          [
-            3,
-            "DQ1"
-          ],
-          [
-            4,
-            "DQ2"
-          ],
-          [
-            5,
-            "DQ3"
-          ],
-          [
-            6,
-            "DQ4"
-          ],
-          [
-            7,
-            "DQ5"
-          ],
-          [
-            8,
-            "DQ6"
-          ],
-          [
-            9,
-            "DQ7"
-          ],
-          [
-            10,
-            "RESET"
-          ],
-          [
-            11,
-            "START"
-          ],
-          [
-            13,
-            "TXTICK"
-          ],
-          [
-            19,
-            "SOUT"
-          ],
-          [
-            18,
-            "TXS1"
-          ],
-          [
-            20,
-            "TXS2"
-          ],
-          [
-            17,
-            "TXS3"
-          ],
-          [
-            21,
-            "TXS4"
-          ],
-          [
-            16,
-            "TXS5"
-          ],
-          [
-            22,
-            "TXS6"
-          ],
-          [
-            15,
-            "TXS7"
-          ],
-          [
-            23,
-            "TXS8"
-          ],
-          [
-            14,
-            "TXS9"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "DQ0",
-          "net": "DQ0",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "DQ1",
-          "net": "DQ1",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "DQ2",
-          "net": "DQ2",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "DQ3",
-          "net": "DQ3",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "DQ4",
-          "net": "DQ4",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "DQ5",
-          "net": "DQ5",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "DQ6",
-          "net": "DQ6",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "DQ7",
-          "net": "DQ7",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "START",
-          "net": "START",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "TXTICK",
-          "net": "TXTICK",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "TXS9",
-          "net": "TXS9",
-          "kind": "out"
-        },
-        {
-          "pin": 15,
-          "name": "TXS7",
-          "net": "TXS7",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "TXS5",
-          "net": "TXS5",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "TXS3",
-          "net": "TXS3",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "TXS1",
-          "net": "TXS1",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "SOUT",
-          "net": "SOUT",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "TXS2",
-          "net": "TXS2",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "TXS4",
-          "net": "TXS4",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "TXS6",
-          "net": "TXS6",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "TXS8",
-          "net": "TXS8",
-          "kind": "out"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart4",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": null,
-        "eqs": [
-          {
-            "out": "TXC0",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXC0",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXC1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  true
-                ],
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC1",
-                  false
-                ],
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC1",
-                  false
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXC2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  true
-                ],
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXC1",
-                  false
-                ],
-                [
-                  "TXC2",
-                  false
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "START",
-                  false
-                ],
-                [
-                  "TXTICK",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXC3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  true
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "TXBUSY",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "START",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXTICK",
-                  false
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC0",
-                  false
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC1",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC2",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "TXC3",
-                  true
-                ],
-                [
-                  "TXBUSY",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "SINS1",
-            "mode": "reg",
-            "active_low": true,
-            "terms": [
-              [
-                [
-                  "SIN",
-                  false
                 ],
                 [
                   "RESET",
@@ -96534,272 +93379,24 @@
                 ]
               ]
             ],
-            "sync": true
-          },
-          {
-            "out": "SINS2",
-            "mode": "reg",
-            "active_low": true,
-            "terms": [
+            "oe": [
               [
-                [
-                  "SINS1",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
+                "UDOE",
+                true
               ]
             ]
           },
           {
-            "out": "RXRUN",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "RXACT",
-                  true
-                ]
-              ],
-              [
-                [
-                  "SINS2",
-                  false
-                ]
-              ]
-            ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "RESET"
-          ],
-          [
-            3,
-            "RXACT"
-          ],
-          [
-            4,
-            "SIN"
-          ],
-          [
-            5,
-            "START"
-          ],
-          [
-            6,
-            "TXTICK"
-          ],
-          [
-            17,
-            "TXC0"
-          ],
-          [
-            19,
-            "TXC1"
-          ],
-          [
-            21,
-            "TXC2"
-          ],
-          [
-            18,
-            "TXC3"
-          ],
-          [
-            20,
-            "TXBUSY"
-          ],
-          [
-            22,
-            "SINS1"
-          ],
-          [
-            15,
-            "SINS2"
-          ],
-          [
-            16,
-            "RXRUN"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "RXACT",
-          "net": "RXACT",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "SIN",
-          "net": "SIN",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "START",
-          "net": "START",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "TXTICK",
-          "net": "TXTICK",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 15,
-          "name": "SINS2",
-          "net": "SINS2",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "RXRUN",
-          "net": "RXRUN",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "TXC0",
-          "net": "TXC0",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "TXC3",
-          "net": "TXC3",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "TXC1",
-          "net": "TXC1",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "TXBUSY",
-          "net": "TXBUSY",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "TXC2",
-          "net": "TXC2",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "SINS1",
-          "net": "SINS1",
-          "kind": "out"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart5",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": null,
-        "eqs": [
-          {
-            "out": "RXTICK",
-            "mode": "comb",
-            "terms": [
-              [
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RXB4",
-                  false
-                ],
-                [
-                  "RXB5",
-                  false
-                ],
-                [
-                  "RXB6",
-                  false
-                ],
-                [
-                  "RXB7",
-                  false
-                ],
-                [
-                  "RXACT",
-                  true
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB0",
+            "out": "UD2",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXRUN",
+                  "START",
                   true
                 ],
                 [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV0",
+                  "DQ2",
                   true
                 ],
                 [
@@ -96809,11 +93406,37 @@
               ],
               [
                 [
-                  "RXRUN",
+                  "START",
                   false
                 ],
                 [
-                  "UDIV1",
+                  "UD2",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "UD3",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ3",
                   true
                 ],
                 [
@@ -96823,16 +93446,212 @@
               ],
               [
                 [
-                  "RXRUN",
+                  "START",
+                  false
+                ],
+                [
+                  "UD3",
                   true
                 ],
                 [
-                  "RXTICK",
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "UD4",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ4",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
                   false
                 ],
                 [
-                  "RXB0",
+                  "UD4",
+                  true
+                ],
+                [
+                  "RESET",
                   false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "UD5",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ5",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "UD5",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "UD6",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ6",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "UD6",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "UD7",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ7",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "UD7",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "UDOE",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "SBA0",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "START",
+                  true
+                ],
+                [
+                  "DQ8",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "SBA0",
+                  true
                 ],
                 [
                   "RESET",
@@ -96842,20 +93661,16 @@
             ]
           },
           {
-            "out": "RXB1",
+            "out": "SBA1",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXRUN",
+                  "START",
                   true
                 ],
                 [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV1",
+                  "DQ9",
                   true
                 ],
                 [
@@ -96865,1080 +93680,12 @@
               ],
               [
                 [
-                  "RXRUN",
+                  "START",
                   false
                 ],
                 [
-                  "UDIV2",
+                  "SBA1",
                   true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  false
-                ],
-                [
-                  "UDIV3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  false
-                ],
-                [
-                  "UDIV4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB4",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  false
-                ],
-                [
-                  "UDIV5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB4",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  false
-                ],
-                [
-                  "UDIV6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB5",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RXB4",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  false
-                ],
-                [
-                  "UDIV7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB6",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RXB4",
-                  false
-                ],
-                [
-                  "RXB5",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXB7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "UDIV7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  true
-                ],
-                [
-                  "RXB6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXRUN",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXB7",
-                  false
-                ],
-                [
-                  "RXB0",
-                  false
-                ],
-                [
-                  "RXB1",
-                  false
-                ],
-                [
-                  "RXB2",
-                  false
-                ],
-                [
-                  "RXB3",
-                  false
-                ],
-                [
-                  "RXB4",
-                  false
-                ],
-                [
-                  "RXB5",
-                  false
-                ],
-                [
-                  "RXB6",
-                  false
                 ],
                 [
                   "RESET",
@@ -97955,83 +93702,87 @@
           ],
           [
             2,
-            "RESET"
+            "DQ1"
           ],
           [
             3,
-            "RXACT"
+            "DQ2"
           ],
           [
             4,
-            "RXRUN"
+            "DQ3"
           ],
           [
             5,
-            "UDIV0"
+            "DQ4"
           ],
           [
             6,
-            "UDIV1"
+            "DQ5"
           ],
           [
             7,
-            "UDIV2"
+            "DQ6"
           ],
           [
             8,
-            "UDIV3"
+            "DQ7"
           ],
           [
             9,
-            "UDIV4"
+            "DQ8"
           ],
           [
             10,
-            "UDIV5"
+            "DQ9"
           ],
           [
             11,
-            "UDIV6"
+            "RESET"
           ],
           [
             13,
-            "UDIV7"
+            "START"
           ],
           [
-            23,
-            "RXTICK"
-          ],
-          [
-            15,
-            "RXB0"
-          ],
-          [
-            22,
-            "RXB1"
-          ],
-          [
-            16,
-            "RXB2"
-          ],
-          [
-            21,
-            "RXB3"
-          ],
-          [
-            17,
-            "RXB4"
-          ],
-          [
-            20,
-            "RXB5"
+            14,
+            "UDOE"
           ],
           [
             19,
-            "RXB6"
+            "UD1"
           ],
           [
             18,
-            "RXB7"
+            "UD2"
+          ],
+          [
+            20,
+            "UD3"
+          ],
+          [
+            17,
+            "UD4"
+          ],
+          [
+            21,
+            "UD5"
+          ],
+          [
+            16,
+            "UD6"
+          ],
+          [
+            22,
+            "UD7"
+          ],
+          [
+            15,
+            "SBA0"
+          ],
+          [
+            23,
+            "SBA1"
           ]
         ]
       },
@@ -98044,62 +93795,62 @@
         },
         {
           "pin": 2,
-          "name": "RESET",
-          "net": "RESET",
+          "name": "DQ1",
+          "net": "DQ1",
           "kind": "in"
         },
         {
           "pin": 3,
-          "name": "RXACT",
-          "net": "RXACT",
+          "name": "DQ2",
+          "net": "DQ2",
           "kind": "in"
         },
         {
           "pin": 4,
-          "name": "RXRUN",
-          "net": "RXRUN",
+          "name": "DQ3",
+          "net": "DQ3",
           "kind": "in"
         },
         {
           "pin": 5,
-          "name": "UDIV0",
-          "net": "UDIV0",
+          "name": "DQ4",
+          "net": "DQ4",
           "kind": "in"
         },
         {
           "pin": 6,
-          "name": "UDIV1",
-          "net": "UDIV1",
+          "name": "DQ5",
+          "net": "DQ5",
           "kind": "in"
         },
         {
           "pin": 7,
-          "name": "UDIV2",
-          "net": "UDIV2",
+          "name": "DQ6",
+          "net": "DQ6",
           "kind": "in"
         },
         {
           "pin": 8,
-          "name": "UDIV3",
-          "net": "UDIV3",
+          "name": "DQ7",
+          "net": "DQ7",
           "kind": "in"
         },
         {
           "pin": 9,
-          "name": "UDIV4",
-          "net": "UDIV4",
+          "name": "DQ8",
+          "net": "DQ8",
           "kind": "in"
         },
         {
           "pin": 10,
-          "name": "UDIV5",
-          "net": "UDIV5",
+          "name": "DQ9",
+          "net": "DQ9",
           "kind": "in"
         },
         {
           "pin": 11,
-          "name": "UDIV6",
-          "net": "UDIV6",
+          "name": "RESET",
+          "net": "RESET",
           "kind": "in"
         },
         {
@@ -98110,714 +93861,68 @@
         },
         {
           "pin": 13,
-          "name": "UDIV7",
-          "net": "UDIV7",
+          "name": "START",
+          "net": "START",
           "kind": "in"
-        },
-        {
-          "pin": 15,
-          "name": "RXB0",
-          "net": "RXB0",
-          "kind": "out"
-        },
-        {
-          "pin": 16,
-          "name": "RXB2",
-          "net": "RXB2",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "RXB4",
-          "net": "RXB4",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "RXB7",
-          "net": "RXB7",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "RXB6",
-          "net": "RXB6",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "RXB5",
-          "net": "RXB5",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "RXB3",
-          "net": "RXB3",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "RXB1",
-          "net": "RXB1",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "RXTICK",
-          "net": "RXTICK",
-          "kind": "out"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart6",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": "CLK",
-        "ar": null,
-        "eqs": [
-          {
-            "out": "RXS0",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS1",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS2",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS3",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS3",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS4",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS4",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RXS7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXS7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "SINS2",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RXS7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXACT",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXACT",
-                  false
-                ],
-                [
-                  "SINS2",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  false
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC1",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC2",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC3",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXC0",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXC0",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  false
-                ],
-                [
-                  "RXC1",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  false
-                ],
-                [
-                  "RXC2",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  false
-                ],
-                [
-                  "RXC3",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "RESET"
-          ],
-          [
-            3,
-            "RXC1"
-          ],
-          [
-            4,
-            "RXC2"
-          ],
-          [
-            5,
-            "RXC3"
-          ],
-          [
-            6,
-            "RXTICK"
-          ],
-          [
-            7,
-            "SINS2"
-          ],
-          [
-            20,
-            "RXS0"
-          ],
-          [
-            17,
-            "RXS1"
-          ],
-          [
-            21,
-            "RXS2"
-          ],
-          [
-            16,
-            "RXS3"
-          ],
-          [
-            22,
-            "RXS4"
-          ],
-          [
-            15,
-            "RXS5"
-          ],
-          [
-            23,
-            "RXS6"
-          ],
-          [
-            14,
-            "RXS7"
-          ],
-          [
-            19,
-            "RXACT"
-          ],
-          [
-            18,
-            "RXC0"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "RXC1",
-          "net": "RXC1",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "RXC2",
-          "net": "RXC2",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "RXC3",
-          "net": "RXC3",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "RXTICK",
-          "net": "RXTICK",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "SINS2",
-          "net": "SINS2",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
         },
         {
           "pin": 14,
-          "name": "RXS7",
-          "net": "RXS7",
-          "kind": "out"
+          "name": "UDOE",
+          "net": "UDOE",
+          "kind": "in"
         },
         {
           "pin": 15,
-          "name": "RXS5",
-          "net": "RXS5",
+          "name": "SBA0",
+          "net": "SBA0",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "RXS3",
-          "net": "RXS3",
+          "name": "UD6",
+          "net": "UD6",
           "kind": "out"
         },
         {
           "pin": 17,
-          "name": "RXS1",
-          "net": "RXS1",
+          "name": "UD4",
+          "net": "UD4",
           "kind": "out"
         },
         {
           "pin": 18,
-          "name": "RXC0",
-          "net": "RXC0",
+          "name": "UD2",
+          "net": "UD2",
           "kind": "out"
         },
         {
           "pin": 19,
-          "name": "RXACT",
-          "net": "RXACT",
+          "name": "UD1",
+          "net": "UD1",
           "kind": "out"
         },
         {
           "pin": 20,
-          "name": "RXS0",
-          "net": "RXS0",
+          "name": "UD3",
+          "net": "UD3",
           "kind": "out"
         },
         {
           "pin": 21,
-          "name": "RXS2",
-          "net": "RXS2",
+          "name": "UD5",
+          "net": "UD5",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "RXS4",
-          "net": "RXS4",
+          "name": "UD7",
+          "net": "UD7",
           "kind": "out"
         },
         {
           "pin": 23,
-          "name": "RXS6",
-          "net": "RXS6",
+          "name": "SBA1",
+          "net": "SBA1",
           "kind": "out"
         },
         {
@@ -98829,10 +93934,10 @@
       ]
     },
     {
-      "name": "uart7",
+      "name": "sbr2",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "UART",
+      "block": "Serial bridge",
       "stage": "MEM",
       "model": {
         "kind": "gal",
@@ -98840,40 +93945,16 @@
         "ar": null,
         "eqs": [
           {
-            "out": "RXC1",
+            "out": "SBA2",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXACT",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC1",
+                  "START",
                   true
                 ],
                 [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  true
-                ],
-                [
-                  "RXC1",
+                  "DQ10",
                   true
                 ],
                 [
@@ -98883,41 +93964,11 @@
               ],
               [
                 [
-                  "RXC0",
+                  "START",
                   false
                 ],
                 [
-                  "RXC1",
-                  false
-                ],
-                [
-                  "RXC2",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  false
-                ],
-                [
-                  "RXC1",
-                  false
-                ],
-                [
-                  "RXC3",
-                  true
-                ],
-                [
-                  "RXTICK",
+                  "SBA2",
                   true
                 ],
                 [
@@ -98928,38 +93979,16 @@
             ]
           },
           {
-            "out": "RXC2",
+            "out": "SBRW",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXC2",
+                  "START",
                   true
                 ],
                 [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  true
-                ],
-                [
-                  "RXC2",
-                  true
-                ],
-                [
-                  "RXACT",
+                  "DQ15",
                   true
                 ],
                 [
@@ -98969,45 +93998,11 @@
               ],
               [
                 [
-                  "RXC1",
-                  true
-                ],
-                [
-                  "RXC2",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
+                  "START",
                   false
                 ],
                 [
-                  "RXC1",
-                  false
-                ],
-                [
-                  "RXC2",
-                  false
-                ],
-                [
-                  "RXC3",
-                  true
-                ],
-                [
-                  "RXACT",
-                  true
-                ],
-                [
-                  "RXTICK",
+                  "SBRW",
                   true
                 ],
                 [
@@ -99018,40 +94013,20 @@
             ]
           },
           {
-            "out": "RXC3",
+            "out": "BUSY",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXACT",
+                  "K2",
                   false
                 ],
                 [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC3",
-                  true
-                ],
-                [
-                  "RXTICK",
+                  "K3",
                   false
                 ],
                 [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXC0",
-                  true
-                ],
-                [
-                  "RXC3",
+                  "BUSY",
                   true
                 ],
                 [
@@ -99061,11 +94036,15 @@
               ],
               [
                 [
-                  "RXC1",
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
                   true
                 ],
                 [
-                  "RXC3",
+                  "SBRW",
                   true
                 ],
                 [
@@ -99075,11 +94054,47 @@
               ],
               [
                 [
-                  "RXC2",
+                  "K2",
+                  false
+                ],
+                [
+                  "BUSY",
                   true
                 ],
                 [
-                  "RXC3",
+                  "SBRW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "SBRW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "START",
                   true
                 ],
                 [
@@ -99090,44 +94105,572 @@
             ]
           },
           {
-            "out": "RXDONE",
+            "out": "K0",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K1",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K2",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "K3",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "K0",
+                  true
+                ],
+                [
+                  "K1",
+                  true
+                ],
+                [
+                  "K2",
+                  true
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K3",
+                  true
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "START",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "URD_n",
+            "mode": "reg",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "SBRW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "K0",
+                  false
+                ],
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "SBRW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "UWR_n",
+            "mode": "reg",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "K1",
+                  false
+                ],
+                [
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
+                  true
+                ],
+                [
+                  "SBRW",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "LATCH",
             "mode": "comb",
             "terms": [
               [
                 [
-                  "RXACT",
+                  "K0",
                   true
                 ],
                 [
-                  "RXTICK",
+                  "K1",
                   true
                 ],
                 [
-                  "RXC0",
+                  "K2",
+                  false
+                ],
+                [
+                  "K3",
+                  false
+                ],
+                [
+                  "BUSY",
                   true
                 ],
                 [
-                  "RXC1",
-                  false
-                ],
-                [
-                  "RXC2",
-                  false
-                ],
-                [
-                  "RXC3",
-                  false
+                  "SBRW",
+                  true
                 ]
               ]
             ]
-          },
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "DQ10"
+          ],
+          [
+            3,
+            "DQ15"
+          ],
+          [
+            4,
+            "RESET"
+          ],
+          [
+            5,
+            "START"
+          ],
+          [
+            17,
+            "SBA2"
+          ],
+          [
+            21,
+            "SBRW"
+          ],
+          [
+            19,
+            "BUSY"
+          ],
+          [
+            15,
+            "K0"
+          ],
+          [
+            16,
+            "K1"
+          ],
+          [
+            20,
+            "K2"
+          ],
+          [
+            18,
+            "K3"
+          ],
+          [
+            22,
+            "URD_n"
+          ],
+          [
+            23,
+            "UWR_n"
+          ],
+          [
+            14,
+            "LATCH"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "DQ10",
+          "net": "DQ10",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "DQ15",
+          "net": "DQ15",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "START",
+          "net": "START",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 14,
+          "name": "LATCH",
+          "net": "LATCH",
+          "kind": "out"
+        },
+        {
+          "pin": 15,
+          "name": "K0",
+          "net": "K0",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "K1",
+          "net": "K1",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "SBA2",
+          "net": "SBA2",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "K3",
+          "net": "K3",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "BUSY",
+          "net": "BUSY",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "K2",
+          "net": "K2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "SBRW",
+          "net": "SBRW",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "URD_n",
+          "net": "URD_n",
+          "kind": "out"
+        },
+        {
+          "pin": 23,
+          "name": "UWR_n",
+          "net": "UWR_n",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "sbr3",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "Serial bridge",
+      "stage": "MEM",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
           {
-            "out": "VALID",
+            "out": "RDATA0",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXDONE",
+                  "LATCH",
+                  true
+                ],
+                [
+                  "UD0",
                   true
                 ],
                 [
@@ -99137,45 +94680,11 @@
               ],
               [
                 [
-                  "VALID",
-                  true
-                ],
-                [
-                  "URDD",
+                  "LATCH",
                   false
                 ],
                 [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXD0",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXDONE",
-                  true
-                ],
-                [
-                  "RXS0",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXDONE",
-                  false
-                ],
-                [
-                  "RXD0",
+                  "RDATA0",
                   true
                 ],
                 [
@@ -99186,16 +94695,16 @@
             ]
           },
           {
-            "out": "RXD1",
+            "out": "RDATA1",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   true
                 ],
                 [
-                  "RXS1",
+                  "UD1",
                   true
                 ],
                 [
@@ -99205,11 +94714,11 @@
               ],
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   false
                 ],
                 [
-                  "RXD1",
+                  "RDATA1",
                   true
                 ],
                 [
@@ -99220,16 +94729,16 @@
             ]
           },
           {
-            "out": "RXD2",
+            "out": "RDATA2",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   true
                 ],
                 [
-                  "RXS2",
+                  "UD2",
                   true
                 ],
                 [
@@ -99239,11 +94748,11 @@
               ],
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   false
                 ],
                 [
-                  "RXD2",
+                  "RDATA2",
                   true
                 ],
                 [
@@ -99254,16 +94763,16 @@
             ]
           },
           {
-            "out": "RXD3",
+            "out": "RDATA3",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   true
                 ],
                 [
-                  "RXS3",
+                  "UD3",
                   true
                 ],
                 [
@@ -99273,11 +94782,11 @@
               ],
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   false
                 ],
                 [
-                  "RXD3",
+                  "RDATA3",
                   true
                 ],
                 [
@@ -99288,16 +94797,16 @@
             ]
           },
           {
-            "out": "RXD4",
+            "out": "RDATA4",
             "mode": "reg",
             "terms": [
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   true
                 ],
                 [
-                  "RXS4",
+                  "UD4",
                   true
                 ],
                 [
@@ -99307,11 +94816,113 @@
               ],
               [
                 [
-                  "RXDONE",
+                  "LATCH",
                   false
                 ],
                 [
-                  "RXD4",
+                  "RDATA4",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "RDATA5",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "LATCH",
+                  true
+                ],
+                [
+                  "UD5",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "LATCH",
+                  false
+                ],
+                [
+                  "RDATA5",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "RDATA6",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "LATCH",
+                  true
+                ],
+                [
+                  "UD6",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "LATCH",
+                  false
+                ],
+                [
+                  "RDATA6",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "RDATA7",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "LATCH",
+                  true
+                ],
+                [
+                  "UD7",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "LATCH",
+                  false
+                ],
+                [
+                  "RDATA7",
                   true
                 ],
                 [
@@ -99329,83 +94940,75 @@
           ],
           [
             2,
-            "RESET"
+            "LATCH"
           ],
           [
             3,
-            "RXACT"
+            "RESET"
           ],
           [
             4,
-            "RXC0"
+            "UD0"
           ],
           [
             5,
-            "RXS0"
+            "UD1"
           ],
           [
             6,
-            "RXS1"
+            "UD2"
           ],
           [
             7,
-            "RXS2"
+            "UD3"
           ],
           [
             8,
-            "RXS3"
+            "UD4"
           ],
           [
             9,
-            "RXS4"
+            "UD5"
           ],
           [
             10,
-            "RXTICK"
+            "UD6"
           ],
           [
             11,
-            "URDD"
+            "UD7"
           ],
           [
             19,
-            "RXC1"
-          ],
-          [
-            20,
-            "RXC2"
+            "RDATA0"
           ],
           [
             18,
-            "RXC3"
+            "RDATA1"
           ],
           [
-            14,
-            "RXDONE"
+            20,
+            "RDATA2"
           ],
           [
             17,
-            "VALID"
+            "RDATA3"
           ],
           [
             21,
-            "RXD0"
+            "RDATA4"
           ],
           [
             16,
-            "RXD1"
+            "RDATA5"
           ],
           [
             22,
-            "RXD2"
+            "RDATA6"
           ],
           [
             15,
-            "RXD3"
-          ],
-          [
-            23,
-            "RXD4"
+            "RDATA7"
           ]
         ]
       },
@@ -99418,62 +95021,62 @@
         },
         {
           "pin": 2,
+          "name": "LATCH",
+          "net": "LATCH",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
           "name": "RESET",
           "net": "RESET",
           "kind": "in"
         },
         {
-          "pin": 3,
-          "name": "RXACT",
-          "net": "RXACT",
-          "kind": "in"
-        },
-        {
           "pin": 4,
-          "name": "RXC0",
-          "net": "RXC0",
+          "name": "UD0",
+          "net": "UD0",
           "kind": "in"
         },
         {
           "pin": 5,
-          "name": "RXS0",
-          "net": "RXS0",
+          "name": "UD1",
+          "net": "UD1",
           "kind": "in"
         },
         {
           "pin": 6,
-          "name": "RXS1",
-          "net": "RXS1",
+          "name": "UD2",
+          "net": "UD2",
           "kind": "in"
         },
         {
           "pin": 7,
-          "name": "RXS2",
-          "net": "RXS2",
+          "name": "UD3",
+          "net": "UD3",
           "kind": "in"
         },
         {
           "pin": 8,
-          "name": "RXS3",
-          "net": "RXS3",
+          "name": "UD4",
+          "net": "UD4",
           "kind": "in"
         },
         {
           "pin": 9,
-          "name": "RXS4",
-          "net": "RXS4",
+          "name": "UD5",
+          "net": "UD5",
           "kind": "in"
         },
         {
           "pin": 10,
-          "name": "RXTICK",
-          "net": "RXTICK",
+          "name": "UD6",
+          "net": "UD6",
           "kind": "in"
         },
         {
           "pin": 11,
-          "name": "URDD",
-          "net": "URDD",
+          "name": "UD7",
+          "net": "UD7",
           "kind": "in"
         },
         {
@@ -99483,63 +95086,51 @@
           "kind": "power"
         },
         {
-          "pin": 14,
-          "name": "RXDONE",
-          "net": "RXDONE",
-          "kind": "out"
-        },
-        {
           "pin": 15,
-          "name": "RXD3",
-          "net": "RXD3",
+          "name": "RDATA7",
+          "net": "RDATA7",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "RXD1",
-          "net": "RXD1",
+          "name": "RDATA5",
+          "net": "RDATA5",
           "kind": "out"
         },
         {
           "pin": 17,
-          "name": "VALID",
-          "net": "VALID",
+          "name": "RDATA3",
+          "net": "RDATA3",
           "kind": "out"
         },
         {
           "pin": 18,
-          "name": "RXC3",
-          "net": "RXC3",
+          "name": "RDATA1",
+          "net": "RDATA1",
           "kind": "out"
         },
         {
           "pin": 19,
-          "name": "RXC1",
-          "net": "RXC1",
+          "name": "RDATA0",
+          "net": "RDATA0",
           "kind": "out"
         },
         {
           "pin": 20,
-          "name": "RXC2",
-          "net": "RXC2",
+          "name": "RDATA2",
+          "net": "RDATA2",
           "kind": "out"
         },
         {
           "pin": 21,
-          "name": "RXD0",
-          "net": "RXD0",
+          "name": "RDATA4",
+          "net": "RDATA4",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "RXD2",
-          "net": "RXD2",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "RXD4",
-          "net": "RXD4",
+          "name": "RDATA6",
+          "net": "RDATA6",
           "kind": "out"
         },
         {
@@ -99551,139 +95142,37 @@
       ]
     },
     {
-      "name": "uart8",
+      "name": "sbr4",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "UART",
+      "block": "Serial bridge",
       "stage": "MEM",
       "model": {
         "kind": "gal",
-        "clk": "CLK",
+        "clk": null,
         "ar": null,
         "eqs": [
-          {
-            "out": "RXD5",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXDONE",
-                  true
-                ],
-                [
-                  "RXS5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXDONE",
-                  false
-                ],
-                [
-                  "RXD5",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXD6",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXDONE",
-                  true
-                ],
-                [
-                  "RXS6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXDONE",
-                  false
-                ],
-                [
-                  "RXD6",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "RXD7",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "RXDONE",
-                  true
-                ],
-                [
-                  "RXS7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "RXDONE",
-                  false
-                ],
-                [
-                  "RXD7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
           {
             "out": "DQ0",
             "mode": "comb",
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD0",
+                  "RDATA0",
                   true
                 ]
               ],
               [
                 [
-                  "USRD",
+                  "SBRDS",
                   true
                 ],
                 [
-                  "TXBUSY",
+                  "BUSY",
                   true
                 ]
               ]
@@ -99705,21 +95194,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD1",
-                  true
-                ]
-              ],
-              [
-                [
-                  "USRD",
-                  true
-                ],
-                [
-                  "VALID",
+                  "RDATA1",
                   true
                 ]
               ]
@@ -99741,11 +95220,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD2",
+                  "RDATA2",
                   true
                 ]
               ]
@@ -99760,258 +95239,18 @@
                 true
               ]
             ]
-          }
-        ],
-        "pins": [
-          [
-            1,
-            "CLK"
-          ],
-          [
-            2,
-            "BRD_n"
-          ],
-          [
-            3,
-            "RESET"
-          ],
-          [
-            4,
-            "RXD0"
-          ],
-          [
-            5,
-            "RXD1"
-          ],
-          [
-            6,
-            "RXD2"
-          ],
-          [
-            7,
-            "RXDONE"
-          ],
-          [
-            8,
-            "RXS5"
-          ],
-          [
-            9,
-            "RXS6"
-          ],
-          [
-            10,
-            "RXS7"
-          ],
-          [
-            11,
-            "SLOT0"
-          ],
-          [
-            13,
-            "TXBUSY"
-          ],
-          [
-            23,
-            "URDD"
-          ],
-          [
-            14,
-            "USRD"
-          ],
-          [
-            22,
-            "VALID"
-          ],
-          [
-            19,
-            "RXD5"
-          ],
-          [
-            18,
-            "RXD6"
-          ],
-          [
-            20,
-            "RXD7"
-          ],
-          [
-            17,
-            "DQ0"
-          ],
-          [
-            21,
-            "DQ1"
-          ],
-          [
-            16,
-            "DQ2"
-          ]
-        ]
-      },
-      "pins": [
-        {
-          "pin": 1,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "in"
-        },
-        {
-          "pin": 2,
-          "name": "BRD_n",
-          "net": "BRD_n",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "in"
-        },
-        {
-          "pin": 4,
-          "name": "RXD0",
-          "net": "RXD0",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "RXD1",
-          "net": "RXD1",
-          "kind": "in"
-        },
-        {
-          "pin": 6,
-          "name": "RXD2",
-          "net": "RXD2",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
-          "name": "RXDONE",
-          "net": "RXDONE",
-          "kind": "in"
-        },
-        {
-          "pin": 8,
-          "name": "RXS5",
-          "net": "RXS5",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "RXS6",
-          "net": "RXS6",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
-          "name": "RXS7",
-          "net": "RXS7",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "SLOT0",
-          "net": "SLOT0",
-          "kind": "in"
-        },
-        {
-          "pin": 12,
-          "name": "GND",
-          "net": "GND",
-          "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "TXBUSY",
-          "net": "TXBUSY",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "USRD",
-          "net": "USRD",
-          "kind": "in"
-        },
-        {
-          "pin": 16,
-          "name": "DQ2",
-          "net": "DQ2",
-          "kind": "out"
-        },
-        {
-          "pin": 17,
-          "name": "DQ0",
-          "net": "DQ0",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "RXD6",
-          "net": "RXD6",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "RXD5",
-          "net": "RXD5",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "RXD7",
-          "net": "RXD7",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
-          "name": "DQ1",
-          "net": "DQ1",
-          "kind": "out"
-        },
-        {
-          "pin": 22,
-          "name": "VALID",
-          "net": "VALID",
-          "kind": "in"
-        },
-        {
-          "pin": 23,
-          "name": "URDD",
-          "net": "URDD",
-          "kind": "in"
-        },
-        {
-          "pin": 24,
-          "name": "VCC",
-          "net": "VCC",
-          "kind": "power"
-        }
-      ]
-    },
-    {
-      "name": "uart9",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
-      "block": "UART",
-      "stage": "MEM",
-      "model": {
-        "kind": "gal",
-        "clk": null,
-        "ar": null,
-        "eqs": [
+          },
           {
             "out": "DQ3",
             "mode": "comb",
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD3",
+                  "RDATA3",
                   true
                 ]
               ]
@@ -100033,11 +95272,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD4",
+                  "RDATA4",
                   true
                 ]
               ]
@@ -100059,11 +95298,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD5",
+                  "RDATA5",
                   true
                 ]
               ]
@@ -100085,11 +95324,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD6",
+                  "RDATA6",
                   true
                 ]
               ]
@@ -100111,11 +95350,11 @@
             "terms": [
               [
                 [
-                  "URDD",
+                  "SBRDD",
                   true
                 ],
                 [
-                  "RXD7",
+                  "RDATA7",
                   true
                 ]
               ]
@@ -100139,50 +95378,82 @@
           ],
           [
             2,
-            "RXD3"
+            "BUSY"
           ],
           [
             3,
-            "RXD4"
+            "RDATA0"
           ],
           [
             4,
-            "RXD5"
+            "RDATA1"
           ],
           [
             5,
-            "RXD6"
+            "RDATA2"
           ],
           [
             6,
-            "RXD7"
+            "RDATA3"
           ],
           [
             7,
-            "SLOT0"
+            "RDATA4"
           ],
           [
             8,
-            "URDD"
+            "RDATA5"
+          ],
+          [
+            9,
+            "RDATA6"
+          ],
+          [
+            10,
+            "RDATA7"
+          ],
+          [
+            11,
+            "SBRDD"
+          ],
+          [
+            13,
+            "SBRDS"
+          ],
+          [
+            23,
+            "SLOT0"
           ],
           [
             19,
-            "DQ3"
+            "DQ0"
           ],
           [
             18,
-            "DQ4"
+            "DQ1"
           ],
           [
             20,
-            "DQ5"
+            "DQ2"
           ],
           [
             17,
-            "DQ6"
+            "DQ3"
           ],
           [
             21,
+            "DQ4"
+          ],
+          [
+            16,
+            "DQ5"
+          ],
+          [
+            22,
+            "DQ6"
+          ],
+          [
+            15,
             "DQ7"
           ]
         ]
@@ -100196,44 +95467,62 @@
         },
         {
           "pin": 2,
-          "name": "RXD3",
-          "net": "RXD3",
+          "name": "BUSY",
+          "net": "BUSY",
           "kind": "in"
         },
         {
           "pin": 3,
-          "name": "RXD4",
-          "net": "RXD4",
+          "name": "RDATA0",
+          "net": "RDATA0",
           "kind": "in"
         },
         {
           "pin": 4,
-          "name": "RXD5",
-          "net": "RXD5",
+          "name": "RDATA1",
+          "net": "RDATA1",
           "kind": "in"
         },
         {
           "pin": 5,
-          "name": "RXD6",
-          "net": "RXD6",
+          "name": "RDATA2",
+          "net": "RDATA2",
           "kind": "in"
         },
         {
           "pin": 6,
-          "name": "RXD7",
-          "net": "RXD7",
+          "name": "RDATA3",
+          "net": "RDATA3",
           "kind": "in"
         },
         {
           "pin": 7,
-          "name": "SLOT0",
-          "net": "SLOT0",
+          "name": "RDATA4",
+          "net": "RDATA4",
           "kind": "in"
         },
         {
           "pin": 8,
-          "name": "URDD",
-          "net": "URDD",
+          "name": "RDATA5",
+          "net": "RDATA5",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "RDATA6",
+          "net": "RDATA6",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "RDATA7",
+          "net": "RDATA7",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "SBRDD",
+          "net": "SBRDD",
           "kind": "in"
         },
         {
@@ -100243,34 +95532,64 @@
           "kind": "power"
         },
         {
-          "pin": 17,
-          "name": "DQ6",
-          "net": "DQ6",
+          "pin": 13,
+          "name": "SBRDS",
+          "net": "SBRDS",
+          "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "DQ7",
+          "net": "DQ7",
           "kind": "out"
         },
         {
-          "pin": 18,
-          "name": "DQ4",
-          "net": "DQ4",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "DQ3",
-          "net": "DQ3",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
+          "pin": 16,
           "name": "DQ5",
           "net": "DQ5",
           "kind": "out"
         },
         {
-          "pin": 21,
-          "name": "DQ7",
-          "net": "DQ7",
+          "pin": 17,
+          "name": "DQ3",
+          "net": "DQ3",
           "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "DQ1",
+          "net": "DQ1",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "DQ0",
+          "net": "DQ0",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "DQ2",
+          "net": "DQ2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "DQ4",
+          "net": "DQ4",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "DQ6",
+          "net": "DQ6",
+          "kind": "out"
+        },
+        {
+          "pin": 23,
+          "name": "SLOT0",
+          "net": "SLOT0",
+          "kind": "in"
         },
         {
           "pin": 24,
@@ -100963,6 +96282,296 @@
       ]
     },
     {
+      "name": "uart0",
+      "part": "TL16C550DPTR",
+      "package": "LQFP-48",
+      "block": "UART",
+      "stage": "MEM",
+      "role": "uart",
+      "model": {
+        "kind": "uart",
+        "xin_hz": 14745600.0
+      },
+      "pins": [
+        {
+          "pin": 2,
+          "name": "D5",
+          "net": "UD5",
+          "kind": "bidir"
+        },
+        {
+          "pin": 3,
+          "name": "D6",
+          "net": "UD6",
+          "kind": "bidir"
+        },
+        {
+          "pin": 4,
+          "name": "D7",
+          "net": "UD7",
+          "kind": "bidir"
+        },
+        {
+          "pin": 5,
+          "name": "RCLK",
+          "net": "UBAUD",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "SIN",
+          "net": "SIN",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "SOUT",
+          "net": "SOUT",
+          "kind": "out"
+        },
+        {
+          "pin": 9,
+          "name": "CS0",
+          "net": "BUSY",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "CS1",
+          "net": "VCC",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "CS2#",
+          "net": "GND",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "BAUDOUT",
+          "net": "UBAUD",
+          "kind": "out"
+        },
+        {
+          "pin": 14,
+          "name": "XIN",
+          "net": "XIN",
+          "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "XOUT",
+          "net": "XOUT",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "WR1#",
+          "net": "UWR_n",
+          "kind": "in"
+        },
+        {
+          "pin": 17,
+          "name": "WR2",
+          "net": "GND",
+          "kind": "in"
+        },
+        {
+          "pin": 18,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 19,
+          "name": "RD1#",
+          "net": "URD_n",
+          "kind": "in"
+        },
+        {
+          "pin": 20,
+          "name": "RD2",
+          "net": "GND",
+          "kind": "in"
+        },
+        {
+          "pin": 24,
+          "name": "ADS#",
+          "net": "GND",
+          "kind": "in"
+        },
+        {
+          "pin": 26,
+          "name": "A2",
+          "net": "SBA2",
+          "kind": "in"
+        },
+        {
+          "pin": 27,
+          "name": "A1",
+          "net": "SBA1",
+          "kind": "in"
+        },
+        {
+          "pin": 28,
+          "name": "A0",
+          "net": "SBA0",
+          "kind": "in"
+        },
+        {
+          "pin": 32,
+          "name": "RTS#",
+          "net": "URTS_n",
+          "kind": "out"
+        },
+        {
+          "pin": 33,
+          "name": "DTR#",
+          "net": "UDTR_n",
+          "kind": "out"
+        },
+        {
+          "pin": 35,
+          "name": "MR",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
+          "pin": 38,
+          "name": "CTS#",
+          "net": "UCTS_n",
+          "kind": "in"
+        },
+        {
+          "pin": 39,
+          "name": "DSR#",
+          "net": "UDTR_n",
+          "kind": "in"
+        },
+        {
+          "pin": 40,
+          "name": "DCD#",
+          "net": "UDTR_n",
+          "kind": "in"
+        },
+        {
+          "pin": 41,
+          "name": "RI#",
+          "net": "VCC",
+          "kind": "in"
+        },
+        {
+          "pin": 42,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        },
+        {
+          "pin": 43,
+          "name": "D0",
+          "net": "UD0",
+          "kind": "bidir"
+        },
+        {
+          "pin": 44,
+          "name": "D1",
+          "net": "UD1",
+          "kind": "bidir"
+        },
+        {
+          "pin": 45,
+          "name": "D2",
+          "net": "UD2",
+          "kind": "bidir"
+        },
+        {
+          "pin": 46,
+          "name": "D3",
+          "net": "UD3",
+          "kind": "bidir"
+        },
+        {
+          "pin": 47,
+          "name": "D4",
+          "net": "UD4",
+          "kind": "bidir"
+        }
+      ]
+    },
+    {
+      "name": "x1",
+      "part": "X3225147456MOB4SI",
+      "package": "3225",
+      "block": "Serial port",
+      "stage": "MEM",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "XOUT",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "c5",
+      "part": "18pF 0603 C0G",
+      "package": "0603",
+      "block": "Serial port",
+      "stage": "MEM",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "c6",
+      "part": "18pF 0603 C0G",
+      "package": "0603",
+      "block": "Serial port",
+      "stage": "MEM",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XOUT",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
       "name": "xcvr0",
       "part": "SP3232EEY-L/TR",
       "package": "TSSOP-16",
@@ -101006,6 +96615,30 @@
           "pin": 6,
           "name": "V-",
           "net": "XC_VM",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "T2OUT",
+          "net": "RS232_RTS",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "R2IN",
+          "net": "RS232_CTS",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "R2OUT",
+          "net": "UCTS_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "T2IN",
+          "net": "URTS_n",
           "kind": "passive"
         },
         {
@@ -101144,8 +96777,8 @@
     },
     {
       "name": "j1",
-      "part": "Header 1x3 2.54mm",
-      "package": "PinHeader_1x03",
+      "part": "Header 1x5 2.54mm",
+      "package": "PinHeader_1x05",
       "block": "Serial port",
       "stage": "MEM",
       "model": {
@@ -101168,6 +96801,18 @@
           "pin": 3,
           "name": "RX",
           "net": "RS232_RX",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "RTS",
+          "net": "RS232_RTS",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "CTS",
+          "net": "RS232_CTS",
           "kind": "passive"
         }
       ]
@@ -107994,228 +103639,106 @@
       "role": "bus:bb8"
     },
     {
-      "name": "TXBUSY"
+      "name": "BUSY"
+    },
+    {
+      "name": "SBRW"
     },
     {
       "name": "SLOT0"
     },
     {
-      "name": "UWRT"
+      "name": "SBCMD"
     },
     {
-      "name": "UWRD"
+      "name": "SBRDD"
     },
     {
-      "name": "URDD"
-    },
-    {
-      "name": "USRD"
+      "name": "SBRDS"
     },
     {
       "name": "START"
     },
     {
-      "name": "UDIV0"
+      "name": "UDOE"
     },
     {
-      "name": "UDIV1"
+      "name": "UD0"
     },
     {
-      "name": "UDIV2"
+      "name": "UD1"
     },
     {
-      "name": "UDIV3"
+      "name": "UD2"
     },
     {
-      "name": "UDIV4"
+      "name": "UD3"
     },
     {
-      "name": "UDIV5"
+      "name": "UD4"
     },
     {
-      "name": "UDIV6"
+      "name": "UD5"
     },
     {
-      "name": "UDIV7"
+      "name": "UD6"
     },
     {
-      "name": "TXTICK"
+      "name": "UD7"
     },
     {
-      "name": "TXB0"
+      "name": "SBA0"
     },
     {
-      "name": "TXB1"
+      "name": "SBA1"
     },
     {
-      "name": "TXB2"
+      "name": "SBA2"
     },
     {
-      "name": "TXB3"
+      "name": "K0"
     },
     {
-      "name": "TXB4"
+      "name": "K1"
     },
     {
-      "name": "TXB5"
+      "name": "K2"
     },
     {
-      "name": "TXB6"
+      "name": "K3"
     },
     {
-      "name": "TXB7"
+      "name": "URD_n"
     },
     {
-      "name": "SOUT",
-      "role": "serial:sout"
+      "name": "UWR_n"
     },
     {
-      "name": "TXS1"
+      "name": "LATCH"
     },
     {
-      "name": "TXS2"
+      "name": "RDATA0"
     },
     {
-      "name": "TXS3"
+      "name": "RDATA1"
     },
     {
-      "name": "TXS4"
+      "name": "RDATA2"
     },
     {
-      "name": "TXS5"
+      "name": "RDATA3"
     },
     {
-      "name": "TXS6"
+      "name": "RDATA4"
     },
     {
-      "name": "TXS7"
+      "name": "RDATA5"
     },
     {
-      "name": "TXS8"
+      "name": "RDATA6"
     },
     {
-      "name": "TXS9"
-    },
-    {
-      "name": "RXACT"
-    },
-    {
-      "name": "SIN",
-      "role": "serial:sin"
-    },
-    {
-      "name": "TXC0"
-    },
-    {
-      "name": "TXC1"
-    },
-    {
-      "name": "TXC2"
-    },
-    {
-      "name": "TXC3"
-    },
-    {
-      "name": "SINS1"
-    },
-    {
-      "name": "SINS2"
-    },
-    {
-      "name": "RXRUN"
-    },
-    {
-      "name": "RXTICK"
-    },
-    {
-      "name": "RXB0"
-    },
-    {
-      "name": "RXB1"
-    },
-    {
-      "name": "RXB2"
-    },
-    {
-      "name": "RXB3"
-    },
-    {
-      "name": "RXB4"
-    },
-    {
-      "name": "RXB5"
-    },
-    {
-      "name": "RXB6"
-    },
-    {
-      "name": "RXB7"
-    },
-    {
-      "name": "RXC1"
-    },
-    {
-      "name": "RXC2"
-    },
-    {
-      "name": "RXC3"
-    },
-    {
-      "name": "RXS0"
-    },
-    {
-      "name": "RXS1"
-    },
-    {
-      "name": "RXS2"
-    },
-    {
-      "name": "RXS3"
-    },
-    {
-      "name": "RXS4"
-    },
-    {
-      "name": "RXS5"
-    },
-    {
-      "name": "RXS6"
-    },
-    {
-      "name": "RXS7"
-    },
-    {
-      "name": "RXC0"
-    },
-    {
-      "name": "RXDONE"
-    },
-    {
-      "name": "VALID"
-    },
-    {
-      "name": "RXD0"
-    },
-    {
-      "name": "RXD1"
-    },
-    {
-      "name": "RXD2"
-    },
-    {
-      "name": "RXD3"
-    },
-    {
-      "name": "RXD4"
-    },
-    {
-      "name": "RXD5"
-    },
-    {
-      "name": "RXD6"
-    },
-    {
-      "name": "RXD7"
+      "name": "RDATA7"
     },
     {
       "name": "T3"
@@ -108300,10 +103823,40 @@
       "name": "WEN"
     },
     {
+      "name": "SIN"
+    },
+    {
+      "name": "SOUT"
+    },
+    {
+      "name": "UDTR_n"
+    },
+    {
+      "name": "UBAUD"
+    },
+    {
+      "name": "URTS_n"
+    },
+    {
+      "name": "UCTS_n"
+    },
+    {
+      "name": "XIN"
+    },
+    {
+      "name": "XOUT"
+    },
+    {
       "name": "RS232_TX"
     },
     {
       "name": "RS232_RX"
+    },
+    {
+      "name": "RS232_RTS"
+    },
+    {
+      "name": "RS232_CTS"
     },
     {
       "name": "XC_c1A"

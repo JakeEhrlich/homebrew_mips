@@ -1,106 +1,79 @@
-# The serial port
+# The serial port: a 16550 behind the bridge
 
-A UART built from ten ATF22V10C, sitting on the crag bus (docs/bus.md) as
-device 0.  8N1, LSB first, idle high, any rate from a programmable
-divisor.  It replaced a TL16C550 and its adapter: the 16550's own bus
-wants 40 ns strobes, 425 ns between reads and a 20 ns address hold,
-which is a slow bus of its own, while the whole point of the crag bus is
-that a device answers within the cycle.  The GALs do, the 16550 was thin
-in stock, and the crystal went with it.
+A TL16C550 UART (16-byte FIFOs each way, hardware RTS/CTS flow control)
+on the crag bus (docs/bus.md) as device 0, behind a six-GAL **bridge**
+that makes it look like a memory: the CPU writes a command word in one
+cycle and reads the result in one cycle, and the bridge runs the chip's
+own slow strobes in between.  The same bridge, with a wider address
+latch, turns any slow chip (a flash for the WAD, say) into a bus device.
 
-Simulated end to end in `tests/uart.rs`: the netlist's UART on the wire
-against a bit-level terminal model, the program against the reference
-simulator.
+Simulated end to end in `tests/uart.rs`: the netlist's bridge against
+the chip model, which checks every bus-timing requirement of the
+datasheet on every strobe; the program against the reference simulator.
 
-## 1. Registers
+## 1. Why a bridge and not the chip on the bus
 
-Base 0x8000_0000 (slot 0).  A byte device: reads return the byte on
-lane 0, zero above (bus BB8); byte loads at offset 0 or 4 work as
-expected.
+The 16550's own bus wants 40 ns strobes, 87 ns cycles, 425 ns between
+reads of its FIFO or status, a 20 ns address hold after RD and a 5 ns
+data hold after WR.  The crag bus gives a device 25 ns and moves on.  So
+the chip gets a private data bus and its own address, chip select and
+strobes, all from the bridge's registers, and the CPU never waits.
+
+Why the 16550 and not a UART built from GALs: buffering plus flow
+control is what makes a serial link reliable when the other end streams.
+The chip holds sixteen bytes each way and, in auto-flow mode, drops RTS#
+when its receive FIFO is nearly full and stops transmitting while CTS# is
+high, all without the CPU.  A GAL UART with one byte of buffer was built
+first and worked; it is in the history, not on the board.
+
+## 2. Registers (slot 0, base 0x8000_0000)
+
+A byte device: reads return the byte on lane 0, zero above (bus BB8).
 
 | Offset | Read | Write |
 |---|---|---|
-| 0 | RXD: the last received byte; reading clears RXVALID | TXD: send the byte (when TXBUSY is clear; a write while busy is ignored) |
-| 4 | STATUS: bit 0 TXBUSY, bit 1 RXVALID | |
-| 8 | | DIV: bit period = DIV + 1 clocks |
+| 0 | RDATA: the result of the last read command | CMD: bits 7:0 data, bits 10:8 the 16550 register (A2..A0), bit 15 = read. Ignored while BUSY |
+| 4 | STATUS: bit 0 BUSY | |
 
-115200 baud at 34 ns is DIV = 255: 8.70 us per bit, 114.9 kbaud, 0.3 %
-off, well inside the 2 % a UART tolerates.  The receiver needs DIV >= 7
-(section 3).
+A read command takes 14 cycles (476 ns, which also covers the 425 ns
+FIFO read spacing); a write command takes 5.  Software either polls BUSY
+or, knowing the latency, spaces its instructions.  The 16550 register
+map is the chip's (RBR/THR/DLL at 0, IER/DLM at 1, IIR/FCR at 2, LCR 3,
+MCR 4, LSR 5, MSR 6, SCR 7).  Set-up for 115200 baud, 8N1, FIFOs and
+auto-flow: LCR = 0x83, DLL = 8, DLM = 0, LCR = 0x03, FCR = 0x07, MCR =
+0x22.  Send: read LSR until bit 5 (THRE), write THR.  Receive: read LSR
+until bit 0 (DR), read RBR.  The test program in `tests/uart.rs` does
+exactly this with a five-instruction command-and-wait sequence.
 
-Software: write DIV once.  Send: poll STATUS until TXBUSY is clear, write
-TXD.  Receive: poll STATUS until RXVALID is set, read RXD.  A character
-takes 10 bit periods either way; the receiver holds one character while
-the next arrives, so a loop that reads within one character time never
-loses one.
+## 3. The bridge (chips sbr0 .. sbr5)
 
-## 2. Transmitter
+| Signal | Kind | What |
+|---|---|---|
+| SLOT0, SBCMD, SBRDD, SBRDS | comb | slot decode and the three accesses |
+| START | comb | a command while not busy |
+| SBA[2:0], UD[7:0], SBRW | reg | address, data and direction, latched by START. UD's pins are the chip's private data bus: driven by the latch during a write (UDOE), by the chip during a read |
+| BUSY | reg | from START until K reaches 13 (read) or 4 (write); also the chip's CS0 |
+| K[3:0] | reg | cycle count within the command |
+| URD#, UWR# | reg | RD# low for K = 1..3, WR# low for K = 1..2 |
+| LATCH | comb | K = 3 of a read: RDATA takes UD at the end of it |
+| RDATA[7:0] | reg | the result |
+| DQ[7:0] drivers | comb, tri-state | RDATA or STATUS onto lane 0, enabled from BRD# and SLOT0 |
+| BB8 | comb, tri-state | byte device while selected |
 
-- DIV register: 8 bits, written from DQ[7:0] on a store to offset 8.
-- Bit-period counter TXB: an 8-bit down-counter reloaded with DIV on each
-  tick and while idle; TXTICK when it reaches zero and the transmitter is
-  busy.
-- Shift register TXS[9:0], stored complemented so that a cleared register
-  is an idle line: loaded with {stop, data, start} by a write to TXD
-  when not busy, shifted right on every tick with idle filling in.  TXS0
-  is the SOUT pin (an active-low output).
-- Bit counter TXC: loaded with 10 by the start, decremented on each tick;
-  TXBUSY from the start until the tick that takes it to zero.
+Against the datasheet: CS valid a cycle before the strobe (7 ns needed);
+RD 102 ns and WR 68 ns wide (40); data latched 85 ns after RD fell (45
+max to valid); address held until the next command (20 after RD); data
+held two cycles past WR (5); consecutive commands 14 cycles apart (87
+cycle time, 425 FIFO spacing).  The chip model asserts all of these.
 
-## 3. Receiver
+## 4. Board
 
-- SINS1, SINS2: two synchroniser flops on SIN (the first is the
-  metastability stage, `sync` in the model), stored complemented so that
-  reset reads as an idle line.
-- A start bit (SINS2 low while idle) starts the bit-period counter RXB
-  from DIV / 2, so the first tick lands in the middle of the start bit;
-  after that it reloads with DIV, so every later tick is mid-bit.
-  Detection latency is three clocks (two synchroniser flops and the tick
-  register), so the samples sit 3 / (DIV + 1) of a bit late: DIV >= 7
-  keeps them in the middle half.
-- RXS[7:0]: the samples shift in on every tick; after nine ticks they
-  hold d7..d0.
-- RXC: 10 per character; on the tenth tick (the stop bit) RXDONE loads
-  the holding register RXD from RXS and sets RXVALID.  A read of RXD
-  clears RXVALID.  The receiver goes idle and the next start bit can
-  follow at once.
-- No parity, no framing error, no overrun flag: a character arriving
-  while RXD is unread overwrites it on completion.
-
-## 4. Chips
-
-| Chip | Holds |
-|---|---|
-| uart0 | slot decode, the four access decodes, START, BB8, DIV bit 0 |
-| uart1 | DIV bits 1..7 |
-| uart2 | TXB, TXTICK |
-| uart3 | SOUT and TXS1..7 |
-| uart4 | TXS8..9, TXC, TXBUSY, SINS1..2 |
-| uart5 | RXB, RXTICK, RXS0 |
-| uart6 | RXS1..7, RXACT, RXC0..1 |
-| uart7 | RXC2..3, RXDONE, VALID, RXD0..4 |
-| uart8 | RXD5..7, DQ0..2 drivers |
-| uart9 | DQ3..7 drivers |
-
-The packing is the tool's; the equations are in `cpu::uart_block`.
-
-## 5. Bus timing
-
-The port meets the bus contract (bus.md section 1) with one gate level
-in hand:
-
-- Decode: MR valid 5.5 ns, SLOT0 13 ns, the access decodes 20.5 ns; a
-  register written from DQ sees its enable with 10 ns of setup.
-- Read: the DQ drivers enable from BRD# low and SLOT0, 15 ns at the
-  earliest, data valid by 20.5 ns; the SRAM outputs are off by 10.5 ns
-  (OEN) and the drivers are off by 20.5 ns into the following cycle,
-  during which the SRAM stays off.
-- BB8 valid by 20.5 ns, sampled at 23.
-
-## 6. Board
-
-- SOUT and SIN to the SP3232 (T1IN, R1OUT), its RS-232 side to a DE-9 or
-  a 3-pin header (TX, RX, GND).  A USB-serial adapter with TTL levels
-  can bypass the transceiver.
-- No crystal: the bit clock is the CPU clock divided.  If the CPU period
-  changes, DIV changes in software.
+- UD[7:0] to D0-7, SBA to A0-2, BUSY to CS0, CS1 high, CS2# low, ADS# low,
+  URD# to RD1# with RD2 low, UWR# to WR1# with WR2 low, MR = RESET.
+- Crystal 14.7456 MHz (3225, 12 pF) on XIN / XOUT with two 18 pF load
+  capacitors; BAUDOUT to RCLK.
+- SOUT, SIN, RTS#, CTS# through the SP3232's two driver / receiver pairs
+  to a 5-pin header (GND, TX, RX, RTS, CTS) or a DE-9.  DTR# to DSR# and
+  DCD#, RI# high.
+- Parts: TL16C550DPTR (LCSC C544406; the C in LQFP-48 or PLCC-44 is the
+  same pinout), SP3232EEY-L/TR (C13482, JLCPCB basic), crystal C2885591.

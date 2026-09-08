@@ -208,7 +208,7 @@ impl Core {
                 }
             }
             LCR => self.lcr = v,
-            MCR => self.mcr = v & 0x1F,
+            MCR => self.mcr = v & 0x3F,
             LSR | MSR => {}
             _ => self.scr = v,
         }
@@ -243,6 +243,45 @@ impl Core {
             self.tx_done();
         }
         while self.rx_deliver() {}
+    }
+}
+
+/// The bridge as software sees it (docs/uart.md): a command is executed
+/// at once, BUSY never reads set, and the result waits in RDATA.  The
+/// reference simulator's view of slot 0.
+#[derive(Clone, Debug, Default)]
+pub struct Bridge {
+    pub core: Core,
+    rdata: u8,
+}
+
+impl Bridge {
+    pub const CMD_READ: u32 = 0x8000;
+    /// A read command word for register `a`.
+    pub const fn read_cmd(a: u8) -> u32 {
+        Self::CMD_READ | (a as u32) << 8
+    }
+    /// A write command word for register `a` with `v`.
+    pub const fn write_cmd(a: u8, v: u8) -> u32 {
+        (a as u32) << 8 | v as u32
+    }
+    pub fn read(&mut self, offset: u32) -> u32 {
+        match offset & 0xC {
+            0 => self.rdata as u32,
+            4 => 0, // never busy here
+            _ => 0,
+        }
+    }
+    pub fn write(&mut self, offset: u32, v: u32) {
+        if offset & 0xC == 0 {
+            let a = (v >> 8 & 7) as u8;
+            if v & Self::CMD_READ != 0 {
+                self.rdata = self.core.read(a);
+            } else {
+                self.core.write(a, v as u8);
+            }
+            self.core.drain();
+        }
     }
 }
 

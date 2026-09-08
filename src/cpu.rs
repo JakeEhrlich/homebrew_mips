@@ -28,7 +28,7 @@ use crate::cy7c131::{Cy7c131, Port};
 use crate::galpack::{Eq, GalSpec, Mode, SLit, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::serial::Terminal;
+use crate::uart16550::{BusTiming, Uart16550, UartPin, uart_pin_of};
 use crate::board::{Board, ChipMeta, Column, Load, Model};
 use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
 use std::collections::BTreeMap;
@@ -1157,166 +1157,72 @@ fn hold_terms() -> Vec<Vec<SLit>> {
     ]
 }
 
-/// The serial port: a UART built from GALs as a fast bus device (slot 0,
-/// docs/uart.md), 8N1, LSB first, bit period DIV + 1 clocks.
+/// A slow chip behind registers: the bridge that makes any device with
+/// its own strobe timing look like a memory to the bus (docs/bus.md
+/// section 5).  This instance carries the TL16C550 (docs/uart.md).
 ///
-/// Registers: offset 0 write TXD / read RXD (clears VALID), offset 4
-/// read STATUS (bit 0 TXBUSY, bit 1 RXVALID), offset 8 write DIV.
+/// Registers (slot 0):
 ///
-/// Transmit: a 10-bit shift register holding the *complement* of the
-/// line (a cleared register is an idle line), a down-counter for the
-/// bit period, a 4-bit bit counter.  Receive: two synchroniser flops on
-/// SIN, a start-bit detector, a half-period first count then full
-/// periods (samples in the middle of each bit), an 8-bit shift register
-/// for the data samples and a holding register loaded when the stop bit
-/// is sampled, so a following character does not disturb an unread one.
-fn uart_block() -> Vec<Eq> {
+/// | offset | read | write |
+/// |---|---|---|
+/// | 0 | RDATA: the result of the last read command | CMD: bits 7:0 data, bits 10:8 the chip's register address, bit 15 = read; starts a cycle when not busy |
+/// | 4 | STATUS: bit 0 BUSY | |
+///
+/// A command latches the address, data and direction (SBA, UD, SBRW),
+/// raises BUSY (the 16550's chip select) and runs a cycle counter K:
+/// reads hold RD# low for K = 1..3, latch the chip's data at the end of
+/// K = 3 and stay busy to K = 13 (the 16550 wants 425 ns between FIFO
+/// reads); writes hold WR# low for K = 1..2 with the data on the chip's
+/// private bus UD until K = 4.  The chip's timing model checks all of it.
+fn bridge_block() -> Vec<Eq> {
     let mut eqs = Vec::new();
-    let div: Vec<String> = (0..8).map(|i| n("UDIV", i)).collect();
-    // Decode (combinational): slot 0, the four accesses, the byte-device
-    // flag on the bus, and "start a transmission".
+    // Decode (combinational): slot 0, the accesses, the byte-device flag.
     eqs.push(Eq::sop("SLOT0", Mode::Comb, vec![vec![nl_(&n("MR", 23)), nl_(&n("MR", 24)), nl_(&n("MR", 25)), nl_(&n("MR", 26))]]));
-    eqs.push(Eq::sop("UWRT", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
-    eqs.push(Eq::sop("UWRD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), l(&n("MR", 3)), nl_(&n("MR", 2))]]));
-    eqs.push(Eq::sop("URDD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
-    eqs.push(Eq::sop("USRD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), l(&n("MR", 2))]]));
-    eqs.push(Eq::sop("START", Mode::Comb, vec![vec![l("UWRT"), nl_("TXBUSY")]]));
+    eqs.push(Eq::sop("SBCMD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("SBRDD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("SBRDS", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), l(&n("MR", 2))]]));
+    eqs.push(Eq::sop("START", Mode::Comb, vec![vec![l("SBCMD"), nl_("BUSY")]]));
+    eqs.push(Eq::sop("UDOE", Mode::Comb, vec![vec![l("BUSY"), nl_("SBRW")]]));
     eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![l("MIO"), l("SLOT0")]]).with_oe(vec![l("MIO"), l("SLOT0")]));
-    // Divisor.
+    // Data latch: its outputs are the chip's private data bus UD, driven
+    // during a write (the chip drives it during a read).
     for i in 0..8 {
-        eqs.push(Eq::sop(&div[i], Mode::Reg, vec![vec![l("UWRD"), l(&n("DQ", i))], vec![nl_("UWRD"), l(&div[i])]]));
+        eqs.push(Eq::sop(&n("UD", i), Mode::Reg, vec![vec![l("START"), l(&n("DQ", i))], vec![nl_("START"), l(&n("UD", i))]]).with_oe(vec![l("UDOE")]));
     }
-    // Down-counter `name` of 8 bits: reload with `load` (a net per bit)
-    // when `reload` or when not `run`; else decrement; `tick` when zero.
-    let counter = |eqs: &mut Vec<Eq>, name: &str, tick: &str, run: &str, load: &[String]| {
-        let bits: Vec<String> = (0..8).map(|i| n(name, i)).collect();
-        let mut zero: Vec<SLit> = bits.iter().map(|b| nl_(b)).collect();
-        zero.push(l(run));
-        eqs.push(Eq::sop(tick, Mode::Comb, vec![zero]));
-        for i in 0..8 {
-            let mut terms = vec![vec![nl_(run), l(&load[i])], vec![l(run), l(tick), l(&load[i])]];
-            // Decrement: bit i flips when every lower bit is 0.
-            for j in 0..i {
-                terms.push(vec![l(run), nl_(tick), l(&bits[i]), l(&bits[j])]);
-            }
-            let mut t = vec![l(run), nl_(tick), nl_(&bits[i])];
-            t.extend((0..i).map(|j| nl_(&bits[j])));
-            terms.push(t);
-            eqs.push(Eq::sop(&bits[i], Mode::Reg, terms));
-        }
-    };
-    // Transmit.
-    counter(&mut eqs, "TXB", "TXTICK", "TXBUSY", &div);
-    // Shift register, complemented: TXS0 is the line (active-low output
-    // SOUT), TXS9 the stop bit.  Loaded with {stop, data, start}, shifted
-    // right on each tick with idle (0 = high) filling in.
-    for i in 0..10 {
-        let mut terms = Vec::new();
-        if i == 0 {
-            terms.push(vec![l("START")]); // start bit: line low
-        } else if i <= 8 {
-            terms.push(vec![l("START"), nl_(&n("DQ", i - 1))]);
-        }
-        if i < 9 {
-            terms.push(vec![nl_("START"), l("TXTICK"), l(&n("TXS", i + 1))]);
-        }
-        // Hold: the register's own value (for TXS0 that is the SOUT pin,
-        // inverted).
-        terms.push(if i == 0 { vec![nl_("START"), nl_("TXTICK"), nl_("SOUT")] } else { vec![nl_("START"), nl_("TXTICK"), l(&n("TXS", i))] });
-        let eq = Eq::sop(&n("TXS", i), Mode::Reg, terms);
-        eqs.push(if i == 0 { eq.with_name("SOUT").active_low() } else { eq });
+    // Address latch.
+    for i in 0..3 {
+        eqs.push(Eq::sop(&n("SBA", i), Mode::Reg, vec![vec![l("START"), l(&n("DQ", 8 + i))], vec![nl_("START"), l(&n("SBA", i))]]));
     }
-    // Bit counter (10 bits per character) and busy.
-    let cnt: Vec<String> = (0..4).map(|i| n("TXC", i)).collect();
-    let mut ins: Vec<String> = cnt.clone();
-    ins.extend(["START", "TXTICK", "TXBUSY"].map(String::from));
+    // Direction, busy, counter, strobes, the latch pulse.
+    let k: Vec<String> = (0..4).map(|i| n("K", i)).collect();
+    let mut ins: Vec<String> = k.clone();
+    ins.extend(["BUSY", "SBRW", "START"].map(String::from));
     let ins = strs(&ins);
-    let c = |m: u32| (m & 15) as usize;
-    let start = |m: u32| m >> 4 & 1 == 1;
-    let tick = |m: u32| m >> 5 & 1 == 1;
-    let busy = |m: u32| m >> 6 & 1 == 1;
+    let kv = |m: u32| (m & 15) as usize;
+    let busy = |m: u32| m >> 4 & 1 == 1;
+    let rw = |m: u32| m >> 5 & 1 == 1;
+    let start = |m: u32| m >> 6 & 1 == 1;
+    let last = |m: u32| if rw(m) { 13 } else { 4 };
+    eqs.push(Eq::sop("SBRW", Mode::Reg, vec![vec![l("START"), l(&n("DQ", 15))], vec![nl_("START"), l("SBRW")]]));
+    eqs.push(Eq::table_pos("BUSY", Mode::Reg, &ins, move |m| Some(start(m) || (busy(m) && kv(m) < last(m)))));
     for b in 0..4 {
-        eqs.push(Eq::table_pos(&cnt[b], Mode::Reg, &ins, move |m| {
-            let v = if start(m) { 10 } else if busy(m) && tick(m) { c(m).saturating_sub(1) } else { c(m) };
-            Some(v >> b & 1 == 1)
-        }));
+        eqs.push(Eq::table_pos(&k[b], Mode::Reg, &ins, move |m| Some(busy(m) && !start(m) && (kv(m) + 1) >> b & 1 == 1)));
     }
-    eqs.push(Eq::table_pos("TXBUSY", Mode::Reg, &ins, move |m| Some(start(m) || (busy(m) && !(tick(m) && c(m) == 1)))));
-    // Receive.
-    // Synchroniser, as active-low registers so that reset (registers
-    // cleared) reads as an idle (high) line rather than a start bit.
-    eqs.push(Eq::sop("SINS1", Mode::Reg, vec![vec![nl_("SIN")]]).sync().active_low());
-    eqs.push(Eq::sop("SINS2", Mode::Reg, vec![vec![nl_("SINS1")]]).active_low());
-    // First count from the start edge is half a period (DIV / 2), then
-    // full periods: the samples land mid-bit.
-    let half: Vec<String> = (0..8).map(|i| if i < 7 { n("UDIV", i + 1) } else { "GND".to_string() }).collect();
-    // Reload with DIV / 2 while idle with the line high; count from the
-    // edge that starts a character (RXRUN, a cycle before RXACT) and
-    // reload with DIV on every tick.  Detection latency is then three
-    // clocks (two synchroniser flops and the tick register), so the
-    // samples sit 3 / (DIV + 1) of a bit late: DIV >= 7 keeps them in
-    // the middle half of the bit.
-    eqs.push(Eq::sop("RXRUN", Mode::Comb, vec![vec![l("RXACT")], vec![nl_("SINS2")]]));
-    {
-        let bits: Vec<String> = (0..8).map(|i| n("RXB", i)).collect();
-        let mut zero: Vec<SLit> = bits.iter().map(|b| nl_(b)).collect();
-        zero.push(l("RXACT"));
-        eqs.push(Eq::sop("RXTICK", Mode::Comb, vec![zero]));
-        for i in 0..8 {
-            let mut terms = vec![vec![l("RXRUN"), l("RXTICK"), l(&div[i])]];
-            if half[i] != "GND" {
-                terms.push(vec![nl_("RXRUN"), l(&half[i])]);
-            }
-            for j in 0..i {
-                terms.push(vec![l("RXRUN"), nl_("RXTICK"), l(&bits[i]), l(&bits[j])]);
-            }
-            let mut t = vec![l("RXRUN"), nl_("RXTICK"), nl_(&bits[i])];
-            t.extend((0..i).map(|j| nl_(&bits[j])));
-            terms.push(t);
-            eqs.push(Eq::sop(&bits[i], Mode::Reg, terms));
-        }
-    }
-    // Samples: shift right on every tick, the new one entering at the
-    // top; after nine ticks bits 7..0 hold d7..d0.
+    eqs.push(Eq::table_pos("URD_n", Mode::Reg, &ins, move |m| Some(busy(m) && rw(m) && (0..=2).contains(&kv(m)))).active_low());
+    eqs.push(Eq::table_pos("UWR_n", Mode::Reg, &ins, move |m| Some(busy(m) && !rw(m) && (0..=1).contains(&kv(m)))).active_low());
+    eqs.push(Eq::table_pos("LATCH", Mode::Comb, &ins, move |m| Some(busy(m) && rw(m) && kv(m) == 3)));
+    // Result.
     for i in 0..8 {
-        let from = if i < 7 { l(&n("RXS", i + 1)) } else { l("SINS2") };
-        eqs.push(Eq::sop(&n("RXS", i), Mode::Reg, vec![vec![l("RXTICK"), from], vec![nl_("RXTICK"), l(&n("RXS", i))]]));
+        eqs.push(Eq::sop(&n("RDATA", i), Mode::Reg, vec![vec![l("LATCH"), l(&n("UD", i))], vec![nl_("LATCH"), l(&n("RDATA", i))]]));
     }
-    // Control: active from a start bit until the stop bit is sampled
-    // (tick 10); the bit counter; VALID set at the stop bit, cleared by
-    // a read of RXD.
-    let rcnt: Vec<String> = (0..4).map(|i| n("RXC", i)).collect();
-    let mut rins: Vec<String> = rcnt.clone();
-    rins.extend(["RXACT", "RXTICK", "SINS2"].map(String::from));
-    let rins = strs(&rins);
-    let rc = |m: u32| (m & 15) as usize;
-    let act = |m: u32| m >> 4 & 1 == 1;
-    let rtick = |m: u32| m >> 5 & 1 == 1;
-    let sin = |m: u32| m >> 6 & 1 == 1;
-    let done = move |m: u32| act(m) && rtick(m) && rc(m) == 1;
-    eqs.push(Eq::table_pos("RXACT", Mode::Reg, &rins, move |m| Some(if act(m) { !done(m) } else { !sin(m) })));
-    for b in 0..4 {
-        eqs.push(Eq::table_pos(&rcnt[b], Mode::Reg, &rins, move |m| {
-            let v = if !act(m) { 10 } else if rtick(m) { rc(m).saturating_sub(1) } else { rc(m) };
-            Some(v >> b & 1 == 1)
-        }));
-    }
-    eqs.push(Eq::sop("RXDONE", Mode::Comb, vec![vec![l("RXACT"), l("RXTICK"), l(&rcnt[0]), nl_(&rcnt[1]), nl_(&rcnt[2]), nl_(&rcnt[3])]]));
-    eqs.push(Eq::sop("VALID", Mode::Reg, vec![vec![l("RXDONE")], vec![l("VALID"), nl_("URDD")]]));
+    // Bus read drivers: RDATA at offset 0, STATUS at offset 4, on lane 0,
+    // enabled from the bus read strobe (a gate level after MIO: the data
+    // memory's outputs are off by then, docs/bus.md section 4).
     for i in 0..8 {
-        eqs.push(Eq::sop(&n("RXD", i), Mode::Reg, vec![vec![l("RXDONE"), l(&n("RXS", i))], vec![nl_("RXDONE"), l(&n("RXD", i))]]));
-    }
-    // Bus read drivers: RXD at offset 0, STATUS at offset 4, on lane 0.
-    for i in 0..8 {
-        let mut terms = vec![vec![l("URDD"), l(&n("RXD", i))]];
+        let mut terms = vec![vec![l("SBRDD"), l(&n("RDATA", i))]];
         if i == 0 {
-            terms.push(vec![l("USRD"), l("TXBUSY")]);
+            terms.push(vec![l("SBRDS"), l("BUSY")]);
         }
-        if i == 1 {
-            terms.push(vec![l("USRD"), l("VALID")]);
-        }
-        // Enabled from the bus read strobe (a gate level after MIO): the
-        // data memory's outputs are off by then (OEN, section 6.2).
         eqs.push(Eq::sop(&n("DQ", i), Mode::Comb, terms).with_oe(vec![nl_("BRD_n"), l("SLOT0")]));
     }
     eqs
@@ -1545,7 +1451,7 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("macc", clk, None, mem_access_block()));
     v.extend(pack("msel", None, None, mem_select_block()));
     v.extend(pack("sf", None, None, sf_block()));
-    v.extend(pack("uart", clk, None, with_bubble(uart_block(), "RESET")));
+    v.extend(pack("sbr", clk, None, with_bubble(bridge_block(), "RESET")));
     v.extend(pack("wc1", Some("T3"), None, wcopy1_block()));
     v.extend(pack("wc2", Some("T1"), None, wcopy2_block()));
     v
@@ -1590,7 +1496,7 @@ pub fn layout() -> Vec<Column> {
         col("", 240, &["ID/EX control", "Forwarding control", "ID/EX A", "ID/EX B", "ID/EX store data", "ID/EX branch target"], true),
         col("EX", 330, &["Forward A", "Forward B", "ALU slices + carries", "Shifter", "Compare", "Next PC"], false),
         col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Access size", "Stall"], true),
-        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "UART", "Serial port"], false),
+        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "Serial bridge", "UART", "Serial port"], false),
         col("", 240, &["MEM/WB", "Write copies"], true),
         col("WB", 170, &[], false),
     ]
@@ -1687,10 +1593,59 @@ pub fn build_netlist(p: &Params) -> Netlist {
         let bb8 = nl.net("BB8");
         nl.pull(bb8, Level::L);
         nl.set_net_role(bb8, "bus:bb8");
+        // The UART (TL16C550D) behind the bridge: data on the private bus
+        // UD, address from the bridge's latch, chip select CS0 = BUSY,
+        // strobes from the bridge, master reset from RESET.  CS1 high,
+        // CS2# low, ADS# low, RD2 / WR2 low.  Modem lines: RTS# and CTS#
+        // through the transceiver's second pair (hardware flow control,
+        // auto mode in the chip); DTR# -> DSR# + DCD#, RI# high;
+        // BAUDOUT -> RCLK.
+        let c = nl.add_chip("uart0", Uart16550::new(BusTiming::tl16c550c(), UART_XIN_HZ));
+        nl.set_meta(c, meta("TL16C550DPTR", "LQFP-48", "uart0", Some("uart".into()), Model::Uart { xin_hz: UART_XIN_HZ }));
+        for i in 0..8u8 {
+            let net = nl.net(&n("UD", i as usize));
+            nl.connect(net, c, uart_pin_of(UartPin::D(i)));
+        }
+        for i in 0..3u8 {
+            let net = nl.net(&n("SBA", i as usize));
+            nl.connect(net, c, uart_pin_of(UartPin::A(i)));
+        }
+        for (net, p) in [("BUSY", UartPin::Cs0), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout)] {
+            let net = nl.net(net);
+            nl.connect(net, c, uart_pin_of(p));
+        }
+        nl.connect(vcc, c, uart_pin_of(UartPin::Cs1));
+        for p in [UartPin::Cs2N, UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
+            nl.connect(gnd, c, uart_pin_of(p));
+        }
+        for (net, pins) in [("UDTR_n", vec![33, 39, 40]), ("UBAUD", vec![12, 5])] {
+            let net = nl.net(net);
+            for p in pins {
+                nl.connect(net, c, p);
+            }
+        }
+        nl.connect(vcc, c, 41);
+        let rts = nl.net("URTS_n");
+        let cts = nl.net("UCTS_n");
+        nl.connect(rts, c, 32);
+        nl.connect(cts, c, 38);
+        let xin = nl.net("XIN");
+        let xout = nl.net("XOUT");
+        nl.connect(xin, c, uart_pin_of(UartPin::Xin));
+        nl.connect(xout, c, uart_pin_of(UartPin::Xout));
+        // Crystal and load capacitors.
+        let x = nl.add_chip("x1", Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+        nl.set_meta(x, meta("X3225147456MOB4SI", "3225", "x1", None, Model::Passive));
+        nl.connect(xin, x, 1);
+        nl.connect(xout, x, 2);
+        for (name, net) in [("c5", xin), ("c6", xout)] {
+            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+            nl.set_meta(cap, meta("18pF 0603 C0G", "0603", name, None, Model::Passive));
+            nl.connect(net, cap, 1);
+            nl.connect(gnd, cap, 2);
+        }
         let sout = nl.net("SOUT");
         let sin = nl.net("SIN");
-        nl.set_net_role(sout, "serial:sout");
-        nl.set_net_role(sin, "serial:sin");
         // RS-232 transceiver (SP3232, TSSOP-16): 1 C1+, 2 V+, 3 C1-,
         // 4 C2+, 5 C2-, 6 V-, 7 T2OUT, 8 R2IN, 9 R2OUT, 10 T2IN, 11 T1IN,
         // 12 R1OUT, 13 R1IN, 14 T1OUT, 15 GND, 16 VCC.
@@ -1699,10 +1654,16 @@ pub fn build_netlist(p: &Params) -> Netlist {
         nl.set_meta(xc, meta("SP3232EEY-L/TR", "TSSOP-16", "xcvr0", None, Model::Passive));
         nl.connect(sout, xc, 11);
         nl.connect(sin, xc, 12);
+        nl.connect(rts, xc, 10);
+        nl.connect(cts, xc, 9);
         let tx = nl.net("RS232_TX");
         let rx = nl.net("RS232_RX");
+        let rts232 = nl.net("RS232_RTS");
+        let cts232 = nl.net("RS232_CTS");
         nl.connect(tx, xc, 14);
         nl.connect(rx, xc, 13);
+        nl.connect(rts232, xc, 7);
+        nl.connect(cts232, xc, 8);
         nl.connect(gnd, xc, 15);
         nl.connect(vcc, xc, 16);
         for (name, a, b) in [("c1", 1, 3), ("c2", 4, 5)] {
@@ -1723,11 +1684,13 @@ pub fn build_netlist(p: &Params) -> Netlist {
             nl.connect(net, cap, 1);
             nl.connect(gnd, cap, 2);
         }
-        let j = nl.add_chip("j1", Passive::new(vec![(1, "GND".into()), (2, "TX".into()), (3, "RX".into())]));
-        nl.set_meta(j, meta("Header 1x3 2.54mm", "PinHeader_1x03", "j1", None, Model::Passive));
+        let j = nl.add_chip("j1", Passive::new(vec![(1, "GND".into()), (2, "TX".into()), (3, "RX".into()), (4, "RTS".into()), (5, "CTS".into())]));
+        nl.set_meta(j, meta("Header 1x5 2.54mm", "PinHeader_1x05", "j1", None, Model::Passive));
         nl.connect(gnd, j, 1);
         nl.connect(tx, j, 2);
         nl.connect(rx, j, 3);
+        nl.connect(rts232, j, 4);
+        nl.connect(cts232, j, 5);
     }
 
     let k = p.code_words_log2;
@@ -1921,23 +1884,21 @@ pub struct Build {
     /// rising edge).  Any value must work; the tests sweep it.
     pub reset_phase_ns: f64,
     pub boot: Boot,
-    /// The serial divisor the program will write (bit period DIV + 1
-    /// clocks): the terminal on the wire runs at the same rate.  255 on
-    /// the board (115200 baud); tests use a small one.
-    pub uart_div: u8,
-    /// Characters the terminal types, one after another, starting
-    /// `uart_rx_after` cycles after reset is released.
+    /// UART crystal (Hz).  The board's is 14.7456 MHz; tests use a faster
+    /// one so that characters take tens of cycles rather than thousands.
+    pub uart_xin_hz: f64,
+    /// Characters the terminal sends, from when the program first polls
+    /// the line status, one per character time.
     pub uart_rx: Vec<u8>,
-    pub uart_rx_after: u64,
 }
 
-/// The board's serial divisor: 115200 baud at 34 ns (255 + 1 clocks per
-/// bit = 8.70 us, 114.9 kbaud).
-pub const UART_DIV: u8 = 255;
+/// The board's UART crystal: 14.7456 MHz (3225 SMD, 12 pF), divisor 8
+/// for 115200 baud.
+pub const UART_XIN_HZ: f64 = 14_745_600.0;
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_div: UART_DIV, uart_rx: Vec::new(), uart_rx_after: 8 }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new() }
     }
 }
 
@@ -1954,7 +1915,6 @@ pub struct Cpu {
     mr_n: NetId,
     /// Cycles a full reset (boot copy included) may take.
     boot_budget: usize,
-    uart_rx_after: u64,
     pc: Vec<NetId>,
     imem: Vec<usize>,
     dmem: Vec<usize>,
@@ -2009,6 +1969,7 @@ impl Cpu {
             gate_tpd: opt.gate_tpd,
             reset_release: (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns),
             mr_timeout: Self::ns(MR_TIMEOUT_NS),
+            uart_xin_hz: Some(opt.uart_xin_hz),
             dmem_timing: Some(opt.dmem),
         };
         let mut nl = board.instantiate(&load);
@@ -2075,14 +2036,9 @@ impl Cpu {
             }
             chip.preload(0, 0xA5);
         }
-        // The terminal on the serial line (test bench, not a board part):
-        // starts typing once reset has been released.
-        let bit = period * (opt.uart_div as Time + 1);
-        let term = nl.add_chip("term0", Terminal::new(bit, Time::MAX, &opt.uart_rx));
-        let sout = nl.net("SOUT");
-        let sin = nl.net("SIN");
-        nl.connect(sout, term, 1);
-        nl.connect(sin, term, 2);
+        if let Some(id) = nl.chips_with_role("uart").first().map(|(id, _)| *id) {
+            nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
+        }
         let gal_count = board.chips.iter().filter(|c| matches!(c.model, Model::Gal { .. })).count();
         let sim = nl.build();
         let clk = sim.net_id("CLK");
@@ -2103,7 +2059,6 @@ impl Cpu {
             reset_release: 0,
             mr_n,
             boot_budget: RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) },
-            uart_rx_after: opt.uart_rx_after,
         };
         // Power-on: the supervisor holds RST_n low, the synchroniser's
         // registers power up with RESET asserted, clock low.  Let every
@@ -2141,10 +2096,6 @@ impl Cpu {
         self.step();
         self.cycles = 0;
         self.pc_trace.clear();
-        // The terminal starts typing a few cycles from now.
-        let start = self.sim.now() + self.uart_rx_after * self.period;
-        let id = self.sim.chip_id("term0");
-        self.sim.chip_mut::<Terminal>(id).set_start(start);
     }
 
     /// Press the reset button: MR_n low from `phase_ns` into the current
@@ -2270,14 +2221,14 @@ impl Cpu {
     fn chip_sram(&self, id: usize) -> &Cy7c131 {
         self.sim.chip(id).downcast_ref::<Cy7c131>().unwrap()
     }
-    /// The terminal on the serial line.
-    pub fn terminal(&self) -> &Terminal {
-        let id = self.sim.chip_id("term0");
-        self.sim.chip(id).downcast_ref::<Terminal>().expect("terminal model")
+    /// The UART chip model.
+    pub fn uart(&self) -> &Uart16550 {
+        let id = self.sim.chip_id("uart0");
+        self.sim.chip(id).downcast_ref::<Uart16550>().expect("uart model")
     }
-    /// Characters the machine has sent so far, as the terminal decoded them.
+    /// Characters the UART has transmitted so far.
     pub fn uart_tx(&self) -> Vec<u8> {
-        self.terminal().rx.clone()
+        self.uart().core.tx.clone()
     }
 
     pub fn imem_chips(&self) -> &[usize] {
@@ -2318,6 +2269,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "dl" => ("Delay line", "CLK"),
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
+        "sbr" => ("Serial bridge", "MEM"),
         "uart" => ("UART", "MEM"),
         "macc" => ("Access size", "EX/MEM"),
         "msel" => ("Load lane select", "MEM"),

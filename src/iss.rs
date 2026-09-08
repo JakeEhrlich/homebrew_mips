@@ -30,8 +30,8 @@ pub struct Cpu {
     branch: Option<u32>,
     /// Instructions retired.
     pub count: u64,
-    /// The serial port, bus slot 0 (docs/uart.md).
-    pub serial: crate::serial::Port,
+    /// The serial bridge and its UART, bus slot 0 (docs/uart.md).
+    pub serial: crate::uart16550::Bridge,
 }
 
 /// I/O space: an access is I/O when the *base register* (not the sum)

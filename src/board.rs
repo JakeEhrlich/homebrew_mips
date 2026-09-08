@@ -152,6 +152,8 @@ pub struct Load {
     /// When the supervisor releases RST_n (ps from power-on).
     pub reset_release: Time,
     pub mr_timeout: Time,
+    /// Overrides the board crystal.
+    pub uart_xin_hz: Option<f64>,
     /// Data memory timing override (a part sweep).
     pub dmem_timing: Option<as7c164a::Timing>,
 }
@@ -199,7 +201,7 @@ impl Board {
                 Model::Gate => nl.add_chip(&c.name, FastGate::new(load.gate_tpd.0, load.gate_tpd.1)),
                 Model::Supervisor => nl.add_chip(&c.name, ResetSupervisor::new(load.reset_release, load.mr_timeout)),
                 Model::Rom { tacc_ns, toe_ns, tdf_ns } => nl.add_chip(&c.name, Rom::new(*tacc_ns as Time * NS, *toe_ns as Time * NS, *tdf_ns as Time * NS)),
-                Model::Uart { xin_hz } => nl.add_chip(&c.name, Uart16550::new(BusTiming::tl16c550c(), *xin_hz)),
+                Model::Uart { xin_hz } => nl.add_chip(&c.name, Uart16550::new(BusTiming::tl16c550c(), load.uart_xin_hz.unwrap_or(*xin_hz))),
                 Model::Passive => {
                     let names: Vec<(usize, String)> = c.pins.iter().map(|p| (p.pin, p.name.clone())).collect();
                     nl.add_chip(&c.name, Passive::new(names))
