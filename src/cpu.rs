@@ -1916,8 +1916,9 @@ impl Lcg {
         self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         (self.0 >> 33) as u32
     }
+    /// Uniform in [0, 1) (`next` yields 31 bits).
     pub fn unit(&mut self) -> f64 {
-        self.next() as f64 / 4294967296.0
+        self.next() as f64 / 2147483648.0
     }
 }
 

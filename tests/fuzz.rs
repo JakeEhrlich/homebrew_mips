@@ -7,7 +7,9 @@
 //! `FUZZ_PROGRAMS`, `FUZZ_SEED`, `FUZZ_DELAY_NS` (the maximum pin delay)
 //! `FUZZ_DUTY` (the clock duty range, "0.49,0.51": a divide-by-two
 //! flop's), `FUZZ_JITTER_NS` and `FUZZ_GRADE` (the delay lines' tolerance
-//! grade, "room" = binned) in the environment scale it.
+//! grade, "room" = binned), `FUZZ_PERIOD_NS` and `FUZZ_GATE_TAP` ("50,0"
+//! = a DS1100-50's 10 ns tap for the write gate) in the environment
+//! scale it.
 use mips32::asm::assemble;
 use mips32::cpu::{Boot, Build, Cpu, fuzz_image};
 use mips32::ds1100::Grade;
@@ -29,12 +31,18 @@ fn fuzz_build(seed: u64, delay_ns: f64) -> Build {
         Ok("industrial") => Grade::Industrial,
         _ => Grade::Room,
     };
-    Build { boot: Boot::Preload, fuzz_seed: seed, pin_delay_ns: delay_ns, clock_duty: duty(), clock_jitter_ns: jitter, grade, ..Build::default() }
+    // The write gate's delay line: "40,0" = DS1100-40 tap 1 (8 ns, the
+    // board's), "50,0" = DS1100-50 tap 1 (10 ns).
+    let gate_tap = std::env::var("FUZZ_GATE_TAP").ok().map(|v| {
+        let mut it = v.split(',').map(|x| x.trim().parse::<u32>().unwrap());
+        (it.next().unwrap(), it.next().unwrap() as usize)
+    }).unwrap_or((40, 0));
+    Build { boot: Boot::Preload, fuzz_seed: seed, pin_delay_ns: delay_ns, clock_duty: duty(), clock_jitter_ns: jitter, grade, gate_tap, ..Build::default() }
 }
 
 /// Run `src` under the fuzz for `seed`; the failure message names what
 /// disagreed.
-fn run_fuzzed(src: &str, seed: u64, delay_ns: f64, what: &str) -> Cpu {
+fn run_fuzzed(src: &str, seed: u64, delay_ns: f64, period_ns: f64, what: &str) -> Cpu {
     let p = assemble(src, 0).unwrap_or_else(|e| panic!("{what}: assembler {e:?}"));
     let stop = p.labels["stop"];
     let image = fuzz_image(seed);
@@ -44,7 +52,7 @@ fn run_fuzzed(src: &str, seed: u64, delay_ns: f64, what: &str) -> Cpu {
     iss.regs = image.regs;
     let retired = iss.run_until(stop, 200_000).unwrap_or_else(|e| panic!("{what}: reference fault {e:?}"));
     assert_eq!(iss.pc, stop, "{what}: reference did not reach stop");
-    let mut cpu = Cpu::build(&p.words, 34.0, fuzz_build(seed, delay_ns));
+    let mut cpu = Cpu::build(&p.words, period_ns, fuzz_build(seed, delay_ns));
     let budget = retired * 3 + 300;
     assert!(cpu.run_until_pc(stop, budget), "{what}: netlist did not reach stop in {budget} cycles; pc tail {:?}", &cpu.pc_trace[cpu.pc_trace.len().saturating_sub(30)..]);
     let rw = cpu.reset_warnings();
@@ -66,9 +74,10 @@ fn random_programs_with_delays_jitter_and_random_contents() {
     let programs: u64 = std::env::var("FUZZ_PROGRAMS").ok().and_then(|v| v.parse().ok()).unwrap_or(4);
     let seed0: u64 = std::env::var("FUZZ_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(1);
     let delay: f64 = std::env::var("FUZZ_DELAY_NS").ok().and_then(|v| v.parse().ok()).unwrap_or(0.3);
+    let period: f64 = std::env::var("FUZZ_PERIOD_NS").ok().and_then(|v| v.parse().ok()).unwrap_or(34.0);
     for i in 0..programs {
         let seed = seed0 + i;
         let src = program(seed, 160);
-        run_fuzzed(&src, seed, delay, &format!("seed {seed} at {delay} ns"));
+        run_fuzzed(&src, seed, delay, period, &format!("seed {seed} at {delay} ns, {period} ns period"));
     }
 }

@@ -1365,6 +1365,10 @@ impl Sim {
         [s, c, q].into_iter().flatten().min()
     }
 
+    /// The propagation delays of a chip's pins (ps, index = pin).
+    pub fn pin_delays(&self, chip: ChipId) -> &[Time] {
+        &self.pin_delay[chip]
+    }
     /// Give every chip pin a propagation delay: `f(chip, pin)` in ps.
     /// Call once, before running.
     pub fn set_pin_delays(&mut self, mut f: impl FnMut(&str, usize) -> Time) {

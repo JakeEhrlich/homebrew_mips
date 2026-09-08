@@ -405,6 +405,10 @@ Not covered:
 - [ ] Oscillator at twice the clock, divided by two in a flop (a 50 %
       clock is required, docs/fuzz.md finding 1).
 - [ ] Delay lines binned to +-2 ns on the 8 ns tap (required, finding 2).
+- [ ] Address and WE# to the data SRAMs routed to equal length: the
+      write-start margin is zero, so the strobe must not arrive before
+      the address (docs/fuzz.md finding 4); the skew budget between any
+      two chips is 0.5 ns at 34 ns.
 - [ ] MAX811LEUS+T: RESET# (pin 2) into the rsync GAL's RST_n pin, MR#
       (pin 3) to the reset button and a 0.1 uF decoupling capacitor at VCC;
       no pull-up needed on MR# (internal). Sense point at the far end of
