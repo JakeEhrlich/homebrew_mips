@@ -26,6 +26,7 @@ Times from the rising clock edge that starts the access's MEM cycle.
 | Read strobe BRD# | low from 13 ns to 13 ns after the next edge | drive BD from BRD# low and the slot match, so no earlier than 15 ns; data valid by 30.5 ns; release within 20 ns of BRD# rising |
 | Read data BD[31:0] | captured at 30.5 ns (3.5 ns before the next edge) | |
 | Write strobe BWR#, write data BD | data valid by 8 ns, held to the next edge + 2 ns; strobe low 13 ns to 13 ns after the next edge | take the data at the edge that ends the strobe cycle, or at any edge while the strobe is low |
+| Write qualifier BWEQ | registered: high from 5.5 ns of an I/O store's MEM cycle to 5.5 ns after the next edge | for an SRAM on a card: shape the write pulse as NAND(tap, BWEQ) from a local DS1100-40's 8 ns tap and gate, exactly as the board does (memory-timing.md section 6.1); select the chip from the slot decode alone and its outputs from BRD# |
 | BB8 | sampled at 23 ns | high while selected if the device drives BD[7:0] only (the CPU zero-extends); tri-state otherwise |
 
 A device therefore gets 25 ns from address to data on a read, and one
@@ -40,6 +41,7 @@ both with one gate level to spare.
 | BBE[3:0]# | CPU to device | 4 | MBE0..3_n (chip macc0): lanes written by a store, all low for a load |
 | BD[31:0] | both | 32 | DQ: the EX/MEM store-data drivers for a write, the device for a read |
 | BRD#, BWR# | CPU to device | 2 | chip stl0: MIO and the direction |
+| BWEQ | CPU to device | 1 | chip mctl0: registered I/O store in MEM |
 | BB8 | device to CPU | 1 | the selected device, tri-state, pulled down |
 | CLK, RESET | CPU to device | 2 | |
 | IRQ | device to CPU | 1 | reserved: one line into a status bit the CPU can poll |
@@ -103,7 +105,7 @@ copied into data memory before the CPU starts (docs/boot.md).
 
 ## 6. Off the board (not built)
 
-- Connector: DIN 41612, 96 pins, rows for the 65 signals with the rest
+- Connector: DIN 41612, 96 pins, rows for the 66 signals with the rest
   ground and 5 V.  A 2 x 40 header is the cheap first backplane.
 - Data transceivers: BD must not be the CPU's DQ once a backplane hangs
   on it; two 74ABT16245 (or eight GALs as buffers) between DQ and the
@@ -113,7 +115,11 @@ copied into data memory before the CPU starts (docs/boot.md).
 - A memory card is the experiment that says whether the SRAM write
   timing (zero margin against the pulse, hold margins of 2 to 4 ns
   minus skew) survives a connector.  The protocol is identical; only
-  the skew budget changes.
+  the skew budget changes.  Such a card lives in a slot, so software
+  sees it above 0x8000_0000, not as a continuation of the on-board
+  1 MB.
+- Every device block on the board (the serial bridge) decodes from the
+  bus signals only, so it moves to a card unchanged.
 
 ## 7. History
 

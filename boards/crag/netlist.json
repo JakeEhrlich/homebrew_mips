@@ -79656,6 +79656,26 @@
             ]
           },
           {
+            "out": "BWEQ",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "FA31",
+                  true
+                ],
+                [
+                  "XMW",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
             "out": "MDEST0",
             "mode": "reg",
             "terms": [
@@ -79799,22 +79819,26 @@
           ],
           [
             21,
-            "MDEST0"
+            "BWEQ"
           ],
           [
             16,
-            "MDEST1"
+            "MDEST0"
           ],
           [
             22,
-            "MDEST2"
+            "MDEST1"
           ],
           [
             15,
-            "MDEST3"
+            "MDEST2"
           ],
           [
             23,
+            "MDEST3"
+          ],
+          [
+            14,
             "MDEST4"
           ]
         ]
@@ -79893,15 +79917,21 @@
           "kind": "power"
         },
         {
+          "pin": 14,
+          "name": "MDEST4",
+          "net": "MDEST4",
+          "kind": "out"
+        },
+        {
           "pin": 15,
-          "name": "MDEST3",
-          "net": "MDEST3",
+          "name": "MDEST2",
+          "net": "MDEST2",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "MDEST1",
-          "net": "MDEST1",
+          "name": "MDEST0",
+          "net": "MDEST0",
           "kind": "out"
         },
         {
@@ -79930,20 +79960,20 @@
         },
         {
           "pin": 21,
-          "name": "MDEST0",
-          "net": "MDEST0",
+          "name": "BWEQ",
+          "net": "BWEQ",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "MDEST2",
-          "net": "MDEST2",
+          "name": "MDEST1",
+          "net": "MDEST1",
           "kind": "out"
         },
         {
           "pin": 23,
-          "name": "MDEST4",
-          "net": "MDEST4",
+          "name": "MDEST3",
+          "net": "MDEST3",
           "kind": "out"
         },
         {
@@ -92920,15 +92950,11 @@
             "terms": [
               [
                 [
-                  "MIO",
-                  true
+                  "BWR_n",
+                  false
                 ],
                 [
                   "SLOT0",
-                  true
-                ],
-                [
-                  "MMW",
                   true
                 ],
                 [
@@ -92948,15 +92974,11 @@
             "terms": [
               [
                 [
-                  "MIO",
-                  true
+                  "BRD_n",
+                  false
                 ],
                 [
                   "SLOT0",
-                  true
-                ],
-                [
-                  "MMR",
                   true
                 ],
                 [
@@ -92976,15 +92998,11 @@
             "terms": [
               [
                 [
-                  "MIO",
-                  true
+                  "BRD_n",
+                  false
                 ],
                 [
                   "SLOT0",
-                  true
-                ],
-                [
-                  "MMR",
                   true
                 ],
                 [
@@ -93036,8 +93054,8 @@
             "terms": [
               [
                 [
-                  "MIO",
-                  true
+                  "BRD_n",
+                  false
                 ],
                 [
                   "SLOT0",
@@ -93047,8 +93065,8 @@
             ],
             "oe": [
               [
-                "MIO",
-                true
+                "BRD_n",
+                false
               ],
               [
                 "SLOT0",
@@ -93104,54 +93122,50 @@
           ],
           [
             2,
-            "BUSY"
+            "BRD_n"
           ],
           [
             3,
-            "DQ0"
+            "BUSY"
           ],
           [
             4,
-            "MIO"
+            "BWR_n"
           ],
           [
             5,
-            "MMR"
+            "DQ0"
           ],
           [
             6,
-            "MMW"
-          ],
-          [
-            7,
             "MR2"
           ],
           [
-            8,
+            7,
             "MR23"
           ],
           [
-            9,
+            8,
             "MR24"
           ],
           [
-            10,
+            9,
             "MR25"
           ],
           [
-            11,
+            10,
             "MR26"
           ],
           [
-            13,
+            11,
             "MR3"
           ],
           [
-            23,
+            13,
             "RESET"
           ],
           [
-            14,
+            23,
             "SBRW"
           ],
           [
@@ -93197,62 +93211,62 @@
         },
         {
           "pin": 2,
+          "name": "BRD_n",
+          "net": "BRD_n",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
           "name": "BUSY",
           "net": "BUSY",
           "kind": "in"
         },
         {
-          "pin": 3,
+          "pin": 4,
+          "name": "BWR_n",
+          "net": "BWR_n",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
           "name": "DQ0",
           "net": "DQ0",
           "kind": "in"
         },
         {
-          "pin": 4,
-          "name": "MIO",
-          "net": "MIO",
-          "kind": "in"
-        },
-        {
-          "pin": 5,
-          "name": "MMR",
-          "net": "MMR",
-          "kind": "in"
-        },
-        {
           "pin": 6,
-          "name": "MMW",
-          "net": "MMW",
-          "kind": "in"
-        },
-        {
-          "pin": 7,
           "name": "MR2",
           "net": "MR2",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 7,
           "name": "MR23",
           "net": "MR23",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 8,
           "name": "MR24",
           "net": "MR24",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 9,
           "name": "MR25",
           "net": "MR25",
           "kind": "in"
         },
         {
-          "pin": 11,
+          "pin": 10,
           "name": "MR26",
           "net": "MR26",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "MR3",
+          "net": "MR3",
           "kind": "in"
         },
         {
@@ -93263,14 +93277,8 @@
         },
         {
           "pin": 13,
-          "name": "MR3",
-          "net": "MR3",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "SBRW",
-          "net": "SBRW",
+          "name": "RESET",
+          "net": "RESET",
           "kind": "in"
         },
         {
@@ -93323,8 +93331,8 @@
         },
         {
           "pin": 23,
-          "name": "RESET",
-          "net": "RESET",
+          "name": "SBRW",
+          "net": "SBRW",
           "kind": "in"
         },
         {
@@ -103464,6 +103472,9 @@
     },
     {
       "name": "MIO"
+    },
+    {
+      "name": "BWEQ"
     },
     {
       "name": "BOOT"

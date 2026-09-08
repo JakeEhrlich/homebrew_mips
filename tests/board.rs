@@ -96,12 +96,11 @@ fn board_is_complete() {
             }
         }
     }
-    // Bus strobes no on-board device needs (they decode MIO and the
-    // direction directly), the unused delay-line taps, and the serial
-    // lines to the connector.
+    // The bus write qualifier (for a memory card), the unused delay-line
+    // taps, and the serial lines to the connector.
     let allowed = |n: &str| {
         internal.contains(n)
-            || n == "BWR_n" || n == "BRD_n"
+            || n == "BWEQ"
             || n.starts_with("T2") || n.starts_with("T4") || n.starts_with("T5")
             || n.starts_with("U2") || n.starts_with("U3") || n.starts_with("U4") || n.starts_with("U5")
             || n == "RS232_TX" || n == "RS232_RX"

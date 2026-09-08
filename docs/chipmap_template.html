@@ -208,6 +208,7 @@ const DESC = {
 "MIO": "I/O access in MEM: a load or store whose base register has bit 31 set (docs/bus.md). Deselects data memory, suppresses the write pulse, makes the bus strobes.",
 "BRD_n": "Bus read strobe: MIO and a load (docs/bus.md).",
 "BWR_n": "Bus write strobe: MIO and a store.",
+"BWEQ": "Bus write qualifier, registered: an I/O store in MEM, for a memory card's write pulse (docs/bus.md).",
 "BB8": "Bus byte-device flag from the selected device (tri-state, pulled down): only BD[7:0] is driven, the CPU zero-extends.",
 "SLOT0": "Serial bridge: the address is in slot 0 (A[26:23] = 0).",
 "SBCMD": "Serial bridge: write of the command register (offset 0).",

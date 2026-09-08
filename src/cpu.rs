@@ -1178,12 +1178,14 @@ fn bridge_block() -> Vec<Eq> {
     let mut eqs = Vec::new();
     // Decode (combinational): slot 0, the accesses, the byte-device flag.
     eqs.push(Eq::sop("SLOT0", Mode::Comb, vec![vec![nl_(&n("MR", 23)), nl_(&n("MR", 24)), nl_(&n("MR", 25)), nl_(&n("MR", 26))]]));
-    eqs.push(Eq::sop("SBCMD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
-    eqs.push(Eq::sop("SBRDD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
-    eqs.push(Eq::sop("SBRDS", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), l(&n("MR", 2))]]));
+    // Everything below is from bus signals only (the strobes, the
+    // address, BB8), so the block moves to a card unchanged.
+    eqs.push(Eq::sop("SBCMD", Mode::Comb, vec![vec![nl_("BWR_n"), l("SLOT0"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("SBRDD", Mode::Comb, vec![vec![nl_("BRD_n"), l("SLOT0"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("SBRDS", Mode::Comb, vec![vec![nl_("BRD_n"), l("SLOT0"), nl_(&n("MR", 3)), l(&n("MR", 2))]]));
     eqs.push(Eq::sop("START", Mode::Comb, vec![vec![l("SBCMD"), nl_("BUSY")]]));
     eqs.push(Eq::sop("UDOE", Mode::Comb, vec![vec![l("BUSY"), nl_("SBRW")]]));
-    eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![l("MIO"), l("SLOT0")]]).with_oe(vec![l("MIO"), l("SLOT0")]));
+    eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![nl_("BRD_n"), l("SLOT0")]]).with_oe(vec![nl_("BRD_n"), l("SLOT0")]));
     // Data latch: its outputs are the chip's private data bus UD, driven
     // during a write (the chip drives it during a read).
     for i in 0..8 {
@@ -1237,6 +1239,10 @@ fn exmem_ctrl_block() -> Vec<Eq> {
         // I/O access in MEM: a load or store whose base register (the
         // forwarded operand A) has bit 31 set.
         Eq::sop("MIO", Mode::Reg, vec![vec![l(&n("FA", 31)), l("XMR")], vec![l(&n("FA", 31)), l("XMW")]]),
+        // The bus write qualifier: an I/O store in MEM, registered, so a
+        // memory card can shape its write pulse from it and a delay-line
+        // tap the way the board does (docs/bus.md section 1).
+        Eq::sop("BWEQ", Mode::Reg, vec![vec![l(&n("FA", 31)), l("XMW")]]),
     ];
     for i in 0..5 {
         eqs.push(Eq::sop(&n("MDEST", i), Mode::Reg, vec![vec![l(&n("XDEST", i))]]));
