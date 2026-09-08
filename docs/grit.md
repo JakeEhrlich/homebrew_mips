@@ -105,29 +105,34 @@ Every instruction is a fixed sequence of states, one clock each unless
 marked:
 
 ```
-F1   D = flash[PC]        -> IR high;   PC += 2
-F2   D = flash[PC]        -> IR low;    PC += 2
-RA   MAR = &rs;  D = SRAM -> A
-RB   MAR = &rt;  D = SRAM -> B                (R-type, beq)
-RI   D = IR low (imm)     -> B                (I-type)
-X    ALU = f(A, B)                            (two clocks: 16-bit ripple)
-WB   MAR = &rd or &rt;  SRAM = ALU            (write pulse in the second half)
-MA   MAR = ALU (pass A)                       (lw, sw: the address)
-MR   D = data[MAR]        -> B                (two clocks)
-MW   data[MAR] = ALU (pass A)                 (two clocks)
-BR   if taken: D = IR low -> PC               (beq, j: PC load)
+F1   D = flash[PC]          -> IR high;  PC += 2
+F2   D = flash[PC]          -> IR low;   PC += 2
+RA1  D[15:11] = rs (IR high) -> MAR as {0, index, 0}
+RA2  D = SRAM[MAR]          -> A
+RB1  D[15:11] = rt          -> MAR                    (R-type, beq, sw)
+RB2  D = SRAM[MAR]          -> B
+RI   D = IR low (imm)       -> B                      (I-type)
+X1   ALU = f(A, B)                                    (16-bit ripple settles)
+X2   ALU held; D[15:11] = rd or rt -> MAR             (the bus is idle, so the write-back index goes now)
+WB   SRAM[MAR] = ALU                                  (write pulse in the low half)
+MA   MAR = ALU (pass A)                               (lw, sw: the address is the register in A)
+MR   D = data[MAR]          -> B                      (two clocks)
+MW   data[MAR] = ALU (pass B)                         (two clocks)
+BR   D = IR low; PC loads if taken                    (beq with all NE = 0, j)
 ```
 
 | Instruction | States | Clocks |
 |---|---|---|
-| addu, and, nor | F1 F2 RA RB X X WB | 7 |
-| addiu, andi | F1 F2 RA RI X X WB | 7 |
-| lw | F1 F2 RA X MA MR MR X WB | 9 (the ALU passes B, the loaded word, to the register) |
-| sw | F1 F2 RB' RA X MA MW MW | 8 (RB' loads rt into B first; the ALU passes A for the address, then B for the data) |
-| beq | F1 F2 RA RB X X BR | 7 |
+| addu, and, nor | F1 F2 RA1 RA2 RB1 RB2 X1 X2 WB | 9 |
+| addiu, andi | F1 F2 RA1 RA2 RI X1 X2 WB | 8 |
+| lw | F1 F2 RA1 RA2 MA MR MR X1 X2 WB | 10 (the ALU passes B, the loaded word, to rt) |
+| sw | F1 F2 RB1 RB2 RA1 RA2 MA MW MW | 9 (rt into B first, rs into A; pass A for the address, pass B for the data) |
+| beq | F1 F2 RA1 RA2 RB1 RB2 X1 X2 BR | 9 |
 | j | F1 F2 BR | 3 |
 
-About 0.9 million instructions a second at 7.4 MHz.  Plenty.
+About 0.8 million instructions a second at 7.4 MHz.  Plenty.
+`docs/grit-blocks.html` is the block diagram and the same table as
+control lines per state.
 
 **Why there are no offsets.**  A store with an offset needs three
 values, the base, the offset and the data, and the machine has two
