@@ -1297,6 +1297,9 @@ impl Sim {
     pub fn chip(&self, id: ChipId) -> &dyn std::any::Any {
         self.chips[id].1.as_any()
     }
+    pub fn chip_mut<T: 'static>(&mut self, id: ChipId) -> &mut T {
+        self.chips[id].1.as_any_mut().downcast_mut::<T>().expect("chip model type")
+    }
     pub fn chip_id(&self, name: &str) -> ChipId {
         self.chips.iter().position(|(n, _)| n == name).unwrap_or_else(|| panic!("no chip {name}"))
     }

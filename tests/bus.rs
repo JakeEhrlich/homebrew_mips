@@ -1,9 +1,9 @@
 //! The bus (docs/bus.md) apart from any device: an access to an empty
-//! slot times out and the machine carries on; a store to an empty slot
-//! is ignored; the pipeline state around a wait is intact (a narrow load
-//! right behind an I/O access, an instruction forwarding across it).
+//! slot costs one cycle like any other and the machine carries on; a
+//! store to an empty slot is ignored; a narrow load right behind an I/O
+//! access and an instruction forwarding across it are intact.
 use mips32::asm::assemble;
-use mips32::cpu::{BUS_TIMEOUT, Boot, Build, Cpu};
+use mips32::cpu::{Boot, Build, Cpu};
 use mips32::iss::Cpu as Iss;
 
 const PROG: &str = "
@@ -15,7 +15,7 @@ const PROG: &str = "
         li    $t1, 7
         sw    $t1, 0($s1)          # store to the empty slot: ignored
         addiu $t2, $t1, 1          # forwarding across the wait
-        lw    $t3, 0($s1)          # load from the empty slot: times out
+        lw    $t3, 0($s1)          # load from the empty slot: garbage
         lb    $t4, 1($zero)        # a narrow load right behind it
         addiu $t5, $t3, 0          # uses the garbage (not compared)
         lh    $t6, 2($zero)
@@ -30,7 +30,7 @@ const PROG: &str = "
         ";
 
 #[test]
-fn empty_slot_times_out() {
+fn empty_slot_reads_garbage_and_carries_on() {
     let p = assemble(PROG, 0).unwrap();
     let stop = p.labels["stop"];
     let mut iss = Iss::new();
@@ -52,8 +52,6 @@ fn empty_slot_times_out() {
     // GAL model's keepers), so the garbage is the previous store's data;
     // on the board it is whatever the capacitance held.  Not compared.
     assert_eq!(cpu.dmem_word(0), Some(0x12345678));
-    // Two empty-slot accesses, each BUS_TIMEOUT + 2 cycles, plus the
-    // dozen instructions.
-    assert!(cpu.cycles >= 2 * (BUS_TIMEOUT as u64 + 2) + 12, "only {} cycles", cpu.cycles);
-    assert!(cpu.cycles < 2 * (BUS_TIMEOUT as u64 + 2) + 40, "{} cycles", cpu.cycles);
+    // No stall anywhere: a dozen instructions, a dozen or so cycles.
+    assert!(cpu.cycles < 40, "{} cycles", cpu.cycles);
 }

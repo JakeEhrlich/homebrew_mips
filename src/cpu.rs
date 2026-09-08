@@ -28,7 +28,7 @@ use crate::cy7c131::{Cy7c131, Port};
 use crate::galpack::{Eq, GalSpec, Mode, SLit, lit, nlit, pack};
 use crate::isa::Instr;
 use crate::ds1100::{Ds1100, Grade};
-use crate::uart16550::{BusTiming, Uart16550, UartPin, uart_pin_of};
+use crate::serial::Terminal;
 use crate::board::{Board, ChipMeta, Column, Load, Model};
 use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
 use std::collections::BTreeMap;
@@ -850,18 +850,11 @@ fn exmem_result_block() -> Vec<Eq> {
                 // form past 16 terms; let the minimiser share terms, with the
                 // control combinations that decode never produces as don't
                 // cares (XSH implies XOP = 0; XOP 6/7 imply XSUB).
-                // The bus-wait hold (WAIT, recirculating MR0) is folded
-                // into the table too: the plain hold transform would need
-                // a 17th term.
                 let ins = [
                     "XOP0", "XOP1", "XOP2", "XSH", "SUM0", "FA0", "FB0", "SH0", "FA31", "FB31", "C10", "S0_31", "S1_31", "G10", "PP10",
-                    "WAIT", "MR0",
                 ];
                 let f = |m: u32| -> Option<bool> {
                     let bit = |b: usize| m >> b & 1 == 1;
-                    if bit(15) {
-                        return Some(bit(16));
-                    }
                     let op = m & 7;
                     let xsh = bit(3);
                     let (sum0, fa, fb, sh) = (bit(4), bit(5), bit(6), bit(7));
@@ -889,9 +882,7 @@ fn exmem_result_block() -> Vec<Eq> {
                 return Eq::table(&n("MR", i), Mode::Reg, &ins, f);
                 // (bit 0 is not a data-memory address pin: no OE)
             }
-            // Held on WAIT like the rest of the pipeline (the bus address
-            // stays on MR for the whole access).
-            let eq = with_hold(vec![Eq::sop(&n("MR", i), Mode::Reg, terms)], "WAIT").pop().unwrap();
+            let eq = Eq::sop(&n("MR", i), Mode::Reg, terms);
             // Bits on the data-memory address pins give way to the boot
             // address buffers while the copier counts (off one cycle before
             // the buffers come on, back one cycle after they go off).
@@ -951,10 +942,8 @@ fn mem_access_block() -> Vec<Eq> {
     eqs.push(Eq::sop("MSZB", Mode::Reg, vec![vec![l("XSZB")]]));
     eqs.push(Eq::sop("MSZH", Mode::Reg, vec![vec![l("XSZH")]]));
     eqs.push(Eq::sop("MLSX", Mode::Reg, vec![vec![l("XLSX")]]));
-    // MEM-stage state: held on WAIT like the rest of the pipeline.
-    let mut eqs = with_hold(eqs, "WAIT");
     // Sign of the selected byte (MSZB) or halfword; the address bits are
-    // the (held) EX/MEM result's.
+    // the EX/MEM result's.
     eqs.push(Eq::sop(
         "LSGN",
         Mode::Comb,
@@ -970,19 +959,18 @@ fn mem_access_block() -> Vec<Eq> {
     eqs
 }
 
-/// MEM/WB load-data selects, combinational in MEM (one-hot per source,
-/// all off during a bus wait so the register recirculates): which DQ
-/// byte lands in each byte of WD, and the sign fills.
+/// MEM/WB load-data selects, combinational in MEM (one-hot per source):
+/// which DQ byte lands in each byte of WD, and the sign fills.
 fn mem_select_block() -> Vec<Eq> {
-    let live = || vec![l("MMR"), nl_("WAIT")];
+    let live = || vec![l("MMR")];
     let with = |extra: Vec<SLit>| {
         let mut t = live();
         t.extend(extra);
         t
     };
     vec![
-        // Not a load (and not waiting): WD takes the ALU result.
-        Eq::sop("MNR", Mode::Comb, vec![vec![nl_("MMR"), nl_("WAIT")]]),
+        // Not a load: WD takes the ALU result.
+        Eq::sop("MNR", Mode::Comb, vec![vec![nl_("MMR")]]),
         // Bits 7:0 from DQ lane 0 / 1 / 2 / 3.
         Eq::sop("ML0", Mode::Comb, vec![with(vec![nl_("MSZB"), nl_("MSZH")]), with(vec![l("MSZH"), nl_("MR1")]), with(vec![l("MSZB"), nl_("MR1"), nl_("MR0")])]),
         Eq::sop("ML1", Mode::Comb, vec![with(vec![l("MSZB"), nl_("MR1"), l("MR0")])]),
@@ -1126,18 +1114,31 @@ fn stall_block() -> Vec<Eq> {
         // Written as the complement (active-low register) so that the
         // asynchronous reset leaves OE# high: the memory must not drive
         // the bus while the boot copier does.
-        Eq::sop("OEN", Mode::Reg, vec![vec![nl_("STORE"), nl_("XMW"), nl_("MMW"), nl_("BOOT")], vec![l("XMR"), nl_("XMW"), nl_("MMW"), nl_("BOOT")]]).active_low(),
+        // ... and off during an I/O load's MEM cycle (a device drives the
+        // bus) and the cycle after (until the device has let go).
+        Eq::sop("OEN", Mode::Reg, {
+            let base = vec![vec![nl_("STORE"), nl_("XMW"), nl_("MMW"), nl_("BOOT")], vec![l("XMR"), nl_("XMW"), nl_("MMW"), nl_("BOOT")]];
+            let mut terms = Vec::new();
+            for t in base {
+                for a in [nl_("XMR"), nl_(&n("FA", 31))] {
+                    for b in [nl_("MMR"), nl_("MIO")] {
+                        let mut u = t.clone();
+                        u.push(a.clone());
+                        u.push(b.clone());
+                        terms.push(u);
+                    }
+                }
+            }
+            terms
+        })
+        .active_low(),
 
         // Data memory CE# (low = selected): off during the boot code phase
         // and during an I/O access (the UART has the bus).
         Eq::sop("DMEN_n", Mode::Comb, vec![vec![l("BOOTCNT"), l("CODE")], vec![l("MIO")]]),
-        // Bus wait: an I/O access holds the whole pipeline until the bus
-        // controller has registered the device's ready (RDYS) and is not
-        // in the turnaround cycle after a transfer (T).  See docs/bus.md.
-        // WAIT holds ID/EX, EX/MEM and MEM/WB; HOLDW = HOLD | WAIT holds
-        // PC and IF/ID.
-        Eq::sop("WAIT", Mode::Comb, wait_terms()),
-        Eq::sop("HOLDW", Mode::Comb, { let mut t = hold_terms(); t.extend(wait_terms()); t }),
+        // The bus strobes (docs/bus.md): levels for the access's cycle.
+        Eq::sop("BRD_n", Mode::Comb, vec![vec![l("MIO"), l("MMR")]]).active_low(),
+        Eq::sop("BWR_n", Mode::Comb, vec![vec![l("MIO"), l("MMW")]]).active_low(),
     ]
 }
 
@@ -1146,6 +1147,7 @@ fn hold_terms() -> Vec<Vec<SLit>> {
     vec![
         vec![l("STORE"), l("XMR")],
         vec![l("LOAD"), l("XMW")],
+        vec![l("LOAD"), l("XMR"), l(&n("FA", 31))],
         // A narrow store whose data would have to be forwarded (sf_block).
         vec![l("SFE")],
         vec![l("SFM")],
@@ -1155,91 +1157,167 @@ fn hold_terms() -> Vec<Vec<SLit>> {
     ]
 }
 
-/// WAIT = MIO & (T | !RDYS): the access in MEM has not been acknowledged.
-fn wait_terms() -> Vec<Vec<SLit>> {
-    vec![vec![l("MIO"), l("T")], vec![l("MIO"), nl_("RDYS")]]
-}
-/// The complement of [`wait_terms`] as a sum of products.
-fn not_wait_terms() -> Vec<Vec<SLit>> {
-    vec![vec![nl_("MIO")], vec![nl_("T"), l("RDYS")]]
-}
-
-/// Bus timeout: cycles without a ready before the controller completes
-/// the access by itself (an empty slot returns garbage, not a hang).
-pub const BUS_TIMEOUT: usize = 31;
-const BUS_CNT_BITS: usize = 5;
-
-/// The bus controller (see docs/bus.md): the strobes, the registered
-/// ready, the turnaround flag and the timeout counter.  All registers
-/// reset synchronously (RESET is a data input).
+/// The serial port: a UART built from GALs as a fast bus device (slot 0,
+/// docs/uart.md), 8N1, LSB first, bit period DIV + 1 clocks.
 ///
-/// - RDYS <- (BRDY | timeout) & MIO & !T: the device was ready during a
-///   strobe cycle; the next cycle is the transfer cycle.
-/// - T <- RDYS & MIO & !T: the previous edge transferred; the strobes
-///   are off for this one cycle so a back-to-back access starts clean.
-/// - BRD_n / BWR_n: combinational from MIO, the direction and T.
-/// - BACK: the transfer cycle, for devices that need the edge.
-fn bus_block() -> Vec<Eq> {
-    let cnt: Vec<String> = (0..BUS_CNT_BITS).map(|b| n("CNT", b)).collect();
-    let mut eqs = vec![
-        Eq::sop("RDYS", Mode::Reg, vec![vec![l("BRDY"), l("MIO"), nl_("T")], { let mut t: Vec<SLit> = cnt.iter().map(|c| l(c)).collect(); t.extend([l("MIO"), nl_("T")]); t }]),
-        Eq::sop("T", Mode::Reg, vec![vec![l("RDYS"), l("MIO"), nl_("T")]]),
-        Eq::sop("BRD_n", Mode::Comb, vec![vec![l("MIO"), l("MMR"), nl_("T")]]).active_low(),
-        Eq::sop("BWR_n", Mode::Comb, vec![vec![l("MIO"), l("MMW"), nl_("T")]]).active_low(),
-        Eq::sop("BACK", Mode::Comb, vec![vec![l("MIO"), l("RDYS"), nl_("T")]]),
-    ];
-    // CNT <- (MIO & !T & !RDYS) ? CNT + 1 : 0, saturating at the timeout.
+/// Registers: offset 0 write TXD / read RXD (clears VALID), offset 4
+/// read STATUS (bit 0 TXBUSY, bit 1 RXVALID), offset 8 write DIV.
+///
+/// Transmit: a 10-bit shift register holding the *complement* of the
+/// line (a cleared register is an idle line), a down-counter for the
+/// bit period, a 4-bit bit counter.  Receive: two synchroniser flops on
+/// SIN, a start-bit detector, a half-period first count then full
+/// periods (samples in the middle of each bit), an 8-bit shift register
+/// for the data samples and a holding register loaded when the stop bit
+/// is sampled, so a following character does not disturb an unread one.
+fn uart_block() -> Vec<Eq> {
+    let mut eqs = Vec::new();
+    let div: Vec<String> = (0..8).map(|i| n("UDIV", i)).collect();
+    // Decode (combinational): slot 0, the four accesses, the byte-device
+    // flag on the bus, and "start a transmission".
+    eqs.push(Eq::sop("SLOT0", Mode::Comb, vec![vec![nl_(&n("MR", 23)), nl_(&n("MR", 24)), nl_(&n("MR", 25)), nl_(&n("MR", 26))]]));
+    eqs.push(Eq::sop("UWRT", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("UWRD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMW"), l(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("URDD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), nl_(&n("MR", 2))]]));
+    eqs.push(Eq::sop("USRD", Mode::Comb, vec![vec![l("MIO"), l("SLOT0"), l("MMR"), nl_(&n("MR", 3)), l(&n("MR", 2))]]));
+    eqs.push(Eq::sop("START", Mode::Comb, vec![vec![l("UWRT"), nl_("TXBUSY")]]));
+    eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![l("MIO"), l("SLOT0")]]).with_oe(vec![l("MIO"), l("SLOT0")]));
+    // Divisor.
+    for i in 0..8 {
+        eqs.push(Eq::sop(&div[i], Mode::Reg, vec![vec![l("UWRD"), l(&n("DQ", i))], vec![nl_("UWRD"), l(&div[i])]]));
+    }
+    // Down-counter `name` of 8 bits: reload with `load` (a net per bit)
+    // when `reload` or when not `run`; else decrement; `tick` when zero.
+    let counter = |eqs: &mut Vec<Eq>, name: &str, tick: &str, run: &str, load: &[String]| {
+        let bits: Vec<String> = (0..8).map(|i| n(name, i)).collect();
+        let mut zero: Vec<SLit> = bits.iter().map(|b| nl_(b)).collect();
+        zero.push(l(run));
+        eqs.push(Eq::sop(tick, Mode::Comb, vec![zero]));
+        for i in 0..8 {
+            let mut terms = vec![vec![nl_(run), l(&load[i])], vec![l(run), l(tick), l(&load[i])]];
+            // Decrement: bit i flips when every lower bit is 0.
+            for j in 0..i {
+                terms.push(vec![l(run), nl_(tick), l(&bits[i]), l(&bits[j])]);
+            }
+            let mut t = vec![l(run), nl_(tick), nl_(&bits[i])];
+            t.extend((0..i).map(|j| nl_(&bits[j])));
+            terms.push(t);
+            eqs.push(Eq::sop(&bits[i], Mode::Reg, terms));
+        }
+    };
+    // Transmit.
+    counter(&mut eqs, "TXB", "TXTICK", "TXBUSY", &div);
+    // Shift register, complemented: TXS0 is the line (active-low output
+    // SOUT), TXS9 the stop bit.  Loaded with {stop, data, start}, shifted
+    // right on each tick with idle (0 = high) filling in.
+    for i in 0..10 {
+        let mut terms = Vec::new();
+        if i == 0 {
+            terms.push(vec![l("START")]); // start bit: line low
+        } else if i <= 8 {
+            terms.push(vec![l("START"), nl_(&n("DQ", i - 1))]);
+        }
+        if i < 9 {
+            terms.push(vec![nl_("START"), l("TXTICK"), l(&n("TXS", i + 1))]);
+        }
+        // Hold: the register's own value (for TXS0 that is the SOUT pin,
+        // inverted).
+        terms.push(if i == 0 { vec![nl_("START"), nl_("TXTICK"), nl_("SOUT")] } else { vec![nl_("START"), nl_("TXTICK"), l(&n("TXS", i))] });
+        let eq = Eq::sop(&n("TXS", i), Mode::Reg, terms);
+        eqs.push(if i == 0 { eq.with_name("SOUT").active_low() } else { eq });
+    }
+    // Bit counter (10 bits per character) and busy.
+    let cnt: Vec<String> = (0..4).map(|i| n("TXC", i)).collect();
     let mut ins: Vec<String> = cnt.clone();
-    ins.extend(["MIO", "T", "RDYS"].map(String::from));
+    ins.extend(["START", "TXTICK", "TXBUSY"].map(String::from));
     let ins = strs(&ins);
-    let c = |m: u32| (m & 0x1F) as usize;
-    let run = |m: u32| m >> 5 & 1 == 1 && m >> 6 & 1 == 0 && m >> 7 & 1 == 0;
-    for b in 0..BUS_CNT_BITS {
-        eqs.push(Eq::table_pos(&cnt[b], Mode::Reg, &ins, move |m| Some(run(m) && (c(m) + 1).min(BUS_TIMEOUT) >> b & 1 == 1)));
-    }
-    eqs
-}
-
-/// The UART's bus adapter (see docs/bus.md and docs/uart.md): device
-/// slot 0.  Turns a bus access into the 16550's strobes, holds the
-/// register select for the strobe's address hold time, and answers
-/// ready after the strobe has been long enough (reads: 13 cycles, for
-/// the 40 ns strobe and the 425 ns FIFO read spacing; writes: 3, then a
-/// cycle of data hold before the transfer).  Its select output is also
-/// the bus byte-device flag (BB8) and the 16550's CS0.
-fn uart_adapter_block() -> Vec<Eq> {
-    let k: Vec<String> = (0..4).map(|b| n("K", b)).collect();
-    let mut ins: Vec<String> = k.clone();
-    ins.extend(["SEL", "RDW", "BRD_n", "BWR_n", "SLOT0"].map(String::from));
-    let ins = strs(&ins);
-    let kv = |m: u32| (m & 0xF) as usize;
-    let sel = |m: u32| m >> 4 & 1 == 1;
-    let rdw = |m: u32| m >> 5 & 1 == 1;
-    let strobe = |m: u32| (m >> 6 & 1 == 0 || m >> 7 & 1 == 0) && m >> 8 & 1 == 1;
-    let last = |m: u32| if rdw(m) { 15 } else { 6 };
-    let mut eqs = vec![
-        // Slot decode: A[26:23] == 0.
-        Eq::sop("SLOT0", Mode::Comb, vec![vec![nl_(&n("MR", 23)), nl_(&n("MR", 24)), nl_(&n("MR", 25)), nl_(&n("MR", 26))]]),
-        // Selected from the strobe until the count runs out.
-        Eq::table_pos("SEL", Mode::Reg, &ins, move |m| Some(if sel(m) { kv(m) < last(m) } else { strobe(m) })),
-        // Direction, captured with SEL.
-        Eq::table_pos("RDW", Mode::Reg, &ins, move |m| Some(if sel(m) { rdw(m) } else { m >> 6 & 1 == 0 })),
-    ];
+    let c = |m: u32| (m & 15) as usize;
+    let start = |m: u32| m >> 4 & 1 == 1;
+    let tick = |m: u32| m >> 5 & 1 == 1;
+    let busy = |m: u32| m >> 6 & 1 == 1;
     for b in 0..4 {
-        eqs.push(Eq::table_pos(&k[b], Mode::Reg, &ins, move |m| Some(sel(m) && (kv(m) + 1) >> b & 1 == 1)));
+        eqs.push(Eq::table_pos(&cnt[b], Mode::Reg, &ins, move |m| {
+            let v = if start(m) { 10 } else if busy(m) && tick(m) { c(m).saturating_sub(1) } else { c(m) };
+            Some(v >> b & 1 == 1)
+        }));
     }
-    // Read strobe: K = 1 ..= 13 (through the transfer cycle: the 16550
-    // holds its data while RD is low).  Ready at K = 12.
-    eqs.push(Eq::table_pos("URD_n", Mode::Reg, &ins, move |m| Some(sel(m) && rdw(m) && (0..=12).contains(&kv(m)))).active_low());
-    // Write strobe: K = 1 ..= 3; ready at K = 4, a cycle after it ended
-    // (data hold), transfer at the end of K = 5.
-    eqs.push(Eq::table_pos("UWR_n", Mode::Reg, &ins, move |m| Some(sel(m) && !rdw(m) && (0..=2).contains(&kv(m)))).active_low());
-    eqs.push(Eq::table_pos("BRDY", Mode::Comb, &ins, move |m| Some(sel(m) && kv(m) == if rdw(m) { 12 } else { 4 })).with_oe(vec![l("SEL")]));
-    // Byte device: high while selected, released otherwise (pulled down).
-    eqs.push(Eq::sop("BB8", Mode::Comb, vec![vec![l("SEL")]]).with_oe(vec![l("SEL")]));
-    // Register select, captured at the start and held to the end.
-    for i in 0..3 {
-        eqs.push(Eq::sop(&n("UA", i), Mode::Reg, vec![vec![nl_("SEL"), l(&n("MR", i + 2))], vec![l("SEL"), l(&n("UA", i))]]));
+    eqs.push(Eq::table_pos("TXBUSY", Mode::Reg, &ins, move |m| Some(start(m) || (busy(m) && !(tick(m) && c(m) == 1)))));
+    // Receive.
+    // Synchroniser, as active-low registers so that reset (registers
+    // cleared) reads as an idle (high) line rather than a start bit.
+    eqs.push(Eq::sop("SINS1", Mode::Reg, vec![vec![nl_("SIN")]]).sync().active_low());
+    eqs.push(Eq::sop("SINS2", Mode::Reg, vec![vec![nl_("SINS1")]]).active_low());
+    // First count from the start edge is half a period (DIV / 2), then
+    // full periods: the samples land mid-bit.
+    let half: Vec<String> = (0..8).map(|i| if i < 7 { n("UDIV", i + 1) } else { "GND".to_string() }).collect();
+    // Reload with DIV / 2 while idle with the line high; count from the
+    // edge that starts a character (RXRUN, a cycle before RXACT) and
+    // reload with DIV on every tick.  Detection latency is then three
+    // clocks (two synchroniser flops and the tick register), so the
+    // samples sit 3 / (DIV + 1) of a bit late: DIV >= 7 keeps them in
+    // the middle half of the bit.
+    eqs.push(Eq::sop("RXRUN", Mode::Comb, vec![vec![l("RXACT")], vec![nl_("SINS2")]]));
+    {
+        let bits: Vec<String> = (0..8).map(|i| n("RXB", i)).collect();
+        let mut zero: Vec<SLit> = bits.iter().map(|b| nl_(b)).collect();
+        zero.push(l("RXACT"));
+        eqs.push(Eq::sop("RXTICK", Mode::Comb, vec![zero]));
+        for i in 0..8 {
+            let mut terms = vec![vec![l("RXRUN"), l("RXTICK"), l(&div[i])]];
+            if half[i] != "GND" {
+                terms.push(vec![nl_("RXRUN"), l(&half[i])]);
+            }
+            for j in 0..i {
+                terms.push(vec![l("RXRUN"), nl_("RXTICK"), l(&bits[i]), l(&bits[j])]);
+            }
+            let mut t = vec![l("RXRUN"), nl_("RXTICK"), nl_(&bits[i])];
+            t.extend((0..i).map(|j| nl_(&bits[j])));
+            terms.push(t);
+            eqs.push(Eq::sop(&bits[i], Mode::Reg, terms));
+        }
+    }
+    // Samples: shift right on every tick, the new one entering at the
+    // top; after nine ticks bits 7..0 hold d7..d0.
+    for i in 0..8 {
+        let from = if i < 7 { l(&n("RXS", i + 1)) } else { l("SINS2") };
+        eqs.push(Eq::sop(&n("RXS", i), Mode::Reg, vec![vec![l("RXTICK"), from], vec![nl_("RXTICK"), l(&n("RXS", i))]]));
+    }
+    // Control: active from a start bit until the stop bit is sampled
+    // (tick 10); the bit counter; VALID set at the stop bit, cleared by
+    // a read of RXD.
+    let rcnt: Vec<String> = (0..4).map(|i| n("RXC", i)).collect();
+    let mut rins: Vec<String> = rcnt.clone();
+    rins.extend(["RXACT", "RXTICK", "SINS2"].map(String::from));
+    let rins = strs(&rins);
+    let rc = |m: u32| (m & 15) as usize;
+    let act = |m: u32| m >> 4 & 1 == 1;
+    let rtick = |m: u32| m >> 5 & 1 == 1;
+    let sin = |m: u32| m >> 6 & 1 == 1;
+    let done = move |m: u32| act(m) && rtick(m) && rc(m) == 1;
+    eqs.push(Eq::table_pos("RXACT", Mode::Reg, &rins, move |m| Some(if act(m) { !done(m) } else { !sin(m) })));
+    for b in 0..4 {
+        eqs.push(Eq::table_pos(&rcnt[b], Mode::Reg, &rins, move |m| {
+            let v = if !act(m) { 10 } else if rtick(m) { rc(m).saturating_sub(1) } else { rc(m) };
+            Some(v >> b & 1 == 1)
+        }));
+    }
+    eqs.push(Eq::sop("RXDONE", Mode::Comb, vec![vec![l("RXACT"), l("RXTICK"), l(&rcnt[0]), nl_(&rcnt[1]), nl_(&rcnt[2]), nl_(&rcnt[3])]]));
+    eqs.push(Eq::sop("VALID", Mode::Reg, vec![vec![l("RXDONE")], vec![l("VALID"), nl_("URDD")]]));
+    for i in 0..8 {
+        eqs.push(Eq::sop(&n("RXD", i), Mode::Reg, vec![vec![l("RXDONE"), l(&n("RXS", i))], vec![nl_("RXDONE"), l(&n("RXD", i))]]));
+    }
+    // Bus read drivers: RXD at offset 0, STATUS at offset 4, on lane 0.
+    for i in 0..8 {
+        let mut terms = vec![vec![l("URDD"), l(&n("RXD", i))]];
+        if i == 0 {
+            terms.push(vec![l("USRD"), l("TXBUSY")]);
+        }
+        if i == 1 {
+            terms.push(vec![l("USRD"), l("VALID")]);
+        }
+        // Enabled from the bus read strobe (a gate level after MIO): the
+        // data memory's outputs are off by then (OEN, section 6.2).
+        eqs.push(Eq::sop(&n("DQ", i), Mode::Comb, terms).with_oe(vec![nl_("BRD_n"), l("SLOT0")]));
     }
     eqs
 }
@@ -1303,7 +1381,6 @@ fn memwb_block() -> Vec<Eq> {
     // bits 7:0 from any DQ byte, bits 15:8 from their own lane or the
     // high half or the sign, bits 31:16 from their own lane or the
     // sign.  Bits 8..31 from a byte device are zero (the selects see BB8).
-    // With no select active (a bus wait) the register recirculates.
     let mut eqs: Vec<Eq> = (0..32)
         .map(|i| {
             let mut terms = vec![vec![l("MNR"), l(&n("MR", i))]];
@@ -1323,30 +1400,17 @@ fn memwb_block() -> Vec<Eq> {
                 terms.push(vec![l("MSN"), l("LSGN")]);
                 vec!["MNR", "MW16", "MSN"]
             };
-            // Bits 7:0 always have exactly one select active outside a
-            // wait, so "none" is the wait; the upper bytes are zero for an
-            // unsigned narrow load, so they hold on WAIT itself.
-            let hold: Vec<SLit> = if i < 8 {
-                let mut h: Vec<SLit> = sels.iter().map(|s| nl_(s)).collect();
-                h.push(l(&n("WD", i)));
-                h
-            } else {
-                vec![l("WAIT"), l(&n("WD", i))]
-            };
-            terms.push(hold);
+            let _ = &sels;
             Eq::sop(&n("WD", i), Mode::Reg, terms)
         })
         .collect();
-    // Destination and write flag hold on WAIT the plain way.
-    let mut tail = Vec::new();
     for i in 0..5 {
-        tail.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
+        eqs.push(Eq::sop(&n("WDEST", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]]));
     }
     // Polarity chosen so that reset (registers cleared) reads as "writing
     // r0": the steer then keeps the read ports off r0 while the write copy
     // (also reset) zeroes it.
-    tail.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
-    eqs.extend(with_hold(tail, "WAIT"));
+    eqs.push(Eq::sop("WREG", Mode::Reg, vec![vec![nl_("MRW")]]).active_low());
     eqs
 }
 
@@ -1370,42 +1434,9 @@ fn memwb_block() -> Vec<Eq> {
 fn wcopy1_block() -> Vec<Eq> {
     let mut eqs: Vec<Eq> = (0..5).map(|i| Eq::sop(&n("WC1D", i), Mode::Reg, vec![vec![l(&n("MDEST", i))]])).collect();
     eqs.push(Eq::sop("WC1W_n", Mode::Reg, vec![vec![nl_("MRW"), nl_("RESET")]]));
-    // Bus wait: the pipeline holds at the next edge, so the WB instruction
-    // stays and the copy must too.  WAIT itself is combinational and would
-    // miss the T3 window; MIO, T and RDYS are registered (valid 5.5 ns
-    // after the edge, 9.5 ns before the window), so the condition is
-    // rebuilt from them here.
-    let not_wait = not_wait_terms();
-    with_hold_sop(eqs, &not_wait, &wait_terms())
+    eqs
 }
 
-/// [`with_hold`] for a hold condition given as a sum of products:
-/// `Q <- hold ? Q : f`, with `not_hold` the complement of `hold`, also as
-/// a sum of products (each term of `f` is multiplied by each term of it).
-pub fn with_hold_sop(eqs: Vec<Eq>, not_hold: &[Vec<SLit>], hold: &[Vec<SLit>]) -> Vec<Eq> {
-    eqs.into_iter()
-        .map(|mut e| {
-            if e.mode != Mode::Reg {
-                return e;
-            }
-            let mut terms: Vec<Vec<SLit>> = Vec::new();
-            for t in &e.terms {
-                for nh in not_hold {
-                    let mut t = t.clone();
-                    t.extend(nh.iter().cloned());
-                    terms.push(t);
-                }
-            }
-            for h in hold {
-                let mut t = h.clone();
-                t.push((e.out.clone(), !e.active_low));
-                terms.push(t);
-            }
-            e.terms = terms;
-            e
-        })
-        .collect()
-}
 fn wcopy2_block() -> Vec<Eq> {
     let mut eqs: Vec<Eq> = (0..5).map(|i| Eq::sop(&n("WDESTC", i), Mode::Reg, vec![vec![l(&n("WC1D", i))]])).collect();
     eqs.push(Eq::sop("WREGC_n", Mode::Reg, vec![vec![l("WC1W_n")]]));
@@ -1470,27 +1501,25 @@ fn build_gal_specs() -> Vec<GalSpec> {
     let (bt1, bt2, btr) = bt_block();
     let (fa, fb) = fwd_mux_block();
     let mut v = Vec::new();
-    let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLDW");
+    let h = |eqs: Vec<Eq>| with_hold(eqs, "HOLD");
     v.extend(pack("pc", clk, Some("RESET_PC"), h(pc_block())));
     v.extend(pack("inc", None, None, inc_block()));
     v.extend(pack("ifid", clk, rst, h(ifid_block())));
     v.extend(pack("dec", None, None, dec_block()));
-    // ID/EX: a bubble on HOLD (the instruction stays in ID), held on WAIT
-    // (the instruction in EX must not be replaced while MEM waits).
-    let w = |eqs: Vec<Eq>| with_hold(eqs, "WAIT");
-    v.extend(pack("ctl", clk, rst, w(with_bubble(ctrl_block(), "HOLD"))));
+    // ID/EX: a bubble on HOLD (the instruction stays in ID).
+    v.extend(pack("ctl", clk, rst, with_bubble(ctrl_block(), "HOLD")));
     v.extend(pack("steer", None, None, steer_block()));
     // No async reset: under reset the write flags are 0, so these settle
     // to "no hit" from their inputs after one clock.  An async reset would
     // leave them at "hit" (they are written active-low), which selects the
     // EX/MEM result, undriven during the boot copy, into the ALU.
-    v.extend(pack("fwdc", clk, None, w(fwdctl_block())));
-    v.extend(pack("xa", clk, None, w(idex_a_block())));
-    v.extend(pack("xb", clk, None, w(idex_b_block())));
-    v.extend(pack("xsd", clk, None, w(idex_sd_block())));
+    v.extend(pack("fwdc", clk, None, fwdctl_block()));
+    v.extend(pack("xa", clk, None, idex_a_block()));
+    v.extend(pack("xb", clk, None, idex_b_block()));
+    v.extend(pack("xsd", clk, None, idex_sd_block()));
     v.extend(pack("bt1", None, None, bt1));
     v.extend(pack("bt2", None, None, bt2));
-    v.extend(pack("xbt", clk, None, w(btr)));
+    v.extend(pack("xbt", clk, None, btr));
     v.extend(pack("fa", None, None, fa));
     v.extend(pack("fb", None, None, fb));
     v.extend(pack("alu1", None, None, alu_l1_block()));
@@ -1499,15 +1528,12 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("shm", None, None, shift_mask_block()));
     v.extend(pack("sh2", None, None, shift2_block()));
     v.extend(pack("mr", clk, None, exmem_result_block()));
-    // EX/MEM store data, result and control hold on WAIT too (the
-    // instruction in EX must not replace the one waiting in MEM; the
-    // result register carries the bus address for the whole access).
-    v.extend(pack("msd", clk, None, w(exmem_sd_block())));
+    v.extend(pack("msd", clk, None, exmem_sd_block()));
     // EX/MEM control feeds the tap-clocked write copies (wc1 reads MDEST
     // and MRW inside its 15 to 21 ns window).  An asynchronous clear
     // would land there when RESET is asserted mid-run (button press), so
     // this block resets synchronously: its outputs only ever move at CLK.
-    v.extend(pack("mctl", clk, None, w(with_bubble(exmem_ctrl_block(), "RESET"))));
+    v.extend(pack("mctl", clk, None, with_bubble(exmem_ctrl_block(), "RESET")));
     v.extend(pack("stl", clk, rst, stall_block()));
     v.extend(pack("rsync", clk, None, rsync_block()));
     v.extend(pack("bseq", clk, None, bseq_block()));
@@ -1519,8 +1545,7 @@ fn build_gal_specs() -> Vec<GalSpec> {
     v.extend(pack("macc", clk, None, mem_access_block()));
     v.extend(pack("msel", None, None, mem_select_block()));
     v.extend(pack("sf", None, None, sf_block()));
-    v.extend(pack("bus", clk, None, with_bubble(bus_block(), "RESET")));
-    v.extend(pack("uadp", clk, None, with_bubble(uart_adapter_block(), "RESET")));
+    v.extend(pack("uart", clk, None, with_bubble(uart_block(), "RESET")));
     v.extend(pack("wc1", Some("T3"), None, wcopy1_block()));
     v.extend(pack("wc2", Some("T1"), None, wcopy2_block()));
     v
@@ -1565,7 +1590,7 @@ pub fn layout() -> Vec<Column> {
         col("", 240, &["ID/EX control", "Forwarding control", "ID/EX A", "ID/EX B", "ID/EX store data", "ID/EX branch target"], true),
         col("EX", 330, &["Forward A", "Forward B", "ALU slices + carries", "Shifter", "Compare", "Next PC"], false),
         col("", 240, &["EX/MEM result (ALU last level)", "EX/MEM store data", "EX/MEM control", "Access size", "Stall"], true),
-        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "Bus controller", "UART adapter", "UART", "Serial port"], false),
+        col("MEM", 240, &["Data memory", "Load lane select", "Boot data", "Write gate", "Delay line", "UART", "Serial port"], false),
         col("", 240, &["MEM/WB", "Write copies"], true),
         col("WB", 170, &[], false),
     ]
@@ -1657,62 +1682,21 @@ pub fn build_netlist(p: &Params) -> Netlist {
     // Modem loop-back: RTS# -> CTS#, DTR# -> DSR# + DCD#, RI# high;
     // BAUDOUT -> RCLK.
     {
-        let c = nl.add_chip("uart0", Uart16550::new(BusTiming::tl16c550c(), UART_XIN_HZ));
-        nl.set_meta(c, meta("TL16C550DPTR", "LQFP-48", "uart0", Some("uart".into()), Model::Uart { xin_hz: UART_XIN_HZ }));
-        for i in 0..8u8 {
-            let net = nl.net(&n("DQ", i as usize));
-            nl.connect(net, c, uart_pin_of(UartPin::D(i)));
-        }
-        for i in 0..3u8 {
-            let net = nl.net(&n("UA", i as usize));
-            nl.connect(net, c, uart_pin_of(UartPin::A(i)));
-        }
-        // CS0 is the adapter's select (also the bus byte-device flag);
-        // CS1 high, CS2# low.
-        for (net, p) in [("BB8", UartPin::Cs0), ("URD_n", UartPin::Rd1N), ("UWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout)] {
-            let net = nl.net(net);
-            nl.connect(net, c, uart_pin_of(p));
-        }
-        nl.connect(vcc, c, uart_pin_of(UartPin::Cs1));
-        for p in [UartPin::Cs2N, UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
-            nl.connect(gnd, c, uart_pin_of(p));
-        }
-        // Bus lines driven by whichever device is selected: pulled down.
-        for name in ["BRDY", "BB8"] {
-            let net = nl.net(name);
-            nl.pull(net, Level::L);
-            nl.set_net_role(net, &format!("bus:{}", name.to_lowercase()));
-        }
-        for (net, pins) in [("URTS_n", vec![32, 38]), ("UDTR_n", vec![33, 39, 40]), ("UBAUD", vec![12, 5])] {
-            let net = nl.net(net);
-            for p in pins {
-                nl.connect(net, c, p);
-            }
-        }
-        nl.connect(vcc, c, 41);
-        let xin = nl.net("XIN");
-        let xout = nl.net("XOUT");
-        nl.connect(xin, c, uart_pin_of(UartPin::Xin));
-        nl.connect(xout, c, uart_pin_of(UartPin::Xout));
-        // Crystal and load capacitors.
-        let x = nl.add_chip("x1", Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-        nl.set_meta(x, meta("X3225147456MOB4SI", "3225", "x1", None, Model::Passive));
-        nl.connect(xin, x, 1);
-        nl.connect(xout, x, 2);
-        for (name, net) in [("c5", xin), ("c6", xout)] {
-            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-            nl.set_meta(cap, meta("18pF 0603 C0G", "0603", name, None, Model::Passive));
-            nl.connect(net, cap, 1);
-            nl.connect(gnd, cap, 2);
-        }
+        // The bus byte-device flag: driven by whichever device is
+        // selected, pulled down.
+        let bb8 = nl.net("BB8");
+        nl.pull(bb8, Level::L);
+        nl.set_net_role(bb8, "bus:bb8");
+        let sout = nl.net("SOUT");
+        let sin = nl.net("SIN");
+        nl.set_net_role(sout, "serial:sout");
+        nl.set_net_role(sin, "serial:sin");
         // RS-232 transceiver (SP3232, TSSOP-16): 1 C1+, 2 V+, 3 C1-,
         // 4 C2+, 5 C2-, 6 V-, 7 T2OUT, 8 R2IN, 9 R2OUT, 10 T2IN, 11 T1IN,
         // 12 R1OUT, 13 R1IN, 14 T1OUT, 15 GND, 16 VCC.
         let xc_names = ["C1+", "V+", "C1-", "C2+", "C2-", "V-", "T2OUT", "R2IN", "R2OUT", "T2IN", "T1IN", "R1OUT", "R1IN", "T1OUT", "GND", "VCC"];
         let xc = nl.add_chip("xcvr0", Passive::new(xc_names.iter().enumerate().map(|(i, s)| (i + 1, s.to_string())).collect()));
         nl.set_meta(xc, meta("SP3232EEY-L/TR", "TSSOP-16", "xcvr0", None, Model::Passive));
-        let sout = nl.net("SOUT");
-        let sin = nl.net("SIN");
         nl.connect(sout, xc, 11);
         nl.connect(sin, xc, 12);
         let tx = nl.net("RS232_TX");
@@ -1937,21 +1921,23 @@ pub struct Build {
     /// rising edge).  Any value must work; the tests sweep it.
     pub reset_phase_ns: f64,
     pub boot: Boot,
-    /// UART crystal (Hz).  The board's is 14.7456 MHz; tests use a faster
-    /// one so that characters take tens of cycles rather than thousands.
-    pub uart_xin_hz: f64,
-    /// Characters the terminal sends, from when the program first polls
-    /// the line status, one per character time.
+    /// The serial divisor the program will write (bit period DIV + 1
+    /// clocks): the terminal on the wire runs at the same rate.  255 on
+    /// the board (115200 baud); tests use a small one.
+    pub uart_div: u8,
+    /// Characters the terminal types, one after another, starting
+    /// `uart_rx_after` cycles after reset is released.
     pub uart_rx: Vec<u8>,
+    pub uart_rx_after: u64,
 }
 
-/// The board's UART crystal: 14.7456 MHz (3225 SMD, 12 pF), divisor 8
-/// for 115200 baud.
-pub const UART_XIN_HZ: f64 = 14_745_600.0;
+/// The board's serial divisor: 115200 baud at 34 ns (255 + 1 clocks per
+/// bit = 8.70 us, 114.9 kbaud).
+pub const UART_DIV: u8 = 255;
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new() }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_div: UART_DIV, uart_rx: Vec::new(), uart_rx_after: 8 }
     }
 }
 
@@ -1968,6 +1954,7 @@ pub struct Cpu {
     mr_n: NetId,
     /// Cycles a full reset (boot copy included) may take.
     boot_budget: usize,
+    uart_rx_after: u64,
     pc: Vec<NetId>,
     imem: Vec<usize>,
     dmem: Vec<usize>,
@@ -2022,7 +2009,6 @@ impl Cpu {
             gate_tpd: opt.gate_tpd,
             reset_release: (3 + RESET_CYCLES as Time) * period + Self::ns(opt.reset_phase_ns),
             mr_timeout: Self::ns(MR_TIMEOUT_NS),
-            uart_xin_hz: Some(opt.uart_xin_hz),
             dmem_timing: Some(opt.dmem),
         };
         let mut nl = board.instantiate(&load);
@@ -2089,9 +2075,14 @@ impl Cpu {
             }
             chip.preload(0, 0xA5);
         }
-        if let Some(id) = nl.chips_with_role("uart").first().map(|(id, _)| *id) {
-            nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
-        }
+        // The terminal on the serial line (test bench, not a board part):
+        // starts typing once reset has been released.
+        let bit = period * (opt.uart_div as Time + 1);
+        let term = nl.add_chip("term0", Terminal::new(bit, Time::MAX, &opt.uart_rx));
+        let sout = nl.net("SOUT");
+        let sin = nl.net("SIN");
+        nl.connect(sout, term, 1);
+        nl.connect(sin, term, 2);
         let gal_count = board.chips.iter().filter(|c| matches!(c.model, Model::Gal { .. })).count();
         let sim = nl.build();
         let clk = sim.net_id("CLK");
@@ -2112,6 +2103,7 @@ impl Cpu {
             reset_release: 0,
             mr_n,
             boot_budget: RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) },
+            uart_rx_after: opt.uart_rx_after,
         };
         // Power-on: the supervisor holds RST_n low, the synchroniser's
         // registers power up with RESET asserted, clock low.  Let every
@@ -2149,6 +2141,10 @@ impl Cpu {
         self.step();
         self.cycles = 0;
         self.pc_trace.clear();
+        // The terminal starts typing a few cycles from now.
+        let start = self.sim.now() + self.uart_rx_after * self.period;
+        let id = self.sim.chip_id("term0");
+        self.sim.chip_mut::<Terminal>(id).set_start(start);
     }
 
     /// Press the reset button: MR_n low from `phase_ns` into the current
@@ -2274,14 +2270,14 @@ impl Cpu {
     fn chip_sram(&self, id: usize) -> &Cy7c131 {
         self.sim.chip(id).downcast_ref::<Cy7c131>().unwrap()
     }
-    /// The UART chip model.
-    pub fn uart(&self) -> &Uart16550 {
-        let id = self.sim.chip_id("uart0");
-        self.sim.chip(id).downcast_ref::<Uart16550>().expect("uart model")
+    /// The terminal on the serial line.
+    pub fn terminal(&self) -> &Terminal {
+        let id = self.sim.chip_id("term0");
+        self.sim.chip(id).downcast_ref::<Terminal>().expect("terminal model")
     }
-    /// Characters the UART has transmitted so far.
+    /// Characters the machine has sent so far, as the terminal decoded them.
     pub fn uart_tx(&self) -> Vec<u8> {
-        self.uart().core.tx.clone()
+        self.terminal().rx.clone()
     }
 
     pub fn imem_chips(&self) -> &[usize] {
@@ -2322,12 +2318,10 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "dl" => ("Delay line", "CLK"),
         "wc" => ("Write copies", "MEM/WB"),
         "stl" => ("Stall", "EX/MEM"),
-        "bus" => ("Bus controller", "MEM"),
-        "uadp" => ("UART adapter", "MEM"),
+        "uart" => ("UART", "MEM"),
         "macc" => ("Access size", "EX/MEM"),
         "msel" => ("Load lane select", "MEM"),
         "sf" => ("Narrow-store hold", "ID"),
-        "uart" => ("UART", "MEM"),
         "rsync" => ("Reset sync", "IF"),
         "bseq" => ("Boot sequencer", "IF"),
         "badr" => ("Boot address", "IF"),

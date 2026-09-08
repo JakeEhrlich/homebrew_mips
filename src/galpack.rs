@@ -75,6 +75,11 @@ impl Eq {
             .collect();
         Eq { out: out.to_string(), mode, active_low: false, terms, oe: None, sync: false }
     }
+    /// Rename the output.
+    pub fn with_name(mut self, name: &str) -> Eq {
+        self.out = name.to_string();
+        self
+    }
     /// Mark as a synchroniser stage.
     pub fn sync(mut self) -> Eq {
         self.sync = true;

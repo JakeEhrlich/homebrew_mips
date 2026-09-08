@@ -96,11 +96,12 @@ fn board_is_complete() {
             }
         }
     }
-    // Bus signals no on-board device uses yet, the unused delay-line
-    // taps, and the serial lines to the connector.
+    // Bus strobes no on-board device needs (they decode MIO and the
+    // direction directly), the unused delay-line taps, and the serial
+    // lines to the connector.
     let allowed = |n: &str| {
         internal.contains(n)
-            || n == "BACK"
+            || n == "BWR_n" || n == "BRD_n"
             || n.starts_with("T2") || n.starts_with("T4") || n.starts_with("T5")
             || n.starts_with("U2") || n.starts_with("U3") || n.starts_with("U4") || n.starts_with("U5")
             || n == "RS232_TX" || n == "RS232_RX"

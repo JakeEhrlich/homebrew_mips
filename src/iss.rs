@@ -30,9 +30,8 @@ pub struct Cpu {
     branch: Option<u32>,
     /// Instructions retired.
     pub count: u64,
-    /// The UART, at every address whose base register has bit 31 set
-    /// (I/O space, see docs/uart.md).  Register select = address bits 4:2.
-    pub uart: crate::uart16550::Core,
+    /// The serial port, bus slot 0 (docs/uart.md).
+    pub serial: crate::serial::Port,
 }
 
 /// I/O space: an access is I/O when the *base register* (not the sum)
@@ -61,7 +60,7 @@ impl Cpu {
             load_delay: None,
             branch: None,
             count: 0,
-            uart: Default::default(),
+            serial: Default::default(),
         }
     }
 
@@ -171,13 +170,7 @@ impl Cpu {
                         // addresses are undefined on the board, so they
                         // are not masked here either: the low bits select.
                         let word = if is_io(rs) {
-                            if io_slot(addr) == UART_SLOT {
-                                let v = self.uart.read((addr >> 2 & 7) as u8) as u32;
-                                self.uart.drain();
-                                v
-                            } else {
-                                0
-                            }
+                            if io_slot(addr) == UART_SLOT { self.serial.read(addr & 0xC) } else { 0 }
                         } else {
                             self.load_word(addr)
                         };
@@ -194,8 +187,7 @@ impl Cpu {
                         let addr = rs.wrapping_add(sext);
                         if is_io(rs) {
                             if io_slot(addr) == UART_SLOT {
-                                self.uart.write((addr >> 2 & 7) as u8, rt as u8);
-                                self.uart.drain();
+                                self.serial.write(addr & 0xC, rt);
                             }
                         } else {
                             let old = self.load_word(addr);
