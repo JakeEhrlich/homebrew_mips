@@ -17,7 +17,7 @@ machine.  The 32 registers live in the SRAM (its first 64 bytes), so the
 register file costs no chips.  Code runs straight out of the flash, so
 there is no boot copier.  All data accesses are slow by construction (two
 clocks), so the UART sits on the data bus like any memory and needs no
-bridge.  About 19 GALs and 8 other chips.
+bridge.  17 GALs and 8 other chips.
 
 ## 2. Programmer's view
 
@@ -88,68 +88,73 @@ are written into the flash with the programmer, in the DIP-32 socket.
 Two shared buses.  The 16-bit data bus `D` joins everything: the
 flash's outputs, the SRAMs, the UART's low byte, and the GAL latches.
 The 15-bit address bus `A[15:1]` goes to the flash, the SRAMs and the
-UART, and has two drivers: the PC during fetches and the data address
-register MAR the rest of the time.  Both are GAL registers, and GAL
-outputs have output enables, so sharing the bus costs one input pin per
-chip and no chips.
+UART, and has two drivers: the PC while fetching and the A latch the
+rest of the time.  The A latch is both the ALU's first operand and the
+address register: its outputs feed the ALU and the address bus on the
+same net, and a register access loads it with the register's address
+(0x80 in the high byte, the index in bits 5:1) before the value.
 
-| Block | Bits | GALs | Notes |
-|---|---|---|---|
-| PC | 16 | 2 | counts by 2 per half-fetch; loads from D on a taken branch or jump; drives A during F1 and F2 |
-| IR high half | 16 | 2 | op, rs, rt; rs or rt driven onto D[15:11] to address a register |
-| IR low half | 16 | 2 | imm, or rd and funct; driven onto D whole (imm to B, target to PC) or as D[15:11] (rd to address a register) |
-| A latch | 16 | 2 | ALU operand, loaded from D |
-| B latch | 16 | 2 | ALU operand, loaded from D |
-| ALU | 16 | 4 | four 4-bit slices: add (ripple within the slice, carry between), and, nor, pass A, pass B, plus a not-equal output per slice for BEQ/BNE; outputs drive D through their output enables |
-| MAR | 16 | 2 | loaded from the ALU result or, for a register access, with {0x80, index, 0} taken from D[15:11]; drives A in every state but F1 and F2 |
-| Control | | 3 | state counter, decode of op and funct, region decode from A15 and A14, strobes (flash OE, SRAM CE/OE/WE, UART CS/RD/WR), latch enables, output enables on both buses, PC count and load, ALU function; the divide-by-two for the clock |
-| | | **19** | plus or minus two once the pins are packed with `galpack` |
+The memories select themselves from the address: the flash's CE# is
+A15, the SRAM's CE2 is A15 and CE1# is A14, the UART's CS0 and CS1 are
+A14 and A15.  Control then needs one read strobe and one write strobe
+for all three.
+
+| Block | GALs | Notes |
+|---|---|---|
+| PC | 2 | 15 flops; counts by 2; loads from D on a taken branch or jump; drives A while fetching |
+| rs, rt, rd | 3 | five flops each, loaded at F1 (rs, rt from D[9:0]) or F2 (rd from D[15:11]); each drives its index onto D[5:1] when asked |
+| Decode | 1 | at F1 the instruction class from D[15:10], at F2 the ALU function from D[5:0]; five flops to control and the ALU |
+| A latch | 2 | operand and address; loads a value or an index from D |
+| B latch | 2 | operand; the immediate lands here at F2 |
+| ALU | 4 | four 4-bit slices: add (ripple within the slice, carry between), and, nor, pass B; a not-equal output per slice for `beq`; drives D |
+| Control | 3 | state counter, the strobes, latch enables, output enables, PC count and load; the divide-by-two for the clock |
+| | **17** | plus or minus one once the pins are packed with `galpack` |
+
+There is no instruction-register latch for the low half.  The
+immediate goes straight into B, `rd` and `funct` have their own flops,
+and a branch target is fetched again: the PC steps past the low half
+only when the instruction ends, so at BR the flash is still presenting
+it and the PC loads it from the bus.
 
 Every instruction is a fixed sequence of states, one clock each unless
 marked:
 
 ```
-F1   D = flash[PC]          -> IR high;  PC += 2
-F2   D = flash[PC]          -> IR low;   PC += 2
-RA1  D[15:11] = rs (IR high) -> MAR as {0, index, 0}
-RA2  D = SRAM[MAR]          -> A
-RB1  D[15:11] = rt          -> MAR                    (R-type, beq, sw)
-RB2  D = SRAM[MAR]          -> B
-RI   D = IR low (imm)       -> B                      (I-type)
+F1   D = flash[PC]  -> rs, rt, class;   PC += 2
+F2   D = flash[PC]  -> rd, ALU function, B (the immediate);  PC += 2 unless beq or j
+RA1  D[5:1] = rs    -> A as 0x8000 | index << 1
+RA2  D = SRAM[A]    -> A
+RB1  D[5:1] = rt    -> A                              (R-type, beq, sw)
+RB2  D = SRAM[A]    -> B
 X1   ALU = f(A, B)                                    (16-bit ripple settles)
-X2   ALU held; D[15:11] = rd or rt -> MAR             (the bus is idle, so the write-back index goes now)
-WB   SRAM[MAR] = ALU                                  (write pulse in the low half)
-MA   MAR = ALU (pass A)                               (lw, sw: the address is the register in A)
-MR   D = data[MAR]          -> B                      (two clocks)
-MW   data[MAR] = ALU (pass B)                         (two clocks)
-BR   D = IR low; PC loads if taken                    (beq with all NE = 0, j)
+X2   D = ALU        -> B                              (the result parks in B: A is about to become the index)
+WI   D[5:1] = rd or rt -> A
+WB   SRAM[A] = B (ALU passes B)                       (write pulse in the low half)
+MR   D = mem[A]     -> B                              (two clocks; A holds rs's value, the address)
+MW   mem[A] = B                                       (two clocks)
+BR   D = flash[PC], the low half again; PC loads it if taken, else PC += 2
 ```
 
 | Instruction | States | Clocks |
 |---|---|---|
-| addu, and, nor | F1 F2 RA1 RA2 RB1 RB2 X1 X2 WB | 9 |
-| addiu, andi | F1 F2 RA1 RA2 RI X1 X2 WB | 8 |
-| lw | F1 F2 RA1 RA2 MA MR MR X1 X2 WB | 10 (the ALU passes B, the loaded word, to rt) |
-| sw | F1 F2 RB1 RB2 RA1 RA2 MA MW MW | 9 (rt into B first, rs into A; pass A for the address, pass B for the data) |
-| beq | F1 F2 RA1 RA2 RB1 RB2 X1 X2 BR | 9 |
-| j | F1 F2 BR | 3 |
+| addu, and, nor | F1 F2 RA1 RA2 RB1 RB2 X1 X2 WI WB | 10 |
+| addiu, andi | F1 F2 RA1 RA2 X1 X2 WI WB | 8 |
+| lw | F1 F2 RA1 RA2 MR MR WI WB | 8 |
+| sw | F1 F2 RB1 RB2 RA1 RA2 MW MW | 8 (rt into B first, then rs into A, which is the address) |
+| beq | F1 F2 RA1 RA2 RB1 RB2 X1 BR | 8 |
+| j | F1 BR | 2 |
 
-About 0.8 million instructions a second at 7.4 MHz.  Plenty.
+About 0.85 million instructions a second at 7.4 MHz.  Plenty.
 `docs/grit-blocks.html` is the block diagram and the same table as
 control lines per state.
 
 **Why there are no offsets.**  A store with an offset needs three
 values, the base, the offset and the data, and the machine has two
-latches.  Reading the data register after the address is in MAR is not
-possible, because register reads go through MAR too.  With a zero
-offset the address is a register, so both reads happen first and MAR is
-loaded last.  A full `sw rt, off(rs)` costs either two more GALs (a
-separate register-index driver on the SRAM's address pins, so MAR
-survives a register read) or four more states that park the computed
-address in a hidden 33rd register and read it back.  An offset on `lw`
-would be free in chips (it is the `addiu` path), but with both at zero
-the two share one address sequence in the control GAL and the rule is
-one rule.
+latches, one of which is also the address.  With a zero offset the
+address is a register value that lands in A and stays there while B
+holds the data.  A full `sw rt, off(rs)` or `lw rt, off(rs)` would
+need the sum parked somewhere while the other register is read: a
+third latch (two GALs) or a hidden register slot and four more states.
 
 ## 4. Timing, and why there are no delay lines
 
@@ -186,7 +191,7 @@ The registers are polled through LSR.
 
 | Part | Count | Role |
 |---|---|---|
-| ATF22V10C-7 (DIP-24, socketed) | 19 | everything in section 3 |
+| ATF22V10C-7 (DIP-24, socketed) | 17 | everything in section 3 |
 | SST39SF040 (DIP-32, socketed) | 2 | code, 16 bits wide |
 | AS7C164A 8K x 8 (DIP-28) | 2 | registers and data, 16 bits wide |
 | TL16C550 (LQFP-48) | 1 | serial |
@@ -195,7 +200,7 @@ The registers are polled through LSR.
 | MAX811L + button | 1 | reset |
 | 5-pin serial header, 3-way bank jumper, decoupling | | |
 
-About 28 placed parts, 23 of them DIP in sockets, and the two SMD parts
+About 26 placed parts, 21 of them DIP in sockets, and the two SMD parts
 are the ones JLCPCB already had in stock.
 
 ## 6. Choices to argue about
@@ -203,6 +208,12 @@ are the ones JLCPCB already had in stock.
 1. **Registers in SRAM.**  Costs about four clocks per instruction, saves
    about eight GALs or the dual-port chips.  A bad program can overwrite
    its registers.  I would keep it: the whole point is a small board.
+1b. **The A latch as the address register.**  Saved the two-GAL MAR.
+   It forced the instruction register to be held as fields rather than
+   halves (rs, rt, rd and a decode chip), because the index has to ride
+   D[5:1] to fit the A latch's pins, and it costs ALU ops one clock to
+   park the result in B.  Going further, `rd == rt` as an assembler rule
+   would delete the rd chip: one more GAL, not taken for now.
 2. **16-bit data bus (two flashes, two SRAMs)** against an 8-bit bus with
    one of each.  8 bits halves the memory chips and the data traces and
    makes the UART a natural byte device, at the cost of a byte-phase in
