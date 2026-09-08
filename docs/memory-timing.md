@@ -74,10 +74,11 @@ authoritative list is `boards/crag/netlist.json` (see boards/README.md).
 ## 4. The clock
 
 - Period 34 ns nominal (clean down to 32 in simulation). Oscillator socketed.
-- Duty cycle matters now: the falling edge is the write start, and it must be
-  at least 14 ns after the rising edge for the register file steer (section 5).
-  Use a 45/55 % or better oscillator, or an exact divide-by-two from a doubled
-  oscillator in a GAL.
+- Duty cycle matters: the falling edge is the register-file write start,
+  which must be at least 14 ns after the rising edge (section 5), and the
+  clock's high time is the width of the data-memory write pulse (6.1).
+  A 45 % clock loses stores (docs/fuzz.md finding 1).  **Divide a 2x
+  oscillator by two in a flop**: 50 % within the flop's own asymmetry.
 - The clock drives every GAL clock pin, the eight register-file write-port
   enables and the two delay-line inputs.
 
@@ -196,6 +197,15 @@ Windows at commercial grade (tap +-3 ns, gate 0.5 to 5.5 ns), 34 ns period:
 
 A gate with a narrower delay range buys clock period directly: every
 nanosecond of range costs half a nanosecond of pulse.
+
+**The end of a store** (docs/fuzz.md finding 2): the tap's earliest rise
+(5 ns at commercial grade) precedes the store flag's latest fall (5.5 ns,
+a register's tCO), so for up to half a nanosecond the NAND may see both
+high: a runt low on WE# with the memory selected.  The physical fuzz
+found it; the ideal simulation had the two events on one instant.  At
+room grade (tap +-2 ns) the window starts at 6 ns and there is no
+overlap.  Binning the delay lines to +-2 ns is therefore a requirement,
+not a margin.
 
 The pulse width is the binding constraint and the reason the two parts have
 different operating points: half a period minus twice the tap tolerance minus
@@ -392,7 +402,9 @@ Not covered:
 - [ ] Enable nets of both SRAM write ports length-matched to their GAL clock
       nets; SRAM side never longer.
 - [ ] Jumper for the GAL clock-tree tap (0 / 6 / 12 ns).
-- [ ] Oscillator socket; 45/55 duty or divide-by-two.
+- [ ] Oscillator at twice the clock, divided by two in a flop (a 50 %
+      clock is required, docs/fuzz.md finding 1).
+- [ ] Delay lines binned to +-2 ns on the 8 ns tap (required, finding 2).
 - [ ] MAX811LEUS+T: RESET# (pin 2) into the rsync GAL's RST_n pin, MR#
       (pin 3) to the reset button and a 0.1 uF decoupling capacitor at VCC;
       no pull-up needed on MR# (internal). Sense point at the far end of

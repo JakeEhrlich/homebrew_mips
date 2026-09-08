@@ -1225,6 +1225,7 @@ impl Netlist {
         }
         let drives = self.chips.iter().map(|(_, c)| vec![Level::Z; c.pin_count() + 1]).collect();
         let fed = self.chips.iter().map(|(_, c)| vec![Level::Z; c.pin_count() + 1]).collect();
+        let pin_counts: Vec<usize> = self.chips.iter().map(|(_, c)| c.pin_count()).collect();
         let mut sim = Sim {
             chips: self.chips,
             nets: self.nets,
@@ -1239,6 +1240,9 @@ impl Netlist {
             now: 0,
             trace: Vec::new(),
             conflicts: Vec::new(),
+            pin_delay: pin_counts.iter().map(|&n| vec![0; n + 1]).collect(),
+            pin_sent: pin_counts.iter().map(|&n| vec![Level::Z; n + 1]).collect(),
+            pin_queue: pin_counts.iter().map(|&n| vec![Vec::new(); n + 1]).collect(),
         };
         sim.settle();
         sim
@@ -1264,6 +1268,14 @@ pub struct Sim {
     now: Time,
     trace: Vec<(Time, NetId, Level)>,
     conflicts: Vec<(Time, NetId)>,
+    /// Propagation delay from the net to each chip pin (trace, connector,
+    /// input loading): 0 = ideal.  Per pin, so a clock reaches every chip
+    /// at its own time.
+    pin_delay: Vec<Vec<Time>>,
+    /// Per pin: the level last sent down the delay, and the arrivals not
+    /// yet due `(when, level)`.
+    pin_sent: Vec<Vec<Level>>,
+    pin_queue: Vec<Vec<Vec<(Time, Level)>>>,
 }
 
 fn resolve(drivers: impl Iterator<Item = Level>, pull: Level) -> Level {
@@ -1349,9 +1361,19 @@ impl Sim {
     pub fn next_event(&self) -> Option<Time> {
         let s = self.stim.keys().next().map(|k| k.0);
         let c = self.chips.iter().filter_map(|(_, c)| c.next_event(self.now)).min();
-        match (s, c) {
-            (Some(a), Some(b)) => Some(a.min(b)),
-            (a, b) => a.or(b),
+        let q = self.pin_queue.iter().flatten().flatten().map(|&(t, _)| t).filter(|&t| t > self.now).min();
+        [s, c, q].into_iter().flatten().min()
+    }
+
+    /// Give every chip pin a propagation delay: `f(chip, pin)` in ps.
+    /// Call once, before running.
+    pub fn set_pin_delays(&mut self, mut f: impl FnMut(&str, usize) -> Time) {
+        for c in 0..self.chips.len() {
+            for p in 1..=self.chips[c].1.pin_count() {
+                if self.pin_net[c][p].is_some() {
+                    self.pin_delay[c][p] = f(&self.chips[c].0, p);
+                }
+            }
         }
     }
 
@@ -1391,7 +1413,24 @@ impl Sim {
                 let mut ext = vec![Level::Z; self.chips[c].1.pin_count() + 1];
                 for (p, slot) in ext.iter_mut().enumerate().skip(1) {
                     if let Some(n) = self.pin_net[c][p] {
-                        *slot = self.resolve_excluding(n, c, p);
+                        let v = self.resolve_excluding(n, c, p);
+                        let d = self.pin_delay[c][p];
+                        if d == 0 {
+                            *slot = v;
+                        } else {
+                            // Send the change down the delay; deliver what
+                            // has arrived.
+                            if v != self.pin_sent[c][p] {
+                                self.pin_sent[c][p] = v;
+                                self.pin_queue[c][p].push((t + d, v));
+                            }
+                            let q = &mut self.pin_queue[c][p];
+                            let mut cur = self.fed[c][p];
+                            while !q.is_empty() && q[0].0 <= t {
+                                cur = q.remove(0).1;
+                            }
+                            *slot = cur;
+                        }
                     }
                 }
                 if ext != self.fed[c] || iter == 0 {

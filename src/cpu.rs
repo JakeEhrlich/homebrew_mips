@@ -1896,6 +1896,47 @@ pub struct Build {
     /// Characters the terminal sends, from when the program first polls
     /// the line status, one per character time.
     pub uart_rx: Vec<u8>,
+    /// Physical fuzz (see docs/fuzz.md).  0 = off: ideal wires, a 50 %
+    /// clock, zeroed memories.  Otherwise the seed for: a propagation
+    /// delay on every chip pin drawn from 0..`pin_delay_ns`, a clock duty
+    /// cycle drawn from `clock_duty` and a jitter of up to
+    /// `clock_jitter_ns` on every edge, and random contents in every
+    /// memory and register (mirror them into the reference with
+    /// [`fuzz_image`]).
+    pub fuzz_seed: u64,
+    pub pin_delay_ns: f64,
+    pub clock_duty: (f64, f64),
+    pub clock_jitter_ns: f64,
+}
+
+/// A small deterministic generator for the fuzz.
+pub struct Lcg(pub u64);
+impl Lcg {
+    pub fn next(&mut self) -> u32 {
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (self.0 >> 33) as u32
+    }
+    pub fn unit(&mut self) -> f64 {
+        self.next() as f64 / 4294967296.0
+    }
+}
+
+/// The random power-up contents the fuzz gives the machine, for the
+/// reference simulator: data memory words and the registers (r0 is
+/// zeroed by reset).
+pub struct FuzzImage {
+    pub dmem: Vec<u32>,
+    pub regs: [u32; 32],
+}
+
+pub fn fuzz_image(seed: u64) -> FuzzImage {
+    let mut r = Lcg(seed ^ 0x5eed_0000_0000_0000);
+    let dmem = (0..crate::iss::DMEM_WORDS).map(|_| r.next()).collect();
+    let mut regs = [0u32; 32];
+    for x in regs.iter_mut().skip(1) {
+        *x = r.next();
+    }
+    FuzzImage { dmem, regs }
 }
 
 /// The board's UART crystal: 14.7456 MHz (3225 SMD, 12 pF), divisor 8
@@ -1904,7 +1945,7 @@ pub const UART_XIN_HZ: f64 = 14_745_600.0;
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new() }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new(), fuzz_seed: 0, pin_delay_ns: 0.0, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
     }
 }
 
@@ -1921,6 +1962,8 @@ pub struct Cpu {
     mr_n: NetId,
     /// Cycles a full reset (boot copy included) may take.
     boot_budget: usize,
+    /// Fuzz: (generator, duty range, jitter ns).
+    clock_fuzz: Option<(Lcg, (f64, f64), f64)>,
     pc: Vec<NetId>,
     imem: Vec<usize>,
     dmem: Vec<usize>,
@@ -2021,24 +2064,33 @@ impl Cpu {
                 }
             }
         }
-        // Data memory starts zeroed; the register file too, except r0,
-        // which powers up as garbage and must be zeroed by reset.
+        // Data memory and the register file start zeroed (r0 as garbage,
+        // which reset must fix), or, under the fuzz, with the random
+        // contents of `fuzz_image` (the reference gets the same).
+        let image = (opt.fuzz_seed != 0).then(|| fuzz_image(opt.fuzz_seed));
         let mut dmem: Vec<(String, usize)> = nl.chips_with_role("dmem:").into_iter().map(|(id, r)| (r, id)).collect();
         dmem.sort();
         let dmem: Vec<usize> = dmem.into_iter().map(|(_, id)| id).collect();
-        for &id in &dmem {
+        for (half, &id) in dmem.iter().enumerate() {
             let chip = nl.chip_mut::<Sram16>(id);
+            let mut r = Lcg(opt.fuzz_seed ^ 0xd0e5);
             for w in 0..(1u32 << 18) {
-                chip.preload(w, 0);
+                let word = match &image {
+                    Some(im) => im.dmem.get(w as usize).copied().unwrap_or_else(|| r.next()),
+                    None => 0,
+                };
+                chip.preload(w, (word >> (16 * half)) as u16);
             }
         }
         let mut rf: Vec<(String, usize)> = nl.chips_with_role("rf:").into_iter().map(|(id, r)| (r, id)).collect();
         rf.sort();
         let rf: Vec<usize> = rf.into_iter().map(|(_, id)| id).collect();
-        for &id in &rf {
+        for (i, &id) in rf.iter().enumerate() {
+            let lane = i % 4;
             let chip = nl.chip_mut::<Cy7c131>(id);
             for r in 0..32 {
-                chip.preload(r, 0);
+                let v = image.as_ref().map_or(0, |im| im.regs[r as usize]);
+                chip.preload(r, (v >> (8 * lane)) as u8);
             }
             chip.preload(0, 0xA5);
         }
@@ -2046,7 +2098,12 @@ impl Cpu {
             nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
         }
         let gal_count = board.chips.iter().filter(|c| matches!(c.model, Model::Gal { .. })).count();
-        let sim = nl.build();
+        let mut sim = nl.build();
+        if opt.fuzz_seed != 0 && opt.pin_delay_ns > 0.0 {
+            let mut r = Lcg(opt.fuzz_seed ^ 0xde1a);
+            let max = opt.pin_delay_ns;
+            sim.set_pin_delays(|_, _| Self::ns(r.unit() * max));
+        }
         let clk = sim.net_id("CLK");
         let mr_n = sim.net_id("MR_n");
         let pc = (2..=14).map(|i| sim.net_id(&n("PC", i))).collect();
@@ -2065,6 +2122,7 @@ impl Cpu {
             reset_release: 0,
             mr_n,
             boot_budget: RESET_CYCLES + 8 + if skip { 0 } else { 5 * words * (1 + data_regions as usize) + 8 * (2 + data_regions as usize) },
+            clock_fuzz: (opt.fuzz_seed != 0).then(|| (Lcg(opt.fuzz_seed ^ 0xc10c), opt.clock_duty, opt.clock_jitter_ns)),
         };
         // Power-on: the supervisor holds RST_n low, the synchroniser's
         // registers power up with RESET asserted, clock low.  Let every
@@ -2156,9 +2214,18 @@ impl Cpu {
     /// Run one clock cycle (rising edge now).
     pub fn step(&mut self) {
         let base = self.sim.now();
-        let half = base + self.period / 2;
-        self.sim.schedule(base, self.clk, Level::H);
-        self.sim.schedule(half, self.clk, Level::L);
+        // The clock: ideal, or with the fuzz's duty cycle and jitter.
+        let (rise, fall) = match &mut self.clock_fuzz {
+            None => (base, base + self.period / 2),
+            Some((r, duty, jitter)) => {
+                let d = duty.0 + r.unit() * (duty.1 - duty.0);
+                let j1 = Self::ns(r.unit() * *jitter);
+                let j2 = Self::ns(r.unit() * *jitter);
+                (base + j1, base + (self.period as f64 * d) as Time + j2)
+            }
+        };
+        self.sim.schedule(rise, self.clk, Level::H);
+        self.sim.schedule(fall, self.clk, Level::L);
         // Sample the PC just before the next edge (what IF is fetching).
         self.sim.run_until(base + self.period - Self::ns(3.5));
         self.pc_trace.push(self.sim.read_bus(&self.pc).map(|w| w << 2));

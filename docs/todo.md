@@ -12,8 +12,13 @@ is not listed here.
       and `SOAK_SEED` scale it).
 - [x] Realistic programs: sort, byte strings, recursion with a stack,
       a table-driven checksum (`tests/programs.rs`).
-- [ ] Clock buffer and trace-delay model: every hold margin is still
-      "N minus skew" with skew unmodelled.
+- [x] Physical fuzz (`tests/fuzz.rs`, docs/fuzz.md): per-pin trace
+      delays, clock duty and jitter, random power-up contents.  Found
+      that the clock must be a divided 50 % clock and that the delay
+      lines must be binned to +-2 ns.
+- [ ] Clock buffer model: the fuzz gives every pin its own delay, but
+      the buffer tree's structure (which chips share a branch) is not
+      modelled.
 - [ ] Measured grades for the delay lines and the gate, once binned.
 
 ## Upgrades needed for Doom
@@ -50,3 +55,5 @@ is not listed here.
 - GALs in DIP-24 sockets: programmable, and it looks the part.
 - Boot ROMs are DIP-32 (as bought).
 - The bus is fast-only; slow chips go behind a bridge (docs/bus.md).
+- The clock is a 2x oscillator divided by two; the delay lines are
+  binned (docs/fuzz.md).
