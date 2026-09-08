@@ -1,9 +1,9 @@
 <title>Grit Block Diagram</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-:root { --bg: #F4F3EE; --panel: #FFFFFF; --ink: #1F2A33; --ink-2: #5F6C76; --rule: #D8D4CB; --bus: #2A6F97; --bus-soft: #DCE9F2; --p2p: #8A6D2E; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --bus: #6FB1DC; --bus-soft: #1F3140; --p2p: #D0AE5C; } }
-:root[data-theme="dark"] { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --bus: #6FB1DC; --bus-soft: #1F3140; --p2p: #D0AE5C; }
+:root { --bg: #F4F3EE; --panel: #FFFFFF; --ink: #1F2A33; --ink-2: #5F6C76; --rule: #D8D4CB; --bus: #2A6F97; --abus: #8A6D2E; --p2p: #5E8C4A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --bus: #6FB1DC; --abus: #D0AE5C; --p2p: #8DBB74; } }
+:root[data-theme="dark"] { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --bus: #6FB1DC; --abus: #D0AE5C; --p2p: #8DBB74; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
 main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
@@ -25,6 +25,8 @@ svg .p2p { stroke: var(--p2p); }
 svg text.p2p { fill: var(--p2p); }
 svg .busl { stroke: var(--bus); }
 svg text.bus { fill: var(--bus); }
+svg .abl { stroke: var(--abus); }
+svg text.ab { fill: var(--abus); }
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin-top: 8px; }
 th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { color: var(--ink-2); font-weight: 500; }
@@ -32,221 +34,233 @@ td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px;
 </style>
 <main>
 <h1>Grit Block Diagram</h1>
-<p class="lede">One shared 16-bit data bus, one transfer per clock. Blue arrows are bus connections: toward the bus is a driver, away from it a latch that loads. Gold arrows are point-to-point and never shared. Each block lists the control lines it takes; every one of them comes from the control block.</p>
+<p class="lede">Two shared buses, one transfer per clock. Blue is the data bus: an arrow toward it is a driver, away from it a latch that loads. Gold is the address bus: the PC drives it during fetches, MAR otherwise; the three memories listen. Green paths are point-to-point. Each block lists the control lines it takes; every one of them comes from the control block.</p>
 
 <figure class="scroll">
-<svg viewBox="0 0 1300 800" role="img" aria-label="Grit block diagram: PC, flash, IR high and IR low above the data bus; A, B, ALU, MAR, SRAM and UART below it; control at the right; point-to-point paths PC to flash address, MAR to SRAM and UART address, latches to ALU, ALU to MAR">
+<svg viewBox="0 0 1300 820" role="img" aria-label="Grit block diagram: PC, IR high, IR low and the clock above the data bus; A, B, ALU, MAR, flash, SRAM and UART below it; the address bus under the bottom row driven by PC and MAR and read by flash, SRAM and UART; control at the right">
 <defs>
 <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--bus)"/></marker>
+<marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--abus)"/></marker>
 <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--p2p)"/></marker>
 <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/></marker>
 </defs>
 
-<!-- the bus -->
-<rect x="30" y="392" width="1010" height="16" rx="3" fill="var(--bus)"/>
-<text x="535" y="386" text-anchor="middle" class="bus t">D[15:0]  data bus, one driver per state</text>
+<!-- data bus -->
+<rect x="60" y="372" width="1000" height="16" rx="3" fill="var(--bus)"/>
+<text x="560" y="366" text-anchor="middle" class="bus t">D[15:0]  data bus, one driver per state</text>
+<!-- address bus -->
+<rect x="30" y="690" width="1030" height="12" rx="3" fill="var(--abus)"/>
+<text x="560" y="722" text-anchor="middle" class="ab t">A[15:1]  address bus, PC or MAR drives, the memories listen</text>
 
 <!-- ============ top row ============ -->
 <!-- PC -->
-<rect x="40" y="60" width="170" height="120" rx="3" class="blk"/>
-<text x="52" y="82" class="t">PC</text><text x="200" y="82" text-anchor="end" class="s">2 GALs</text>
-<text x="52" y="102" class="m">PCINC  count by 2</text>
-<text x="52" y="118" class="m">PCLD   load from D</text>
-<text x="52" y="134" class="m">RESET  to 0</text>
-<text x="52" y="160" class="s">15 flops, PC[15:1]</text>
-<!-- PC to bus: load -->
-<line x1="125" y1="392" x2="125" y2="182" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="132" y="300" class="bus s">load (j, beq taken)</text>
-
-<!-- Flash -->
-<rect x="270" y="60" width="180" height="120" rx="3" class="blk"/>
-<text x="282" y="82" class="t">Flash, code</text><text x="440" y="82" text-anchor="end" class="s">2 x SST39SF040</text>
-<text x="282" y="102" class="m">ROMOE  drive D</text>
-<text x="282" y="118" class="m">CE#    tied low</text>
-<text x="282" y="134" class="m">A16-18 bank jumper</text>
-<text x="282" y="160" class="s">16 bits wide, 64 KB used</text>
-<!-- PC -> Flash address -->
-<line x1="212" y1="120" x2="268" y2="120" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="240" y="112" text-anchor="middle" class="p2p s">A[15:1]</text>
-<!-- Flash to bus: drive -->
-<line x1="360" y1="182" x2="360" y2="390" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="367" y="300" class="bus s">drive (F1, F2)</text>
+<rect x="60" y="60" width="180" height="130" rx="3" class="blk"/>
+<text x="72" y="82" class="t">PC</text><text x="230" y="82" text-anchor="end" class="s">2 GALs</text>
+<text x="72" y="102" class="m">PCINC  count by 2</text>
+<text x="72" y="118" class="m">PCLD   load from D</text>
+<text x="72" y="134" class="m">PCOE   drive A</text>
+<text x="72" y="150" class="m">RESET  to 0</text>
+<text x="72" y="176" class="s">15 flops, PC[15:1]</text>
+<!-- PC load from D -->
+<line x1="150" y1="372" x2="150" y2="192" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="157" y="290" class="bus s">load (BR taken)</text>
+<!-- PC drives A: left margin -->
+<line x1="58" y1="125" x2="36" y2="125" class="abl" stroke-width="1.5"/>
+<line x1="36" y1="125" x2="36" y2="688" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<text x="30" y="420" class="ab s" transform="rotate(-90 30 420)">drive A (F1, F2)</text>
 
 <!-- IR high -->
-<rect x="520" y="60" width="200" height="120" rx="3" class="blk"/>
-<text x="532" y="82" class="t">IR high</text><text x="710" y="82" text-anchor="end" class="s">2 GALs</text>
-<text x="532" y="102" class="m">IRHLD  load from D</text>
-<text x="532" y="118" class="m">RSOE   rs onto D[15:11]</text>
-<text x="532" y="134" class="m">RTOE   rt onto D[15:11]</text>
-<text x="532" y="160" class="s">op[5:0], rs, rt</text>
-<!-- IR high to bus: both -->
-<line x1="600" y1="182" x2="600" y2="390" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
-<text x="607" y="290" class="bus s">load (F1)</text>
-<text x="607" y="306" class="bus s">drive index (RA, RB, WB)</text>
+<rect x="330" y="60" width="210" height="130" rx="3" class="blk"/>
+<text x="342" y="82" class="t">IR high</text><text x="530" y="82" text-anchor="end" class="s">2 GALs</text>
+<text x="342" y="102" class="m">IRHLD  load from D</text>
+<text x="342" y="118" class="m">RSOE   rs onto D[15:11]</text>
+<text x="342" y="134" class="m">RTOE   rt onto D[15:11]</text>
+<text x="342" y="176" class="s">op[5:0] to control, rs, rt</text>
+<line x1="420" y1="192" x2="420" y2="370" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
+<text x="427" y="284" class="bus s">load (F1)</text>
+<text x="427" y="300" class="bus s">drive index (RA1, RB1, X2)</text>
 
 <!-- IR low -->
-<rect x="790" y="60" width="200" height="120" rx="3" class="blk"/>
-<text x="802" y="82" class="t">IR low</text><text x="980" y="82" text-anchor="end" class="s">2 GALs</text>
-<text x="802" y="102" class="m">IRLLD  load from D</text>
-<text x="802" y="118" class="m">IRLOE  imm/target onto D</text>
-<text x="802" y="134" class="m">RDOE   rd onto D[15:11]</text>
-<text x="802" y="160" class="s">imm[15:0] = rd, sh, funct</text>
-<!-- IR low to bus: both -->
-<line x1="870" y1="182" x2="870" y2="390" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
-<text x="877" y="290" class="bus s">load (F2)</text>
-<text x="877" y="306" class="bus s">drive (RI, BR, WB rd)</text>
+<rect x="600" y="60" width="210" height="130" rx="3" class="blk"/>
+<text x="612" y="82" class="t">IR low</text><text x="800" y="82" text-anchor="end" class="s">2 GALs</text>
+<text x="612" y="102" class="m">IRLLD  load from D</text>
+<text x="612" y="118" class="m">IRLOE  imm/target onto D</text>
+<text x="612" y="134" class="m">RDOE   rd onto D[15:11]</text>
+<text x="612" y="176" class="s">imm[15:0] = rd, sh, funct to control</text>
+<line x1="690" y1="192" x2="690" y2="370" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
+<text x="697" y="284" class="bus s">load (F2)</text>
+<text x="697" y="300" class="bus s">drive (RI, BR, X2 rd)</text>
+
+<!-- clock and reset -->
+<rect x="870" y="60" width="190" height="90" rx="3" class="blk"/>
+<text x="882" y="82" class="t">Clock and reset</text>
+<text x="882" y="102" class="m">14.7456 MHz osc</text>
+<text x="882" y="118" class="m">  -> UART XIN, control /2</text>
+<text x="882" y="134" class="m">MAX811L -> RESET#</text>
+
+<!-- op, funct, clock into control -->
+<line x1="542" y1="90" x2="1078" y2="90" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
+<text x="700" y="84" text-anchor="middle" class="s">op[5:0]</text>
+<line x1="812" y1="170" x2="1078" y2="170" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
+<text x="945" y="164" text-anchor="middle" class="s">funct[5:0]</text>
+<line x1="1062" y1="120" x2="1078" y2="120" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
 
 <!-- ============ control (right) ============ -->
-<rect x="1080" y="60" width="190" height="640" rx="3" class="blk"/>
+<rect x="1080" y="60" width="190" height="700" rx="3" class="blk"/>
 <text x="1092" y="82" class="t">Control</text><text x="1260" y="82" text-anchor="end" class="s">3 GALs</text>
 <text x="1092" y="104" class="s">in</text>
-<text x="1092" y="120" class="m">op[5:0]   from IR high</text>
-<text x="1092" y="136" class="m">funct[5:0] from IR low</text>
-<text x="1092" y="152" class="m">NE[3:0]   from ALU</text>
-<text x="1092" y="168" class="m">MAR15     device select</text>
-<text x="1092" y="184" class="m">CLK2X, RESET#</text>
-<text x="1092" y="210" class="s">holds</text>
-<text x="1092" y="226" class="m">state counter</text>
-<text x="1092" y="242" class="m">CLK = CLK2X / 2</text>
-<text x="1092" y="268" class="s">out, one set per state</text>
-<text x="1092" y="284" class="m">PCINC PCLD</text>
-<text x="1092" y="300" class="m">ROMOE</text>
-<text x="1092" y="316" class="m">IRHLD RSOE RTOE</text>
-<text x="1092" y="332" class="m">IRLLD IRLOE RDOE</text>
-<text x="1092" y="348" class="m">ALD BLD</text>
-<text x="1092" y="364" class="m">F[2:0] ALUOE</text>
-<text x="1092" y="380" class="m">MARLD MARIDX</text>
-<text x="1092" y="396" class="m">RAMCE# RAMOE# RAMWE#</text>
-<text x="1092" y="412" class="m">UCS# URD# UWR#</text>
-<text x="1092" y="428" class="m">CLK to every GAL</text>
-<text x="1092" y="460" class="s">bus rule: exactly one of</text>
-<text x="1092" y="476" class="s">ROMOE, RSOE, RTOE, IRLOE,</text>
-<text x="1092" y="492" class="s">RDOE, ALUOE, RAMOE#, URD#</text>
-<text x="1092" y="508" class="s">is active in any state, and</text>
-<text x="1092" y="524" class="s">each is a function of the</text>
-<text x="1092" y="540" class="s">state alone.</text>
-<text x="1092" y="572" class="s">RAMWE# and UWR# are the</text>
-<text x="1092" y="588" class="s">write state gated with the</text>
-<text x="1092" y="604" class="s">clock's low half: a 68 ns</text>
-<text x="1092" y="620" class="s">pulse, no delay line.</text>
-<!-- op / funct into control -->
-<line x1="722" y1="90" x2="1078" y2="90" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
-<text x="900" y="84" text-anchor="middle" class="s">op[5:0]</text>
-<line x1="992" y1="170" x2="1078" y2="170" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
-<text x="1035" y="164" text-anchor="middle" class="s">funct</text>
-
-<!-- oscillator + reset, small, top right of bus -->
-<rect x="1080" y="720" width="190" height="60" rx="3" class="blk"/>
-<text x="1092" y="740" class="t">Clock and reset</text>
-<text x="1092" y="756" class="m">14.7456 MHz osc -> UART XIN,</text>
-<text x="1092" y="770" class="m">control (/2); MAX811L -> RESET#</text>
+<text x="1092" y="120" class="m">op, funct, NE[3:0]</text>
+<text x="1092" y="136" class="m">A15, A14 region</text>
+<text x="1092" y="152" class="m">CLK2X, RESET#</text>
+<text x="1092" y="178" class="s">holds</text>
+<text x="1092" y="194" class="m">state counter</text>
+<text x="1092" y="210" class="m">CLK = CLK2X / 2</text>
+<text x="1092" y="236" class="s">out, one set per state</text>
+<text x="1092" y="252" class="m">PCINC PCLD PCOE</text>
+<text x="1092" y="268" class="m">IRHLD RSOE RTOE</text>
+<text x="1092" y="284" class="m">IRLLD IRLOE RDOE</text>
+<text x="1092" y="300" class="m">ALD BLD</text>
+<text x="1092" y="316" class="m">F[2:0] ALUOE</text>
+<text x="1092" y="332" class="m">MARLD MARIDX MAROE</text>
+<text x="1092" y="348" class="m">ROMOE#</text>
+<text x="1092" y="364" class="m">RAMCE# RAMOE# RAMWE#</text>
+<text x="1092" y="380" class="m">UCS# URD# UWR#</text>
+<text x="1092" y="396" class="m">CLK to every GAL</text>
+<text x="1092" y="428" class="s">data bus rule: exactly one</text>
+<text x="1092" y="444" class="s">of ROMOE#, RAMOE#, URD#,</text>
+<text x="1092" y="460" class="s">RSOE, RTOE, IRLOE, RDOE,</text>
+<text x="1092" y="476" class="s">ALUOE is active in a state.</text>
+<text x="1092" y="500" class="s">address bus rule: PCOE in</text>
+<text x="1092" y="516" class="s">F1 and F2, MAROE otherwise.</text>
+<text x="1092" y="540" class="s">region: A15 = 0 flash,</text>
+<text x="1092" y="556" class="s">A15 A14 = 10 SRAM, 11 UART;</text>
+<text x="1092" y="572" class="s">the memory strobes are the</text>
+<text x="1092" y="588" class="s">state's read or write ANDed</text>
+<text x="1092" y="604" class="s">with the region.</text>
+<text x="1092" y="628" class="s">RAMWE# and UWR# are the</text>
+<text x="1092" y="644" class="s">write state gated with the</text>
+<text x="1092" y="660" class="s">clock's low half: a 68 ns</text>
+<text x="1092" y="676" class="s">pulse, no delay line.</text>
+<text x="1092" y="700" class="s">Every OE is a function of</text>
+<text x="1092" y="716" class="s">the state alone.</text>
 
 <!-- ============ bottom row ============ -->
 <!-- A latch -->
-<rect x="40" y="480" width="140" height="100" rx="3" class="blk"/>
-<text x="52" y="502" class="t">A latch</text><text x="170" y="502" text-anchor="end" class="s">2 GALs</text>
-<text x="52" y="522" class="m">ALD  load from D</text>
-<text x="52" y="560" class="s">16 flops</text>
-<line x1="110" y1="410" x2="110" y2="478" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="117" y="448" class="bus s">load</text>
+<rect x="60" y="460" width="130" height="100" rx="3" class="blk"/>
+<text x="72" y="482" class="t">A latch</text><text x="180" y="482" text-anchor="end" class="s">2 GALs</text>
+<text x="72" y="502" class="m">ALD  load from D</text>
+<text x="72" y="540" class="s">16 flops</text>
+<line x1="125" y1="390" x2="125" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="131" y="428" class="bus s">load</text>
 
 <!-- B latch -->
-<rect x="210" y="480" width="140" height="100" rx="3" class="blk"/>
-<text x="222" y="502" class="t">B latch</text><text x="340" y="502" text-anchor="end" class="s">2 GALs</text>
-<text x="222" y="522" class="m">BLD  load from D</text>
-<text x="222" y="560" class="s">16 flops</text>
-<line x1="280" y1="410" x2="280" y2="478" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="287" y="448" class="bus s">load</text>
+<rect x="210" y="460" width="130" height="100" rx="3" class="blk"/>
+<text x="222" y="482" class="t">B latch</text><text x="330" y="482" text-anchor="end" class="s">2 GALs</text>
+<text x="222" y="502" class="m">BLD  load from D</text>
+<text x="222" y="540" class="s">16 flops</text>
+<line x1="275" y1="390" x2="275" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="281" y="428" class="bus s">load</text>
 
 <!-- ALU -->
-<rect x="390" y="480" width="180" height="120" rx="3" class="blk"/>
-<text x="402" y="502" class="t">ALU</text><text x="560" y="502" text-anchor="end" class="s">4 GALs</text>
-<text x="402" y="522" class="m">F[2:0]  add, and, nor,</text>
-<text x="402" y="538" class="m">        pass A, pass B</text>
-<text x="402" y="554" class="m">ALUOE   drive D</text>
-<text x="402" y="580" class="s">4-bit slices, ripple carry;</text>
-<text x="402" y="594" class="s">NE[3:0] out for beq</text>
-<line x1="480" y1="478" x2="480" y2="410" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="487" y="448" class="bus s">drive (WB, MA, MW)</text>
-<!-- A, B -> ALU below the blocks -->
-<line x1="110" y1="582" x2="110" y2="640" class="p2p" stroke-width="1.5"/>
-<line x1="280" y1="582" x2="280" y2="640" class="p2p" stroke-width="1.5"/>
-<line x1="110" y1="640" x2="430" y2="640" class="p2p" stroke-width="1.5"/>
-<line x1="430" y1="640" x2="430" y2="602" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="270" y="656" text-anchor="middle" class="p2p s">A[15:0], B[15:0] to the ALU inputs</text>
+<rect x="365" y="460" width="165" height="120" rx="3" class="blk"/>
+<text x="377" y="482" class="t">ALU</text><text x="520" y="482" text-anchor="end" class="s">4 GALs</text>
+<text x="377" y="502" class="m">F[2:0]  add, and, nor,</text>
+<text x="377" y="518" class="m">        pass A, pass B</text>
+<text x="377" y="534" class="m">ALUOE   drive D</text>
+<text x="377" y="558" class="s">4-bit slices, ripple carry;</text>
+<text x="377" y="572" class="s">NE[3:0] to control</text>
+<line x1="447" y1="458" x2="447" y2="390" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="453" y="428" class="bus s">drive (WB, MW)</text>
+<!-- A, B -> ALU, routed under the latches -->
+<line x1="125" y1="562" x2="125" y2="620" class="p2p" stroke-width="1.5"/>
+<line x1="275" y1="562" x2="275" y2="620" class="p2p" stroke-width="1.5"/>
+<line x1="125" y1="620" x2="400" y2="620" class="p2p" stroke-width="1.5"/>
+<line x1="400" y1="620" x2="400" y2="582" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
+<text x="260" y="636" text-anchor="middle" class="p2p s">A[15:0], B[15:0] to the ALU inputs</text>
 
 <!-- MAR -->
-<rect x="610" y="480" width="170" height="120" rx="3" class="blk"/>
-<text x="622" y="502" class="t">MAR</text><text x="770" y="502" text-anchor="end" class="s">2 GALs</text>
-<text x="622" y="522" class="m">MARLD   load ALU result</text>
-<text x="622" y="538" class="m">MARIDX  load {0,D[15:11],0}</text>
-<text x="622" y="574" class="s">15 flops, MAR[15:1];</text>
-<text x="622" y="588" class="s">MAR15 selects SRAM or UART</text>
-<line x1="700" y1="410" x2="700" y2="478" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="707" y="448" class="bus s">load index D[15:11]</text>
+<rect x="560" y="460" width="160" height="120" rx="3" class="blk"/>
+<text x="572" y="482" class="t">MAR</text><text x="710" y="482" text-anchor="end" class="s">2 GALs</text>
+<text x="572" y="502" class="m">MARLD   load ALU result</text>
+<text x="572" y="518" class="m">MARIDX  load 0x80|index</text>
+<text x="572" y="534" class="m">MAROE   drive A</text>
+<text x="572" y="558" class="s">15 flops, MAR[15:1];</text>
+<text x="572" y="572" class="s">index comes from D[15:11]</text>
+<line x1="600" y1="390" x2="600" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="606" y="428" class="bus s">load index</text>
 <!-- ALU -> MAR result -->
-<line x1="572" y1="560" x2="608" y2="560" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="590" y="552" text-anchor="middle" class="p2p s">result</text>
+<line x1="532" y1="540" x2="558" y2="540" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
+<text x="545" y="532" text-anchor="middle" class="p2p s">result</text>
+<!-- MAR drives A -->
+<line x1="680" y1="582" x2="680" y2="688" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<text x="686" y="640" class="ab s">drive A (all but F1, F2)</text>
+
+<!-- Flash -->
+<rect x="750" y="460" width="120" height="120" rx="3" class="blk"/>
+<text x="762" y="482" class="t">Flash</text><text x="860" y="482" text-anchor="end" class="s">2 chips</text>
+<text x="762" y="502" class="m">ROMOE# drive D</text>
+<text x="762" y="518" class="m">CE#    A15</text>
+<text x="762" y="542" class="s">0x0000..0x7FFF</text>
+<text x="762" y="556" class="s">A16-18 jumper</text>
+<text x="762" y="570" class="s">code + constants</text>
+<line x1="810" y1="458" x2="810" y2="390" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="816" y="428" class="bus s">drive (F1, F2, MR)</text>
+<line x1="810" y1="688" x2="810" y2="582" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 
 <!-- SRAM -->
-<rect x="820" y="480" width="200" height="120" rx="3" class="blk"/>
-<text x="832" y="502" class="t">SRAM, registers + data</text><text x="1010" y="502" text-anchor="end" class="s">2 x 8K x 8</text>
-<text x="832" y="522" class="m">RAMCE#  select</text>
-<text x="832" y="538" class="m">RAMOE#  drive D</text>
-<text x="832" y="554" class="m">RAMWE#  write from D</text>
-<text x="832" y="580" class="s">$0..$31 at 0x0000..0x003F,</text>
-<text x="832" y="594" class="s">data to 0x3FFF</text>
-<line x1="920" y1="410" x2="920" y2="478" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
-<text x="927" y="440" class="bus s">drive (RA, RB, MR)</text>
-<text x="927" y="456" class="bus s">write (WB, MW)</text>
-<!-- MAR -> SRAM address -->
-<line x1="782" y1="530" x2="818" y2="530" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="800" y="522" text-anchor="middle" class="p2p s">A[13:1]</text>
+<rect x="890" y="460" width="120" height="120" rx="3" class="blk"/>
+<text x="902" y="482" class="t">SRAM</text><text x="1000" y="482" text-anchor="end" class="s">2 chips</text>
+<text x="902" y="502" class="m">RAMCE# select</text>
+<text x="902" y="518" class="m">RAMOE# drive D</text>
+<text x="902" y="534" class="m">RAMWE# write</text>
+<text x="902" y="556" class="s">0x8000..0xBFFF;</text>
+<text x="902" y="570" class="s">$n at 0x8000+2n</text>
+<line x1="950" y1="390" x2="950" y2="458" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
+<text x="956" y="420" class="bus s">drive (RA2, RB2, MR)</text>
+<text x="956" y="436" class="bus s">write (WB, MW)</text>
+<line x1="950" y1="688" x2="950" y2="582" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 
 <!-- UART -->
-<rect x="820" y="640" width="200" height="120" rx="3" class="blk"/>
-<text x="832" y="662" class="t">UART, low byte</text><text x="1010" y="662" text-anchor="end" class="s">TL16C550</text>
-<text x="832" y="682" class="m">UCS#   MAR15 and data access</text>
-<text x="832" y="698" class="m">URD#   drive D[7:0]</text>
-<text x="832" y="714" class="m">UWR#   write from D[7:0]</text>
-<text x="832" y="740" class="s">registers at 0x8000 + 2n;</text>
-<text x="832" y="754" class="s">SP3232 to the 5-pin header</text>
-<!-- UART to bus: both, routed left of SRAM -->
-<line x1="1040" y1="410" x2="1040" y2="700" class="busl" stroke-width="1.5" marker-start="url(#ab)"/>
-<line x1="1040" y1="700" x2="1022" y2="700" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="1046" y="560" class="bus s" transform="rotate(90 1046 560)">drive (MR), write (MW)</text>
-<!-- MAR -> UART address, routed under -->
-<line x1="700" y1="602" x2="700" y2="700" class="p2p" stroke-width="1.5"/>
-<line x1="700" y1="700" x2="818" y2="700" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="756" y="692" text-anchor="middle" class="p2p s">A[3:1]</text>
-<!-- NE -> control, dashed under everything -->
-<line x1="480" y1="602" x2="480" y2="780" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="480" y1="780" x2="1060" y2="780" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="1060" y1="780" x2="1060" y2="690" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="1060" y1="690" x2="1078" y2="690" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
-<text x="640" y="774" class="s">NE[3:0] to control (beq decides here)</text>
+<rect x="750" y="740" width="260" height="70" rx="3" class="blk"/>
+<text x="762" y="760" class="t">UART, low byte</text><text x="1000" y="760" text-anchor="end" class="s">TL16C550 + SP3232</text>
+<text x="762" y="778" class="m">UCS#  URD# drive D[7:0]  UWR# write</text>
+<text x="762" y="796" class="s">0xC000 + 2n; A[3:1] to its A0..A2; header for RS-232</text>
+<!-- UART data: from the bus down the right side -->
+<line x1="1040" y1="390" x2="1040" y2="775" class="busl" stroke-width="1.5" marker-start="url(#ab)"/>
+<line x1="1040" y1="775" x2="1012" y2="775" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="1046" y="560" class="bus s" transform="rotate(90 1046 560)">UART: drive (MR), write (MW)</text>
+<!-- UART address: from the address bus -->
+<line x1="880" y1="702" x2="880" y2="738" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+
+<!-- NE -> control -->
+<line x1="530" y1="565" x2="545" y2="565" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="545" y1="565" x2="545" y2="660" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="545" y1="660" x2="1070" y2="660" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="1070" y1="660" x2="1070" y2="740" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="1070" y1="740" x2="1078" y2="740" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
+<text x="560" y="654" class="s">NE[3:0] to control (beq decides there)</text>
 </svg>
-<figcaption>Blue: the shared bus, with the states in which each block drives or loads. Gold: point-to-point, never tri-stated. Dashed grey: status into control. Control's own outputs are not drawn as arrows; each block lists the ones it receives.</figcaption>
+<figcaption>Blue: the data bus, with the states in which each block drives or loads. Gold: the address bus, driven by the PC in the fetch states and by MAR in every other; the flash, SRAM and UART listen and the control block decodes A15 and A14 into chip selects. Green: point-to-point. Dashed grey: status into control. Control's own outputs are not drawn as arrows; each block lists the ones it receives.</figcaption>
 </figure>
 
 <h2>The microprogram: what is active in each state</h2>
-<p>One bus driver per state. A load line is a clock enable on the listed latch; the write strobes are the state gated with the clock's low half.</p>
+<p>One driver per bus per state. A load line is a clock enable on the listed latch; the write strobes are the state gated with the clock's low half and the region decode.</p>
 <div class="scroll"><table>
-<tr><th>State</th><th>Drives D</th><th>Loads from D</th><th>Other lines</th><th>Used by</th></tr>
-<tr><td class="m">F1</td><td class="m">ROMOE</td><td class="m">IRHLD</td><td class="m">PCINC</td><td>all</td></tr>
-<tr><td class="m">F2</td><td class="m">ROMOE</td><td class="m">IRLLD</td><td class="m">PCINC</td><td>all</td></tr>
-<tr><td class="m">RA1</td><td class="m">RSOE</td><td class="m">MARIDX</td><td></td><td>addu and nor addiu andi lw sw beq</td></tr>
-<tr><td class="m">RA2</td><td class="m">RAMOE#</td><td class="m">ALD</td><td class="m">RAMCE#</td><td>same (sw does RB first, then RA)</td></tr>
-<tr><td class="m">RB1</td><td class="m">RTOE</td><td class="m">MARIDX</td><td></td><td>addu and nor beq sw</td></tr>
-<tr><td class="m">RB2</td><td class="m">RAMOE#</td><td class="m">BLD</td><td class="m">RAMCE#</td><td>same</td></tr>
-<tr><td class="m">RI</td><td class="m">IRLOE</td><td class="m">BLD</td><td></td><td>addiu andi</td></tr>
-<tr><td class="m">X1</td><td>none</td><td>none</td><td class="m">F = add, and, nor</td><td>addu and nor addiu andi beq</td></tr>
-<tr><td class="m">X2</td><td class="m">RDOE or RTOE</td><td class="m">MARIDX</td><td class="m">F held; the bus is otherwise idle, so the write-back index goes through MAR now</td><td>same, and the final X of lw</td></tr>
-<tr><td class="m">WB</td><td class="m">ALUOE</td><td>SRAM</td><td class="m">RAMCE#, RAMWE# (low half)</td><td>addu and nor (rd); addiu andi lw (rt)</td></tr>
-<tr><td class="m">MA</td><td>none</td><td class="m">MARLD</td><td class="m">F = pass A (the register read into A is the address)</td><td>lw sw</td></tr>
-<tr><td class="m">MR, MR</td><td class="m">RAMOE# or URD#</td><td class="m">BLD</td><td class="m">RAMCE# or UCS#</td><td>lw</td></tr>
-<tr><td class="m">MW, MW</td><td class="m">ALUOE</td><td>SRAM or UART</td><td class="m">F = pass B; RAMWE# or UWR# (low half of the first clock)</td><td>sw</td></tr>
-<tr><td class="m">BR</td><td class="m">IRLOE</td><td class="m">PCLD if taken</td><td class="m">taken = j, or beq with NE = 0</td><td>beq j</td></tr>
+<tr><th>State</th><th>Drives A</th><th>Drives D</th><th>Loads from D</th><th>Other lines</th><th>Used by</th></tr>
+<tr><td class="m">F1</td><td class="m">PCOE</td><td class="m">ROMOE#</td><td class="m">IRHLD</td><td class="m">PCINC</td><td>all</td></tr>
+<tr><td class="m">F2</td><td class="m">PCOE</td><td class="m">ROMOE#</td><td class="m">IRLLD</td><td class="m">PCINC</td><td>all</td></tr>
+<tr><td class="m">RA1</td><td class="m">MAROE</td><td class="m">RSOE</td><td class="m">MARIDX</td><td></td><td>addu and nor addiu andi lw sw beq</td></tr>
+<tr><td class="m">RA2</td><td class="m">MAROE</td><td class="m">RAMOE#</td><td class="m">ALD</td><td class="m">RAMCE#</td><td>same (sw does RB first, then RA)</td></tr>
+<tr><td class="m">RB1</td><td class="m">MAROE</td><td class="m">RTOE</td><td class="m">MARIDX</td><td></td><td>addu and nor beq sw</td></tr>
+<tr><td class="m">RB2</td><td class="m">MAROE</td><td class="m">RAMOE#</td><td class="m">BLD</td><td class="m">RAMCE#</td><td>same</td></tr>
+<tr><td class="m">RI</td><td class="m">MAROE</td><td class="m">IRLOE</td><td class="m">BLD</td><td></td><td>addiu andi</td></tr>
+<tr><td class="m">X1</td><td class="m">MAROE</td><td>none</td><td>none</td><td class="m">F = add, and, nor</td><td>addu and nor addiu andi beq</td></tr>
+<tr><td class="m">X2</td><td class="m">MAROE</td><td class="m">RDOE or RTOE</td><td class="m">MARIDX</td><td class="m">F held; the bus is otherwise idle, so the write-back index goes through MAR now</td><td>same, and the final X of lw</td></tr>
+<tr><td class="m">WB</td><td class="m">MAROE</td><td class="m">ALUOE</td><td>SRAM</td><td class="m">RAMCE#, RAMWE# (low half)</td><td>addu and nor (rd); addiu andi lw (rt)</td></tr>
+<tr><td class="m">MA</td><td class="m">MAROE</td><td>none</td><td class="m">MARLD</td><td class="m">F = pass A (the register read into A is the address)</td><td>lw sw</td></tr>
+<tr><td class="m">MR, MR</td><td class="m">MAROE</td><td class="m">ROMOE#, RAMOE# or URD# by region</td><td class="m">BLD</td><td class="m">RAMCE# or UCS# by region</td><td>lw</td></tr>
+<tr><td class="m">MW, MW</td><td class="m">MAROE</td><td class="m">ALUOE</td><td>SRAM or UART</td><td class="m">F = pass B; RAMWE# or UWR# by region (low half of the first clock); flash: nothing</td><td>sw</td></tr>
+<tr><td class="m">BR</td><td class="m">MAROE</td><td class="m">IRLOE</td><td class="m">PCLD if taken</td><td class="m">taken = j, or beq with NE = 0</td><td>beq j</td></tr>
 </table></div>
-<p>A register read is two clocks: one to drive the index onto D[15:11] and load it into MAR, one for the SRAM to drive D into the latch. The write-back saves a clock because the second ALU clock leaves the bus idle and the index goes through then. Clocks per instruction: <code>j</code> 3, <code>addiu</code> and <code>andi</code> 8, <code>addu</code>, <code>and</code>, <code>nor</code> and <code>beq</code> 9, <code>lw</code> 10, <code>sw</code> 9.</p>
+<p>A register read is two clocks: one to drive the index onto D[15:11] and load it into MAR, one for the SRAM to drive D into the latch. The write-back saves a clock because the second ALU clock leaves the data bus idle and the index goes through then. Clocks per instruction: <code>j</code> 3, <code>addiu</code> and <code>andi</code> 8, <code>addu</code>, <code>and</code>, <code>nor</code> and <code>beq</code> 9, <code>sw</code> 9, <code>lw</code> 10.</p>
 </main>

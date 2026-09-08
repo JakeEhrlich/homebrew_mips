@@ -13,7 +13,7 @@ Status: proposal for review.  Nothing is modelled yet.
 
 A 16-bit MIPS I subset with MIPS I's own 32-bit instruction encodings,
 executed one instruction at a time over several clocks by a small state
-machine.  The 32 registers live in the SRAM (the first 64 bytes), so the
+machine.  The 32 registers live in the SRAM (its first 64 bytes), so the
 register file costs no chips.  Code runs straight out of the flash, so
 there is no boot copier.  All data accesses are slow by construction (two
 clocks), so the UART sits on the data bus like any memory and needs no
@@ -64,41 +64,45 @@ subroutine is inlined or jumps back to a fixed place), no traps, no
 multiply, no shifts, no set-on-less-than, no byte access.  Undefined
 opcodes do something undefined.
 
-**Memory map.**  Code and data are separate spaces (Harvard), each 64 KB,
-because the PC then drives the flash's address pins directly and the
-data address register drives the SRAM's, with no address mux between.
+**Memory map.**  One 64 KB space for code and data.  The flash is
+readable with `lw`, so tables and strings live where the assembler put
+them.
 
-| Space | Address | What |
-|---|---|---|
-| code | 0x0000 .. 0xFFFF | flash, 64 KB of the 512 KB; the chip's A16..A18 go to a 3-way jumper so one chip holds 8 programs |
-| data | 0x0000 .. 0x003F | registers `$0` .. `$31`, `$n` at 2n |
-| data | 0x0040 .. 0x3FFF | SRAM, 16 KB (two 8K x 8 chips); mirrored to 0x7FFF |
-| data | 0x8000 + 2n | TL16C550 register n on the low byte (n = 0..7); the high byte of a load is garbage, mask it |
+| Address | What |
+|---|---|
+| 0x0000 .. 0x7FFF | flash, 32 KB of the 512 KB; the chip's A16..A18 go to a 3-way jumper so one chip holds 8 programs |
+| 0x8000 .. 0x803F | registers `$0` .. `$31`, `$n` at 0x8000 + 2n |
+| 0x8040 .. 0xBFFF | SRAM, 16 KB (two 8K x 8 chips) |
+| 0xC000 + 2n | TL16C550 register n on the low byte (n = 0..7); the high byte of a load is garbage, mask it |
 
-The flash is not readable as data, so constant tables and strings are
-built with `li` and `sw` at start-up.  Section 6 has the fix if that
-turns out to hurt.
+Stores to the flash region do nothing in the first revision.  With one
+more control line (the flash's WE#) they would be the SST39SF040's
+byte-program command sequence, and a serial bootloader could burn code
+in the socket; section 6.
 
 **Reset.**  The MAX811L holds reset; the PC starts at code 0.  Programs
 are written into the flash with the programmer, in the DIP-32 socket.
 
 ## 3. How it executes
 
-One 16-bit data bus `D` joins everything: the flash's outputs, the
-SRAMs, the UART's low byte, and the GAL latches.  Two address buses,
-each driven by one register: the PC drives the flash, the data address
-register MAR drives the SRAM and UART.
+Two shared buses.  The 16-bit data bus `D` joins everything: the
+flash's outputs, the SRAMs, the UART's low byte, and the GAL latches.
+The 15-bit address bus `A[15:1]` goes to the flash, the SRAMs and the
+UART, and has two drivers: the PC during fetches and the data address
+register MAR the rest of the time.  Both are GAL registers, and GAL
+outputs have output enables, so sharing the bus costs one input pin per
+chip and no chips.
 
 | Block | Bits | GALs | Notes |
 |---|---|---|---|
-| PC | 16 | 2 | counts by 2 per half-fetch; loads from D on a taken branch, jump or jr |
+| PC | 16 | 2 | counts by 2 per half-fetch; loads from D on a taken branch or jump; drives A during F1 and F2 |
 | IR high half | 16 | 2 | op, rs, rt; rs or rt driven onto D[15:11] to address a register |
 | IR low half | 16 | 2 | imm, or rd and funct; driven onto D whole (imm to B, target to PC) or as D[15:11] (rd to address a register) |
 | A latch | 16 | 2 | ALU operand, loaded from D |
 | B latch | 16 | 2 | ALU operand, loaded from D |
 | ALU | 16 | 4 | four 4-bit slices: add (ripple within the slice, carry between), and, nor, pass A, pass B, plus a not-equal output per slice for BEQ/BNE; outputs drive D through their output enables |
-| MAR | 16 | 2 | loaded from the ALU result or, for a register access, with {0, index, 0} taken from D[15:11]; every SRAM access, register or data, goes through it |
-| Control | | 3 | state counter, decode of op and funct, strobes (flash OE, SRAM CE/OE/WE, UART CS/RD/WR), latch enables, output enables, PC count and load, ALU function; the divide-by-two for the clock |
+| MAR | 16 | 2 | loaded from the ALU result or, for a register access, with {0x80, index, 0} taken from D[15:11]; drives A in every state but F1 and F2 |
+| Control | | 3 | state counter, decode of op and funct, region decode from A15 and A14, strobes (flash OE, SRAM CE/OE/WE, UART CS/RD/WR), latch enables, output enables on both buses, PC count and load, ALU function; the divide-by-two for the clock |
 | | | **19** | plus or minus two once the pins are packed with `galpack` |
 
 Every instruction is a fixed sequence of states, one clock each unless
@@ -154,8 +158,9 @@ divide-by-two flop in the control GAL: the CPU clock is 7.3728 MHz,
 135.6 ns, 50 % by construction.  (8 MHz would need a second oscillator
 for nothing.)
 
-**Fetch.**  Flash tACC is 70 ns; the PC is valid 5.5 ns after the edge;
-the IR needs 3.5 ns before the next: 79 of 135 ns.  One clock per half.
+**Fetch.**  Flash tACC is 70 ns; the PC's outputs enable and are valid
+within about 10 ns of the edge; the IR needs 3.5 ns before the next:
+under 85 of 135 ns.  One clock per half.
 
 **Register and SRAM access.**  The SRAM is 15 ns.  A read is one clock;
 a write's WE# is the write state gated with the clock's low half, a
@@ -163,7 +168,7 @@ a write's WE# is the write state gated with the clock's low half, a
 on D) has been stable since the X states.  Every margin is tens of
 nanoseconds; there is nothing to bin.
 
-**Data-space access (lw, sw).**  Two clocks, always, whichever chip is
+**Data access (lw, sw).**  Two clocks, always, whichever chip is
 addressed.  The strobe (RD# or WR#) is the whole first clock, 135 ns
 against the 16550's 40 ns; MAR has been valid for a clock before it
 (setup 7 ns needed); data is valid 45 ns into a read; the strobe ends
@@ -204,10 +209,15 @@ are the ones JLCPCB already had in stock.
    every state (roughly twice the clocks) and a little more control
    logic.  I lean 16 because the control is simpler and it uses the
    chips; the 8-bit version is the fallback if the GAL count must drop.
-3. **Harvard.**  No address mux, but no constants in flash.  Making the
-   flash readable as data costs the mux (about two GALs, MAR onto the
-   flash address bus through output enables) and one more state in lw.
-   I would start Harvard and add it if strings in `li`/`sw` get old.
+3. **One address space.**  An earlier draft was Harvard, with the PC
+   wired to the flash and MAR to the SRAM.  Sharing the address bus
+   costs an output-enable pin on the PC and MAR chips and a three-way
+   decode instead of two, no chips, and buys constants in flash and
+   the same bus model as crag.  The only way it could have saved chips
+   is by dropping the PC and keeping it in an SRAM slot, fetching
+   through MAR: about six clocks per fetch half and an increment
+   function in the ALU.  Not taken.  A later revision can give the
+   flash its WE# and program it in the socket through the UART.
 4. **Absolute branch targets, no delay slot, zero-offset `sw`.**  All
    assembler-level differences from MIPS I; the instruction bit layout
    is untouched.  A future pipelined board (pebble) can reintroduce
