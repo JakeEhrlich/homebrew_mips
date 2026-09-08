@@ -38,29 +38,30 @@ from MIPS I follow from the 16-bit word:
   need the PC on the ALU, which is a mux the board does not have.
 - No delay slots.  Nothing is pipelined, so the instruction after a
   taken branch is not executed.
-- Register `$0` is a real SRAM word.  Writes to it are suppressed in
-  hardware; the first two instructions of every program clear it
-  (`andi $1, $1, 0; sw $1, 0($1)`), after which it reads as zero.
+- Register `$0` is an ordinary SRAM word: writable, and nothing special
+  at reset.  `andi $0, $0, 0` zeroes it (or any register); a program
+  that wants `not` through `nor rd, rs, $0` does that first.
+- `sw` takes a zero offset only (`sw rt, ($rs)`); the assembler rejects
+  others.  Section 3 says why; `lw` keeps its offset.
 
 | Instruction | Encoding | Does | Why it is there |
 |---|---|---|---|
 | `addu rd, rs, rt` | SPECIAL funct 0x21 | rd = rs + rt | add |
 | `and rd, rs, rt` | SPECIAL 0x24 | rd = rs & rt | and |
-| `nor rd, rs, rt` | SPECIAL 0x27 | rd = ~(rs \| rt) | `not rd, rs` = `nor rd, rs, $0` |
-| `jr rs` | SPECIAL 0x08 | PC = rs | returns, computed jumps |
+| `nor rd, rs, rt` | SPECIAL 0x27 | rd = ~(rs \| rt) | `not rd, rs` = `nor rd, rs, $0` with `$0` zeroed |
 | `addiu rt, rs, imm` | op 0x09 | rt = rs + imm | `li`, address arithmetic, counters |
-| `andi rt, rs, imm` | op 0x0C | rt = rs & imm | masks; same datapath as addiu, free |
+| `andi rt, rs, imm` | op 0x0C | rt = rs & imm | masks, zeroing; same datapath as addiu, free |
 | `lw rt, off(rs)` | op 0x23 | rt = mem16[rs + off] | load |
-| `sw rt, off(rs)` | op 0x2B | mem16[rs + off] = rt | store |
-| `beq rs, rt, target` | op 0x04 | if rs == rt: PC = target | loops |
-| `bne rs, rt, target` | op 0x05 | if rs != rt: PC = target | polling the UART |
+| `sw rt, (rs)` | op 0x2B, offset 0 | mem16[rs] = rt | store |
+| `beq rs, rt, target` | op 0x04 | if rs == rt: PC = target | loops, polling |
 | `j target` | op 0x02 | PC = target | same datapath as a taken branch, free |
 
-Load, store, add, and, not and immediates were the request; the branches
-and jumps are my addition, because polling a UART needs a loop.  Nothing
-else exists: no traps, no exceptions, no multiply, no shifts, no set-
-on-less-than, no byte access, no link register (a call is
-`li $ra, ret; j sub`).  Undefined opcodes do something undefined.
+Load, store, add, and, not and immediates were the request; `beq` and
+`j` are there because polling a UART needs a loop, and `bne` is `beq`
+to the other block.  Nothing else exists: no `jr` (no returns; a
+subroutine is inlined or jumps back to a fixed place), no traps, no
+multiply, no shifts, no set-on-less-than, no byte access.  Undefined
+opcodes do something undefined.
 
 **Memory map.**  Code and data are separate spaces (Harvard), each 64 KB,
 because the PC then drives the flash's address pins directly and the
@@ -95,7 +96,7 @@ register MAR drives the SRAM and UART.
 | A latch | 16 | 2 | ALU operand, loaded from D |
 | B latch | 16 | 2 | ALU operand, loaded from D |
 | ALU | 16 | 4 | four 4-bit slices: add (ripple within the slice, carry between), and, nor, pass A, pass B, plus a not-equal output per slice for BEQ/BNE; outputs drive D through their output enables |
-| MAR | 16 | 2 | loaded from the ALU result or, for a register access, with {0, index, 0} taken from D[15:11] |
+| MAR | 16 | 2 | loaded from the ALU result or, for a register access, with {0, index, 0} taken from D[15:11]; every SRAM access, register or data, goes through it |
 | Control | | 3 | state counter, decode of op and funct, strobes (flash OE, SRAM CE/OE/WE, UART CS/RD/WR), latch enables, output enables, PC count and load, ALU function; the divide-by-two for the clock |
 | | | **19** | plus or minus two once the pins are packed with `galpack` |
 
@@ -106,27 +107,37 @@ marked:
 F1   D = flash[PC]        -> IR high;   PC += 2
 F2   D = flash[PC]        -> IR low;    PC += 2
 RA   MAR = &rs;  D = SRAM -> A
-RB   MAR = &rt;  D = SRAM -> B                (R-type, sw, beq, bne)
+RB   MAR = &rt;  D = SRAM -> B                (R-type, beq)
 RI   D = IR low (imm)     -> B                (I-type)
 X    ALU = f(A, B)                            (two clocks: 16-bit ripple)
 WB   MAR = &rd or &rt;  SRAM = ALU            (write pulse in the second half)
-MA   MAR = ALU                                (lw, sw: the address)
+MA   MAR = ALU                                (lw: the address; sw: pass B)
 MR   D = data[MAR]        -> B                (two clocks)
 MW   data[MAR] = ALU (pass A)                 (two clocks)
-BR   if taken: D = IR low -> PC               (beq, bne, j: PC load)
+BR   if taken: D = IR low -> PC               (beq, j: PC load)
 ```
 
 | Instruction | States | Clocks |
 |---|---|---|
 | addu, and, nor | F1 F2 RA RB X X WB | 7 |
 | addiu, andi | F1 F2 RA RI X X WB | 7 |
-| lw | F1 F2 RA RI X X MA MR MR RI' X X WB | 13 (RI' reloads B from memory, X passes it) |
-| sw | F1 F2 RA RI X X MA RB' X X MW MW | 12 (RB' loads rt into A) |
-| beq, bne | F1 F2 RA RB X X BR | 7 |
+| lw | F1 F2 RA RI X X MA MR MR X WB | 11 (the ALU passes B, the loaded word, to the register) |
+| sw | F1 F2 RA' RB' X MA MW MW | 8 (RA' loads rt into A, RB' loads rs into B; MAR = B; the ALU passes A) |
+| beq | F1 F2 RA RB X X BR | 7 |
 | j | F1 F2 BR | 3 |
-| jr | F1 F2 RA RI X X BR | 7 (B = 0 from `$0`'s field; the ALU passes A) |
 
-About 0.8 million instructions a second at 7.4 MHz.  Plenty.
+About 0.9 million instructions a second at 7.4 MHz.  Plenty.
+
+**Why `sw` has no offset.**  A store needs three values, the base, the
+offset and the data, and the machine has two latches.  Reading the data
+register after the address is in MAR is not possible, because register
+reads go through MAR too.  With a zero offset the address is a
+register, so both reads happen first and MAR is loaded last.  A full
+`sw rt, off(rs)` costs either two more GALs (a separate register-index
+driver on the SRAM's address pins, so MAR survives a register read) or
+four more states that park the computed address in a hidden 33rd
+register and read it back.  `lw` does not have the problem: its data
+arrives after the address is used up.
 
 ## 4. Timing, and why there are no delay lines
 
@@ -177,9 +188,8 @@ are the ones JLCPCB already had in stock.
 ## 6. Choices to argue about
 
 1. **Registers in SRAM.**  Costs about four clocks per instruction, saves
-   about eight GALs or the dual-port chips.  It also means `$0` needs
-   clearing and a bad program can overwrite its registers.  I would keep
-   it: the whole point is a small board.
+   about eight GALs or the dual-port chips.  A bad program can overwrite
+   its registers.  I would keep it: the whole point is a small board.
 2. **16-bit data bus (two flashes, two SRAMs)** against an 8-bit bus with
    one of each.  8 bits halves the memory chips and the data traces and
    makes the UART a natural byte device, at the cost of a byte-phase in
@@ -190,15 +200,17 @@ are the ones JLCPCB already had in stock.
    flash readable as data costs the mux (about two GALs, MAR onto the
    flash address bus through output enables) and one more state in lw.
    I would start Harvard and add it if strings in `li`/`sw` get old.
-4. **Absolute branch targets and no delay slot.**  Both are assembler-
-   level differences from MIPS I; the instruction bit layout is
-   untouched.  A future pipelined board (pebble) can reintroduce
+4. **Absolute branch targets, no delay slot, zero-offset `sw`.**  All
+   assembler-level differences from MIPS I; the instruction bit layout
+   is untouched.  A future pipelined board (pebble) can reintroduce
    PC-relative and the slot; the code for grit will not be reused
    anyway.
-5. **What is cheap to add later:** `or`/`ori` (two product terms per
-   ALU bit), `sltu` (a subtract is add with B inverted and carry in:
-   one more ALU function and a carry-out bit), `jal` (PC onto D: costs
-   pins on the PC GALs, probably one more chip), byte loads for the UART.
+5. **What is cheap to add later:** `bne` (the same states, the branch
+   condition inverted), `or`/`ori` (two product terms per ALU bit),
+   `sltu` (a subtract is add with B inverted and carry in: one more ALU
+   function and a carry-out bit), `jr` (four states, the ALU passing A
+   to the PC), `jal` (PC onto D: costs pins on the PC GALs, probably one
+   more chip), byte loads for the UART, `sw` with an offset (above).
 6. **Clock.**  7.37 MHz from the UART's oscillator, or a separate 8 MHz
    can and the same numbers.  Everything above has a factor of two of
    margin at either.
