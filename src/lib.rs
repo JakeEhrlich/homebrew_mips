@@ -14,3 +14,4 @@ pub mod cpu;
 pub mod uart16550;
 pub mod board;
 pub mod soak;
+pub mod slack;

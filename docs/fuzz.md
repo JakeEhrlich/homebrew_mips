@@ -101,4 +101,5 @@ FUZZ_GRADE=commercial FUZZ_JITTER_NS=0 cargo test --release --test fuzz
 
 A failure names the seed and the knob values, and the first warnings
 say which chip captured what.  `Build` carries the same knobs for any
-test.
+test, and `pin_delays` puts a delay on chosen pins: `docs/slack.md` uses
+it to measure each backward bus on its own.

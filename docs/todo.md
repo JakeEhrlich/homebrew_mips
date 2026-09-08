@@ -16,6 +16,11 @@ is not listed here.
       delays, clock duty and jitter, random power-up contents.  Found
       that the clock must be a divided 50 % clock and that the delay
       lines must be binned to +-2 ns.
+- [x] Back-edge slack (`mips32 slack`, docs/slack.md): the longest
+      backward traces are on the branch-resolution path, 2.5 ns of slack
+      shared by two back edges at 34 ns.
+- [ ] Per-net loading in the model: the wide back buses carry 7 to 14
+      inputs and the GAL timings are at the test load.
 - [ ] Clock buffer model: the fuzz gives every pin its own delay, but
       the buffer tree's structure (which chips share a branch) is not
       modelled.

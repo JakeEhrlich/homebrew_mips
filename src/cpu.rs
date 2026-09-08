@@ -31,7 +31,7 @@ use crate::ds1100::{Ds1100, Grade};
 use crate::uart16550::{BusTiming, Uart16550, UartPin, uart_pin_of};
 use crate::board::{Board, ChipMeta, Column, Load, Model};
 use crate::netlist::{DS1100_IN, FastGate, Level, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram16, Sram16Pin, SramPin, Sram8kPin, Time, NS, ds1100_tap_pin, rom_pin_of, sram_pin_of, sram8k_pin_of, sram16_pin_of};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1907,6 +1907,10 @@ pub struct Build {
     pub pin_delay_ns: f64,
     pub clock_duty: (f64, f64),
     pub clock_jitter_ns: f64,
+    /// Extra propagation delay on particular pins, (chip, pin, ns), on
+    /// top of the fuzz's.  The slack analysis (`slack`) uses it one bus
+    /// at a time, on the pins that listen from an earlier stage.
+    pub pin_delays: Vec<(String, usize, f64)>,
 }
 
 /// A small deterministic generator for the fuzz.
@@ -1946,7 +1950,7 @@ pub const UART_XIN_HZ: f64 = 14_745_600.0;
 
 impl Default for Build {
     fn default() -> Build {
-        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new(), fuzz_seed: 0, pin_delay_ns: 0.0, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
+        Build { grade: Grade::Commercial, dmem: as7c164a::Timing::cy7c1041g_10(), gate_tap: (40, 0), gate_tpd: (500, 5500), reset_phase_ns: 11.0, boot: Boot::Preload, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new(), fuzz_seed: 0, pin_delay_ns: 0.0, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0, pin_delays: Vec::new() }
     }
 }
 
@@ -2100,10 +2104,11 @@ impl Cpu {
         }
         let gal_count = board.chips.iter().filter(|c| matches!(c.model, Model::Gal { .. })).count();
         let mut sim = nl.build();
-        if opt.fuzz_seed != 0 && opt.pin_delay_ns > 0.0 {
+        if (opt.fuzz_seed != 0 && opt.pin_delay_ns > 0.0) || !opt.pin_delays.is_empty() {
             let mut r = Lcg(opt.fuzz_seed ^ 0xde1a);
-            let max = opt.pin_delay_ns;
-            sim.set_pin_delays(|_, _| Self::ns(r.unit() * max));
+            let max = if opt.fuzz_seed != 0 { opt.pin_delay_ns } else { 0.0 };
+            let extra: HashMap<(&str, usize), Time> = opt.pin_delays.iter().map(|(c, p, d)| ((c.as_str(), *p), Self::ns(*d))).collect();
+            sim.set_pin_delays(|chip, pin| Self::ns(r.unit() * max) + extra.get(&(chip, pin)).copied().unwrap_or(0));
         }
         let clk = sim.net_id("CLK");
         let mr_n = sim.net_id("MR_n");

@@ -132,3 +132,18 @@ fn test_variant_differs_only_in_boot_wiring() {
     let ties = |b: &Board| -> Vec<(String, Option<mips32::board::Fixed>)> { b.nets.iter().filter(|n| n.name.starts_with("NPH") || n.name == "SKIP").map(|n| (n.name.clone(), n.tie)).collect() };
     assert_ne!(ties(&full), ties(&small));
 }
+
+/// The slack analysis finds the pipeline's backward buses from the board
+/// file: forwarding, write-back, branch resolution and the stall.
+#[test]
+fn backward_edges_are_the_known_ones() {
+    let b = mips32::cpu::board(&mips32::cpu::Params::board());
+    let edges = mips32::slack::backward_edges(&b);
+    let names: Vec<&str> = edges.iter().map(|e| e.bus.as_str()).collect();
+    for want in ["MR", "WD", "WDEST", "WREG", "WDESTC", "WREGC_n", "XBT", "FA", "SELBT", "SELJT", "SELAF", "SELINC", "KILL", "HOLD", "MDEST", "MRW"] {
+        assert!(names.contains(&want), "{want} missing from {names:?}");
+    }
+    let mr = edges.iter().find(|e| e.bus == "MR").unwrap();
+    assert_eq!(mr.nets.len(), 32);
+    assert!(mr.to.iter().any(|t| t.starts_with("Forward A")), "{:?}", mr.to);
+}
