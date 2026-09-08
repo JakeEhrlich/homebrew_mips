@@ -92,7 +92,10 @@ UART, and has two drivers: the PC while fetching and the A latch the
 rest of the time.  The A latch is both the ALU's first operand and the
 address register: its outputs feed the ALU and the address bus on the
 same net, and a register access loads it with the register's address
-(0x80 in the high byte, the index in bits 5:1) before the value.
+(0x80 in the high byte, the index in bits 5:1) before the value.  While
+the PC drives that net the ALU sees the PC as its A operand, which is
+why `beq`'s decision is sampled into a control flop at X1 rather than
+read at BR.
 
 The memories select themselves from the address: the flash's CE# is
 A15, the SRAM's CE2 is A15 and CE1# is A14, the UART's CS0 and CS1 are
@@ -126,13 +129,13 @@ RA1  D[5:1] = rs    -> A as 0x8000 | index << 1
 RA2  D = SRAM[A]    -> A
 RB1  D[5:1] = rt    -> A                              (R-type, beq, sw)
 RB2  D = SRAM[A]    -> B
-X1   ALU = f(A, B)                                    (16-bit ripple settles)
+X1   ALU = f(A, B)                                    (ripple settles; for beq, control samples NE into TAKEN)
 X2   D = ALU        -> B                              (the result parks in B: A is about to become the index)
 WI   D[5:1] = rd or rt -> A
 WB   SRAM[A] = B (ALU passes B)                       (write pulse in the low half)
 MR   D = mem[A]     -> B                              (two clocks; A holds rs's value, the address)
 MW   mem[A] = B                                       (two clocks)
-BR   D = flash[PC], the low half again; PC loads it if taken, else PC += 2
+BR   D = flash[PC], the low half again; PC loads it if TAKEN, else PC += 2
 ```
 
 | Instruction | States | Clocks |

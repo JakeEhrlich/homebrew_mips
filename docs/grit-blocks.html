@@ -123,7 +123,7 @@ td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px;
 <text x="1092" y="138" class="m">NE[3:0]</text>
 <text x="1092" y="154" class="m">CLK2X RESET#</text>
 <text x="1092" y="180" class="s">holds</text>
-<text x="1092" y="196" class="m">state counter</text>
+<text x="1092" y="196" class="m">state counter, TAKEN</text>
 <text x="1092" y="212" class="m">CLK = CLK2X / 2</text>
 <text x="1092" y="238" class="s">out, one set per state</text>
 <text x="1092" y="254" class="m">PCINC PCLD PCOE</text>
@@ -237,7 +237,7 @@ td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px;
 <line x1="605" y1="670" x2="1070" y2="670" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
 <line x1="1070" y1="670" x2="1070" y2="760" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
 <line x1="1070" y1="760" x2="1078" y2="760" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
-<text x="620" y="664" class="s">NE[3:0] to control (beq decides there)</text>
+<text x="620" y="664" class="s">NE[3:0] to control, sampled at X1 into TAKEN</text>
 </svg>
 <figcaption>Blue: the data bus, with the states in which each block drives or loads. Gold: the address bus, driven by the PC in the fetch and branch states and by the A latch in every other; the memories select themselves from A15 and A14 and share one RD# and one WR#. Green: point-to-point. Dashed grey: status into control. Control's outputs are not drawn as arrows; each block lists the ones it receives.</figcaption>
 </figure>
@@ -252,13 +252,13 @@ td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px;
 <tr><td class="m">RA2</td><td>A latch</td><td class="m">RD# (SRAM)</td><td class="m">ALD</td><td></td><td>same (sw does RB first, then RA)</td></tr>
 <tr><td class="m">RB1</td><td>A latch</td><td class="m">RTOE</td><td class="m">AIDX</td><td></td><td>addu and nor beq sw</td></tr>
 <tr><td class="m">RB2</td><td>A latch</td><td class="m">RD# (SRAM)</td><td class="m">BLD</td><td></td><td>same</td></tr>
-<tr><td class="m">X1</td><td>A latch</td><td>none</td><td>none</td><td class="m">ALU = A op B, ripple settles</td><td>addu and nor addiu andi beq</td></tr>
+<tr><td class="m">X1</td><td>A latch</td><td>none</td><td>none</td><td class="m">ALU = A op B, ripple settles; control samples NE into TAKEN at the end</td><td>addu and nor addiu andi beq</td></tr>
 <tr><td class="m">X2</td><td>A latch</td><td class="m">ALUOE</td><td class="m">BLD</td><td class="m">the result parks in B, since A is about to become the index</td><td>addu and nor addiu andi</td></tr>
 <tr><td class="m">WI</td><td>A latch</td><td class="m">RDOE (R-type) or RTOE (I-type, lw)</td><td class="m">AIDX</td><td></td><td>addu and nor addiu andi lw</td></tr>
 <tr><td class="m">WB</td><td>A latch</td><td class="m">ALUOE</td><td>SRAM</td><td class="m">PASSB; WR# (low half)</td><td>addu and nor addiu andi lw</td></tr>
 <tr><td class="m">MR, MR</td><td>A latch</td><td class="m">RD# (by region)</td><td class="m">BLD</td><td class="m">A holds rs's value, which is the address</td><td>lw</td></tr>
 <tr><td class="m">MW, MW</td><td>A latch</td><td class="m">ALUOE</td><td>SRAM or UART</td><td class="m">PASSB; WR# (low half of the first clock); flash region: nothing</td><td>sw</td></tr>
-<tr><td class="m">BR</td><td class="m">PCOE</td><td class="m">RD# (flash, the low half again)</td><td class="m">PCLD if taken</td><td class="m">taken = j, or beq with NE = 0; else PCINC</td><td>beq j</td></tr>
+<tr><td class="m">BR</td><td class="m">PCOE</td><td class="m">RD# (flash, the low half again)</td><td class="m">PCLD if TAKEN</td><td class="m">TAKEN is set for j, and for beq from NE at X1 (at BR the ALU sees the PC, not rs); else PCINC</td><td>beq j</td></tr>
 </table></div>
 <p>Clocks per instruction: <code>j</code> 2, <code>addiu</code>, <code>andi</code>, <code>lw</code>, <code>sw</code> and <code>beq</code> 8, <code>addu</code>, <code>and</code>, <code>nor</code> 10. About 0.85 million instructions a second at 7.37 MHz.</p>
 </main>
