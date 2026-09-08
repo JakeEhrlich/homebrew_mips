@@ -41,8 +41,9 @@ from MIPS I follow from the 16-bit word:
 - Register `$0` is an ordinary SRAM word: writable, and nothing special
   at reset.  `andi $0, $0, 0` zeroes it (or any register); a program
   that wants `not` through `nor rd, rs, $0` does that first.
-- `sw` takes a zero offset only (`sw rt, ($rs)`); the assembler rejects
-  others.  Section 3 says why; `lw` keeps its offset.
+- `lw` and `sw` take a zero offset only (`lw rt, (rs)`, `sw rt, (rs)`);
+  the assembler rejects others.  Addresses are computed with `addiu`
+  first.  Section 3 says why.
 
 | Instruction | Encoding | Does | Why it is there |
 |---|---|---|---|
@@ -51,7 +52,7 @@ from MIPS I follow from the 16-bit word:
 | `nor rd, rs, rt` | SPECIAL 0x27 | rd = ~(rs \| rt) | `not rd, rs` = `nor rd, rs, $0` with `$0` zeroed |
 | `addiu rt, rs, imm` | op 0x09 | rt = rs + imm | `li`, address arithmetic, counters |
 | `andi rt, rs, imm` | op 0x0C | rt = rs & imm | masks, zeroing; same datapath as addiu, free |
-| `lw rt, off(rs)` | op 0x23 | rt = mem16[rs + off] | load |
+| `lw rt, (rs)` | op 0x23, offset 0 | rt = mem16[rs] | load |
 | `sw rt, (rs)` | op 0x2B, offset 0 | mem16[rs] = rt | store |
 | `beq rs, rt, target` | op 0x04 | if rs == rt: PC = target | loops, polling |
 | `j target` | op 0x02 | PC = target | same datapath as a taken branch, free |
@@ -111,7 +112,7 @@ RB   MAR = &rt;  D = SRAM -> B                (R-type, beq)
 RI   D = IR low (imm)     -> B                (I-type)
 X    ALU = f(A, B)                            (two clocks: 16-bit ripple)
 WB   MAR = &rd or &rt;  SRAM = ALU            (write pulse in the second half)
-MA   MAR = ALU                                (lw: the address; sw: pass B)
+MA   MAR = ALU (pass A)                       (lw, sw: the address)
 MR   D = data[MAR]        -> B                (two clocks)
 MW   data[MAR] = ALU (pass A)                 (two clocks)
 BR   if taken: D = IR low -> PC               (beq, j: PC load)
@@ -121,23 +122,25 @@ BR   if taken: D = IR low -> PC               (beq, j: PC load)
 |---|---|---|
 | addu, and, nor | F1 F2 RA RB X X WB | 7 |
 | addiu, andi | F1 F2 RA RI X X WB | 7 |
-| lw | F1 F2 RA RI X X MA MR MR X WB | 11 (the ALU passes B, the loaded word, to the register) |
-| sw | F1 F2 RA' RB' X MA MW MW | 8 (RA' loads rt into A, RB' loads rs into B; MAR = B; the ALU passes A) |
+| lw | F1 F2 RA X MA MR MR X WB | 9 (the ALU passes B, the loaded word, to the register) |
+| sw | F1 F2 RB' RA X MA MW MW | 8 (RB' loads rt into B first; the ALU passes A for the address, then B for the data) |
 | beq | F1 F2 RA RB X X BR | 7 |
 | j | F1 F2 BR | 3 |
 
 About 0.9 million instructions a second at 7.4 MHz.  Plenty.
 
-**Why `sw` has no offset.**  A store needs three values, the base, the
-offset and the data, and the machine has two latches.  Reading the data
-register after the address is in MAR is not possible, because register
-reads go through MAR too.  With a zero offset the address is a
-register, so both reads happen first and MAR is loaded last.  A full
-`sw rt, off(rs)` costs either two more GALs (a separate register-index
-driver on the SRAM's address pins, so MAR survives a register read) or
-four more states that park the computed address in a hidden 33rd
-register and read it back.  `lw` does not have the problem: its data
-arrives after the address is used up.
+**Why there are no offsets.**  A store with an offset needs three
+values, the base, the offset and the data, and the machine has two
+latches.  Reading the data register after the address is in MAR is not
+possible, because register reads go through MAR too.  With a zero
+offset the address is a register, so both reads happen first and MAR is
+loaded last.  A full `sw rt, off(rs)` costs either two more GALs (a
+separate register-index driver on the SRAM's address pins, so MAR
+survives a register read) or four more states that park the computed
+address in a hidden 33rd register and read it back.  An offset on `lw`
+would be free in chips (it is the `addiu` path), but with both at zero
+the two share one address sequence in the control GAL and the rule is
+one rule.
 
 ## 4. Timing, and why there are no delay lines
 
@@ -210,7 +213,7 @@ are the ones JLCPCB already had in stock.
    `sltu` (a subtract is add with B inverted and carry in: one more ALU
    function and a carry-out bit), `jr` (four states, the ALU passing A
    to the PC), `jal` (PC onto D: costs pins on the PC GALs, probably one
-   more chip), byte loads for the UART, `sw` with an offset (above).
+   more chip), byte loads for the UART, offsets on `lw` (two states) and `sw` (above).
 6. **Clock.**  7.37 MHz from the UART's oscillator, or a separate 8 MHz
    can and the same numbers.  Everything above has a factor of two of
    margin at either.
