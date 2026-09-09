@@ -51,22 +51,22 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="565" y="374" text-anchor="middle" class="bus t">D[15:0]  data bus: the flash in a fetch clock or literal read; the SRAM, UART or ALU in an execute clock</text>
 <!-- address bus -->
 <rect x="30" y="710" width="1040" height="12" rx="3" fill="var(--abus)"/>
-<text x="565" y="742" text-anchor="middle" class="ab t">A[15:1]  address bus: the A latch, except the second half of a fetch or literal clock, when the PC drives; flash CE# = A15, SRAM CE2 = A15 and CE1# = A14, UART CS0 = A14 and CS1 = A15</text>
+<text x="565" y="742" text-anchor="middle" class="ab t">Addr[15:1]  address bus: the A latch, except the second half of a fetch or literal clock, when the PC drives; flash CE# = A15, SRAM CE2 = A15 and CE1# = A14, UART CS0 = A14 and CS1 = A15</text>
 
 <!-- PC -->
 <rect x="60" y="60" width="200" height="150" rx="3" class="blk"/>
 <text x="72" y="82" class="t">PC</text><text x="250" y="82" text-anchor="end" class="s">2 GALs</text>
-<text x="72" y="102" class="m">in  D1..D15, LOAD,</text>
-<text x="72" y="118" class="m">    PCDRIVE, CLK, RESET</text>
-<text x="72" y="134" class="m">out PC1..PC15 (on PCDRIVE),</text>
+<text x="72" y="102" class="m">in  D1..D15, PCLOAD,</text>
+<text x="72" y="118" class="m">    PCBUS, CLK, RESET</text>
+<text x="72" y="134" class="m">out PC1..PC15 (on PCBUS),</text>
 <text x="72" y="150" class="m">    CO (carry into bit 9)</text>
-<text x="72" y="178" class="s">counts a word when PCDRIVE is</text>
-<text x="72" y="192" class="s">high at the edge; loads D on LOAD</text>
+<text x="72" y="178" class="s">counts a word when PCBUS is</text>
+<text x="72" y="192" class="s">high at the edge; loads D on PCLOAD</text>
 <line x1="160" y1="380" x2="160" y2="212" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="167" y="300" class="bus s">load (jump target)</text>
 <line x1="58" y1="125" x2="36" y2="125" class="abl" stroke-width="1.5"/>
 <line x1="36" y1="125" x2="36" y2="708" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
-<text x="30" y="440" class="ab s" transform="rotate(-90 30 440)">drive A on PCDRIVE</text>
+<text x="30" y="440" class="ab s" transform="rotate(-90 30 440)">drive A on PCBUS</text>
 
 <!-- MIR -->
 <rect x="300" y="60" width="300" height="150" rx="3" class="blk"/>
@@ -88,8 +88,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="652" y="118" class="m">    PCLD, PCEQ, NE</text>
 <text x="652" y="134" class="m">out CLK      = CLK2X / 2</text>
 <text x="652" y="150" class="m">    WE_n      = quarter two if WR</text>
-<text x="652" y="166" class="m">    PCDRIVE  = PCDRV and CLK low</text>
-<text x="652" y="182" class="m">    LOAD     = PCLD or PCEQ and EQ</text>
+<text x="652" y="166" class="m">    PCBUS  = PCDRV and CLK low</text>
+<text x="652" y="182" class="m">    PCLOAD   = PCLD or PCEQ and EQ</text>
 <line x1="602" y1="120" x2="638" y2="120" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
 
 <!-- clock and reset -->
@@ -106,15 +106,15 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="60" y="460" width="190" height="130" rx="3" class="blk"/>
 <text x="72" y="482" class="t">A latch = address</text><text x="240" y="482" text-anchor="end" class="s">2 GALs</text>
 <text x="72" y="502" class="m">in  D0..D15, ALD,</text>
-<text x="72" y="518" class="m">    PCDRIVE, CLK</text>
+<text x="72" y="518" class="m">    PCBUS, CLK</text>
 <text x="72" y="534" class="m">out A0..A15</text>
 <text x="72" y="558" class="s">A := ALD ? D : A. Outputs feed</text>
 <text x="72" y="572" class="s">the ALU and drive the address</text>
-<text x="72" y="586" class="s">bus while PCDRIVE is low</text>
+<text x="72" y="586" class="s">bus while PCBUS is low</text>
 <line x1="155" y1="398" x2="155" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="161" y="432" class="bus s">load on ALD</text>
 <line x1="90" y1="592" x2="90" y2="708" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
-<text x="96" y="660" class="ab s">drive A unless PCDRIVE</text>
+<text x="96" y="660" class="ab s">drive A unless PCBUS</text>
 
 <!-- B latch -->
 <rect x="280" y="460" width="170" height="130" rx="3" class="blk"/>

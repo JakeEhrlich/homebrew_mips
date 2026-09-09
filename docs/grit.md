@@ -88,7 +88,7 @@ left out until code size bites.
 
 **Buses.**  D[15:0], the data bus: driven by the flash, the SRAM, the
 UART's low byte or the ALU, one per clock; loaded by A, B, the PC and
-the microinstruction register.  A[15:1], the address bus: driven by the
+the microinstruction register.  Addr[15:1], the address bus: driven by the
 A latch, except in the second half of a fetch clock or a literal read,
 when the PC drives it.  The memories decode A15 and A14 on their own
 chip-select pins, so control has no chip selects: one read strobe for
@@ -99,12 +99,12 @@ asynchronous-reset term.
 
 | Chip | Clock | Reset | Inputs | Outputs |
 |---|---|---|---|---|
-| glue | CLK2X | none | WR, PCDRV_n, PCLD, PCEQ, NE | CLK (divide by two), WE_n, PCDRIVE, LOAD |
+| glue | CLK2X | none | WR, PCDRV_n, PCLD, PCEQ, NE | CLK (divide by two), WE_n, PCBUS, PCLOAD |
 | MIR | CLK | RESET | D6 to D15, EXEC | PCDRV_n, MEMRD_n, ALUOE, WR, ALD, BLD, PCLD, PCEQ, F1, F0: loaded from the word at a fetch edge, cleared at an execute edge; PCDRV_n is also active in every fetch clock |
-| PC-low | CLK | RESET | D1 to D8, LOAD, PCDRIVE | PC1 to PC8 (enabled by PCDRIVE), CO |
-| PC-high | CLK | RESET | D9 to D15, CO, LOAD, PCDRIVE | PC9 to PC15 (enabled by PCDRIVE) |
-| A-low | CLK | none | D0 to D7, ALD, PCDRIVE | A0 (always on), A1 to A7 (enabled by not PCDRIVE) |
-| A-high | CLK | none | D8 to D15, ALD, PCDRIVE | A8 to A15 (enabled by not PCDRIVE) |
+| PC-low | CLK | RESET | D1 to D8, PCLOAD, PCBUS | PC1 to PC8 (enabled by PCBUS), CO |
+| PC-high | CLK | RESET | D9 to D15, CO, PCLOAD, PCBUS | PC9 to PC15 (enabled by PCBUS) |
+| A-low | CLK | none | D0 to D7, ALD, PCBUS | A0 (always on), A1 to A7 (enabled by not PCBUS) |
+| A-high | CLK | none | D8 to D15, ALD, PCBUS | A8 to A15 (enabled by not PCBUS) |
 | B-low | CLK | none | D0 to D7, BLD, RST_n | B0 to B7, RS1, RESET |
 | B-high | CLK | RESET | D8 to D15, BLD | B8 to B15, EXEC |
 | ALU 0 | none | none | A0..3, B0..3, F1, F0, ALUOE | S0..3 (enabled by ALUOE), C1, C2, C3, COUT0, NE0 |
@@ -120,14 +120,14 @@ asynchronous-reset term.
 | EXEC | B-high | 1 in an execute clock, 0 in a fetch clock; toggles every edge, reset to 0 |
 | PCDRV_n | MIR | low in every fetch clock and in an execute clock whose word set bit 15 (a literal); the flash's OE# |
 | MEMRD_n | MIR | low in an execute clock with MEMRD; the SRAM's and UART's OE# |
-| PCDRIVE | glue | PCDRV and CLK low: the PC has the address bus, and the PC counts at the edge |
+| PCBUS | glue | PCDRV_n low and CLK low: the PC drives Addr and A does not; the PC counts at the edge |
 | WE_n | glue | low while WR, CLK high and CLK2X low: quarter two of a writing execute clock |
-| LOAD | glue | PCLD, or PCEQ and not NE |
+| PCLOAD | glue | PCLD, or PCEQ and not NE |
 | NE | ALU 3 | A differs from B |
 
 The latches are one equation per bit, `Q := LD & D + !LD & Q`.  The PC
-is a 15-bit counter that steps by one word when PCDRIVE is high at the
-edge and loads D when LOAD is high (LOAD wins).  The ALU slices are
+is a 15-bit counter that steps by one word when PCBUS is high at the
+edge and loads D when PCLOAD is high (PCLOAD wins).  The ALU slices are
 4-bit ripple adders with the function select folded into each sum
 term, a carry between slices and a not-equal chain beside it.  The
 microinstruction register's flops are `Q := !EXEC & Dk`, except PCDRV
@@ -157,7 +157,7 @@ from CLK2X transitions so that neither can glitch:
   address has been on the bus since an earlier edge, and it changes
   109 ns after the pulse ends.  The UART gets the same pulse: 54 ns
   against its 40.
-- **PCDRIVE** is the second half of a fetch or literal clock.  The flash
+- **PCBUS** is the second half of a fetch or literal clock.  The flash
   gets its address 108 ns before the capturing edge (tACC 70).  The chip
   strobed in the previous execute clock keeps its address for the first
   half of the fetch clock, which covers the UART's 20 ns address hold
