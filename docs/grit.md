@@ -301,12 +301,41 @@ four is one more term if the scope says so.
 | Random programs (`grit::soak`): registers, pointers, flash constants, ALU through A and B, forward JEQ, nested bounded loops, against the reference | `tests/grit_soak.rs` | 120 programs, about 60 000 instructions, no chip complaint, every register and data word matching |
 | The same under the physical fuzz: a delay on every pin (clock pins included, so it is clock skew too), CLK2X duty 45 to 55 %, jitter on every edge, random power-up SRAM | `tests/grit_soak.rs` | passes with every pin delayed by up to 1, 2 and 3 ns (up to 450 mm of trace; jitter up to 2 ns); fails at 6 ns |
 
-At 6 ns per pin (900 mm of trace, far outside any board) a fetch
-captures an unknown opcode: one PC bit blinks unknown at an edge while
-PCLD is low, and the flash's address with it.  Not yet diagnosed; the
-todo has it.  The design's real limit is clock skew between chips
-against the 2 ns minimum clock-to-output that every hold time here
-rests on, which is what the 3 ns pass shows.
+**The 6 ns failure, diagnosed.**  With every pin delayed by up to 6 ns
+the clock pins are too, so two chips can see the same edge up to 6 ns
+apart.  In the failing draw the PC-low chip's clock arrived 1.6 ns
+after the edge and PC-high's 4.05 ns after.  At a JMP's load, PC-low
+changed its address bits 2 ns (the GAL's minimum clock-to-output)
+after its own edge, the flash's data followed at once (its output hold
+is 0 ns by datasheet), and PC-high, still 0.15 ns short of its own
+edge, sampled data that was already changing: a hold violation, and a
+real one.  The same margin, minimum clock-to-output minus clock skew,
+governs every flop-to-flop path on the board; the memory paths add
+nothing to it because the flash holds its outputs for 0 ns after an
+address change (the SRAM adds its 3 ns).  So the board's one timing
+rule is: **clock skew between any two GALs under 2 ns**, which is
+300 mm of trace difference and needs no care on a board this size.
+Data traces are free.  With the clock skew on its own knob:
+
+| Data delay per pin | Clock skew per pin | Result |
+|---|---|---|
+| 6 ns | 0 | pass (900 mm of data trace) |
+| 1 ns | 1.5 ns | pass |
+| 1 ns | 2.5 ns | pass in 3 random draws (the critical pair happened not to exceed 2) |
+| directed: PC-high's clock alone | 1.0, 1.8 ns | clean |
+| directed: PC-high's clock alone | 2.2, 3.0 ns | hold violation, as computed |
+
+`clock_skew_limit` in `tests/grit_soak.rs` is the directed sweep; it
+is the number to keep in mind when routing CLK: every GAL within about
+250 mm of trace of every other on the clock net, which a star or a
+short daisy chain gives for free.
+
+**Memories and output hold.**  The model's hold analysis credits a
+memory's data with its output hold after an address change (3 ns for
+the AS7C164A, 0 for the flash), on top of the 2 ns from the register
+that changed the address.  A future board that loads a latch from the
+flash at the edge that also changes the address, as JMP does here,
+has exactly the 2 ns and no more.
 
 The fuzz knobs are `GRIT_FUZZ_DELAY_NS`, `GRIT_FUZZ_JITTER_NS`,
 `GRIT_FUZZ_DUTY`, `GRIT_FUZZ_PROGRAMS`, `GRIT_FUZZ_SEED`; the soak's

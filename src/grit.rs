@@ -986,13 +986,17 @@ pub struct Build {
     /// contents (give the reference the same, `fuzz_ram`).
     pub fuzz_seed: u64,
     pub pin_delay_ns: f64,
+    /// Delay on clock pins (CLK and CLK2X) drawn from 0..this instead of
+    /// `pin_delay_ns`: the clock skew between chips, on its own knob.
+    /// None: clock pins get the same draw as every other pin.
+    pub clock_skew_ns: Option<f64>,
     pub clock_duty: (f64, f64),
     pub clock_jitter_ns: f64,
 }
 
 impl Default for Build {
     fn default() -> Build {
-        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: CLK2X_HZ, uart_rx: Vec::new(), ram_image: None, fuzz_seed: 0, pin_delay_ns: 0.0, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
+        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: CLK2X_HZ, uart_rx: Vec::new(), ram_image: None, fuzz_seed: 0, pin_delay_ns: 0.0, clock_skew_ns: None, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
     }
 }
 
@@ -1076,10 +1080,15 @@ impl Grit {
             nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
         }
         let mut sim = nl.build();
-        if opt.fuzz_seed != 0 && opt.pin_delay_ns > 0.0 {
+        if opt.fuzz_seed != 0 && (opt.pin_delay_ns > 0.0 || opt.clock_skew_ns.is_some()) {
             let mut r = crate::cpu::Lcg(opt.fuzz_seed ^ 0xde1a);
             let max = opt.pin_delay_ns;
-            sim.set_pin_delays(|_, _| Self::ns(r.unit() * max));
+            let skew = opt.clock_skew_ns.unwrap_or(max);
+            let clock_pins: std::collections::HashSet<(String, usize)> = board.chips.iter().flat_map(|c| c.pins.iter().filter(|p| p.net == "CLK" || p.net == "CLK2X").map(move |p| (c.name.clone(), p.pin))).collect();
+            sim.set_pin_delays(|chip, pin| {
+                let m = if clock_pins.contains(&(chip.to_string(), pin)) { skew } else { max };
+                Self::ns(r.unit() * m)
+            });
         }
         let clock_fuzz = (opt.fuzz_seed != 0).then(|| (crate::cpu::Lcg(opt.fuzz_seed ^ 0xc10c), opt.clock_duty, Self::ns(opt.clock_jitter_ns)));
         let clk2x = sim.net_id("CLK2X");
@@ -1096,6 +1105,24 @@ impl Grit {
     /// One CLK2X period: low for the first half, high for the second, so
     /// that at power-up the clock settles low before its first rising
     /// edge.
+    /// Schedule one CLK2X period's edges from now and return the period's
+    /// end, without running (for fine-grained tracing).
+    pub fn schedule_tick(&mut self) -> Time {
+        let base = self.sim.now();
+        let (fall, rise) = match &mut self.clock_fuzz {
+            None => (base, base + PERIOD2X / 2),
+            Some((r, duty, jitter)) => {
+                let d = duty.0 + r.unit() * (duty.1 - duty.0);
+                let j1 = (r.unit() * *jitter as f64) as Time;
+                let j2 = (r.unit() * *jitter as f64) as Time;
+                (base + j1, base + (PERIOD2X as f64 * (1.0 - d)) as Time + j2)
+            }
+        };
+        self.sim.schedule(fall, self.clk2x, Level::L);
+        self.sim.schedule(rise, self.clk2x, Level::H);
+        base + PERIOD2X
+    }
+
     fn tick(&mut self) {
         let base = self.sim.now();
         let (fall, rise) = match &mut self.clock_fuzz {

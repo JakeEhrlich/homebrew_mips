@@ -33,9 +33,9 @@ is not listed here.
       the board file (they are nets and pulls today).
 - [ ] The PCB (Jake, flatland).
 - [ ] The macro assembler (MIPS-looking syntax over the grit ISA).
-- [ ] Why the fuzz fails at 6 ns per pin: a PC bit's flop blinks unknown
-      at an edge with PCLD low (an unknown on D reaching a minimised
-      term?), and the flash's address goes unknown through a fetch.
+- [x] Why the fuzz fails at 6 ns per pin: clock skew above the GAL's
+      2 ns minimum clock-to-output is a hold violation on the PC's
+      self-addressed load (docs/grit.md section 8).
 - [ ] JEDEC manifest for the 13 GALs and the two ROM images.
 
 ## Upgrades needed for Doom

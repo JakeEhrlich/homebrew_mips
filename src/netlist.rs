@@ -1321,6 +1321,8 @@ impl Sim {
             reg_out: Vec<usize>,
             comb_out: Vec<usize>,
             inputs: Vec<usize>,
+            /// Minimum input-to-output delay of the combinational outputs.
+            level: Time,
         }
         let mut infos: Vec<Option<Info>> = Vec::new();
         for c in 0..nchips {
@@ -1342,14 +1344,18 @@ impl Sim {
                 }
                 let outs: Vec<usize> = reg_out.iter().chain(&comb_out).copied().collect();
                 let inputs: Vec<usize> = (1..=23).filter(|&p| p != 12 && self.pin_net[c][p].is_some() && !outs.contains(&p) && !(has_reg && p == 1)).collect();
-                Some(Info { clk, reg_out, comb_out, inputs })
+                let level = g.timing().tpd_min;
+                Some(Info { clk, reg_out, comb_out, inputs, level })
             } else if any.is::<Rom>() || any.is::<As7c164a>() || any.is::<Sram16>() {
-                Some(Info { clk: None, reg_out: Vec::new(), comb_out: pins(&[PinKind::Out, PinKind::Bidir]), inputs: pins(&[PinKind::In]) })
+                // A memory's data follows its address after at least its
+                // output hold (the flash's is 0 by datasheet).
+                let hold = if let Some(s) = any.downcast_ref::<As7c164a>() { s.timing().toh } else if let Some(s) = any.downcast_ref::<Sram16>() { s.hi.timing().toh } else { 0 };
+                Some(Info { clk: None, reg_out: Vec::new(), comb_out: pins(&[PinKind::Out, PinKind::Bidir]), inputs: pins(&[PinKind::In]), level: hold })
             } else if any.is::<crate::uart16550::Uart16550>() {
                 use crate::uart16550::{UartPin, uart_pin};
                 let bus_in: Vec<usize> = (1..=48).filter(|&p| self.pin_net[c][p].is_some() && matches!(uart_pin(p), UartPin::A(_) | UartPin::Cs0 | UartPin::Cs1 | UartPin::Cs2N | UartPin::AdsN | UartPin::Rd1N | UartPin::Rd2 | UartPin::Wr1N | UartPin::Wr2 | UartPin::Mr)).collect();
                 let data: Vec<usize> = (1..=48).filter(|&p| matches!(uart_pin(p), UartPin::D(_))).collect();
-                Some(Info { clk: None, reg_out: Vec::new(), comb_out: data, inputs: bus_in })
+                Some(Info { clk: None, reg_out: Vec::new(), comb_out: data, inputs: bus_in, level: 0 })
             } else {
                 None
             };
@@ -1390,8 +1396,8 @@ impl Sim {
                 }
                 let tag = if ok { clk } else { None };
                 // A combinational level adds at least its minimum
-                // propagation delay to the lead.
-                let level = self.chips[c].1.as_any().downcast_ref::<Gal22v10>().map_or(0, |g| g.timing().tpd_min);
+                // propagation delay (or output hold) to the lead.
+                let level = info.level;
                 for &p in &info.comb_out {
                     if pin_tag[c][p] != tag {
                         pin_tag[c][p] = tag;
