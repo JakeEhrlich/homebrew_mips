@@ -7,242 +7,220 @@ the physical side: programming GALs from the manifest, executing out of
 a socketed flash, SRAM strobes from GAL logic, the serial link, a board
 through JLCPCB.  Speed is not a goal.
 
-Status: proposal for review.  Nothing is modelled yet.
+Status: proposal, reviewed component by component.  Nothing is modelled
+yet.
 
 ## 1. The idea in one paragraph
 
-A 16-bit MIPS I subset with MIPS I's own 32-bit instruction encodings,
-executed one instruction at a time over several clocks by a small state
-machine.  The 32 registers live in the SRAM (its first 64 bytes), so the
-register file costs no chips.  Code runs straight out of the flash, so
-there is no boot copier.  All data accesses are slow by construction (two
-clocks), so the UART sits on the data bus like any memory and needs no
-bridge.  17 GALs and 8 other chips.
+A microcoded 16-bit machine.  Every flash word is a microinstruction: a
+horizontal word with one bit per control line, executed in two clocks,
+fetch then execute.  There is no instruction decoder and no state
+machine; the microinstruction register is the whole of control.  The
+32 registers are the first 32 words of the SRAM, addressed like any
+memory.  One data bus, one address bus, one read strobe per region,
+one write strobe.  12 GALs and 8 other chips.
 
 ## 2. Programmer's view
 
-**Word.**  16 bits.  Registers are 16 bits, memory is 16-bit words at
-even byte addresses, addresses are 16 bits.  There are no byte
-operations.
+**Word.**  16 bits.  Latches are 16 bits, memory is 16-bit words at even
+byte addresses, addresses are 16 bits.  No byte operations.
 
-**Instructions.**  MIPS I encodings, 32 bits, opcode and function fields
-exactly MIPS I's, so the existing assembler emits them.  The differences
-from MIPS I follow from the 16-bit word:
+**The machine.**  Two latches A and B feeding a 16-bit ALU; A's outputs
+are also the address bus.  A program counter.  A flash for code and
+constants, an SRAM for data and registers, a UART.  Everything is
+joined by the data bus D.
 
-- The 16-bit immediate is the whole word.  `addiu rt, rs, imm` adds a
-  full 16-bit value, so `li rt, imm` is one instruction and there is no
-  LUI; sign extension does not arise.
-- Branch and jump targets are absolute byte addresses: BEQ, BNE and J
-  put the target address in the immediate field (the assembler encodes
-  labels that way; the fields are the same bits).  PC-relative would
-  need the PC on the ALU, which is a mux the board does not have.
-- No delay slots.  Nothing is pipelined, so the instruction after a
-  taken branch is not executed.
-- Register `$0` is an ordinary SRAM word: writable, and nothing special
-  at reset.  `andi $0, $0, 0` zeroes it (or any register); a program
-  that wants `not` through `nor rd, rs, $0` does that first.
-- `lw` and `sw` take a zero offset only (`lw rt, (rs)`, `sw rt, (rs)`);
-  the assembler rejects others.  Addresses are computed with `addiu`
-  first.  Section 3 says why.
+**The microword.**  One bit per control line; the bottom six are spare.
 
-| Instruction | Encoding | Does | Why it is there |
-|---|---|---|---|
-| `addu rd, rs, rt` | SPECIAL funct 0x21 | rd = rs + rt | add |
-| `and rd, rs, rt` | SPECIAL 0x24 | rd = rs & rt | and |
-| `nor rd, rs, rt` | SPECIAL 0x27 | rd = ~(rs \| rt) | `not rd, rs` = `nor rd, rs, $0` with `$0` zeroed |
-| `addiu rt, rs, imm` | op 0x09 | rt = rs + imm | `li`, address arithmetic, counters |
-| `andi rt, rs, imm` | op 0x0C | rt = rs & imm | masks, zeroing; same datapath as addiu, free |
-| `lw rt, (rs)` | op 0x23, offset 0 | rt = mem16[rs] | load |
-| `sw rt, (rs)` | op 0x2B, offset 0 | mem16[rs] = rt | store |
-| `beq rs, rt, target` | op 0x04 | if rs == rt: PC = target | loops, polling |
-| `j target` | op 0x02 | PC = target | same datapath as a taken branch, free |
+| Bit | Signal | In the execute clock |
+|---|---|---|
+| 15 | LIT | the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word |
+| 14 | MEMRD | memory at A drives D |
+| 13 | ALUOE | the ALU drives D |
+| 12 | WR | memory at A takes D (a quarter-clock write pulse) |
+| 11 | ALD | A loads D at the end of the clock |
+| 10 | BLD | B loads D |
+| 9 | PCLD | the PC loads D |
+| 8 | PCEQ | the PC loads D if A equals B |
+| 7:6 | F1, F0 | ALU function: 00 add, 01 and, 10 nor, 11 pass B |
+| 5:0 | | unused |
 
-Load, store, add, and, not and immediates were the request; `beq` and
-`j` are there because polling a UART needs a loop, and `bne` is `beq`
-to the other block.  Nothing else exists: no `jr` (no returns; a
-subroutine is inlined or jumps back to a fixed place), no traps, no
-multiply, no shifts, no set-on-less-than, no byte access.  Undefined
-opcodes do something undefined.
+Rules the assembler enforces: at most one of LIT, MEMRD, ALUOE (one
+driver on D); MEMRD and WR never together.
 
-**Memory map.**  One 64 KB space for code and data.  The flash is
-readable with `lw`, so tables and strings live where the assembler put
-them.
+**Memory map.**
 
 | Address | What |
 |---|---|
-| 0x0000 .. 0x7FFF | flash, 32 KB of the 512 KB; the chip's A16..A18 go to a 3-way jumper so one chip holds 8 programs |
-| 0x8000 .. 0x803F | registers `$0` .. `$31`, `$n` at 0x8000 + 2n |
-| 0x8040 .. 0xBFFF | SRAM, 16 KB (two 8K x 8 chips) |
-| 0xC000 + 2n | TL16C550 register n on the low byte (n = 0..7); the high byte of a load is garbage, mask it |
+| 0x0000 .. 0x7FFF | flash, 32 KB of the 512 KB; A16..A18 on a 3-way jumper, so one chip holds 8 programs |
+| 0x8000 .. 0x803F | registers r0 .. r31, r_n at 0x8000 + 2n |
+| 0x8040 .. 0xBFFF | SRAM, 16 KB |
+| 0xC000 + 2n | TL16C550 register n on the low byte; the high byte of a read is garbage, mask it |
 
-Stores to the flash region do nothing in the first revision.  With one
-more control line (the flash's WE#) they would be the SST39SF040's
-byte-program command sequence, and a serial bootloader could burn code
-in the socket; section 6.
+**Immediates.**  A microop with LIT is followed by a data word; in its
+execute clock the flash presents that word on D and whatever LD bits are
+set load it.  `B = 0x1234` is `0x8400, 0x1234`: two words, two clocks.
+A register's address is an immediate like any other: `A = &r5` is
+`0x8800, 0x800A`.
 
-**Reset.**  The MAX811L holds reset; the PC starts at code 0.  Programs
-are written into the flash with the programmer, in the DIP-32 socket.
+**Reset.**  The MAX811L holds reset; the PC starts at flash address 0.
+Programs go into the flash with the programmer, in the DIP-32 socket.
 
-## 3. How it executes
+**MIPS-like macros.**  A macro assembler gives the program MIPS syntax;
+the binary is microcode.
 
-Two shared buses.  The 16-bit data bus `D` joins everything: the
-flash's outputs, the SRAMs, the UART's low byte, and the GAL latches.
-The 15-bit address bus `A[15:1]` goes to the flash, the SRAMs and the
-UART, and has two drivers: the PC while fetching and the A latch the
-rest of the time.  The A latch is both the ALU's first operand and the
-address register: its outputs feed the ALU and the address bus on the
-same net, and a register access loads it with the register's address
-(0x80 in the high byte, the index in bits 5:1) before the value.  While
-the PC drives that net the ALU sees the PC as its A operand, which is
-why `beq`'s decision is sampled into a control flop at X1 rather than
-read at BR.
+| Macro | Microops | Words | Clocks |
+|---|---|---|---|
+| `lw rt, (rs)` | A=&rs; A=mem; B=mem; A=&rt; mem=B | 7 | 10 |
+| `sw rt, (rs)` | A=&rt; B=mem; A=&rs; A=mem; mem=B | 7 | 10 |
+| `addu rd, rs, rt` (also and, nor) | A=&rt; B=mem; A=&rs; A=mem; B=ALU; A=&rd; mem=B | 10 | 14 |
+| `addiu rt, rs, imm` (also andi) | A=&rs; A=mem; B=imm; B=ALU; A=&rt; mem=B | 9 | 12 |
+| `beq rs, rt, target` | A=&rt; B=mem; A=&rs; A=mem; PC=target if EQ | 8 | 10 |
+| `j target` | PC=target | 2 | 2 |
 
-The memories select themselves from the address: the flash's CE# is
-A15, the SRAM's CE2 is A15 and CE1# is A14, the UART's CS0 and CS1 are
-A14 and A15.  Control then needs one read strobe and one write strobe
-for all three.
+About 0.4 million macro-instructions a second at 4.6 MHz, and about
+1600 of them per flash bank.  A one-word "point A at register n" field
+in the microword would halve both numbers; it is a pure addition to the
+A latch (two flag bits, five index bits, four product terms) and is
+left out until code size bites.
 
-| Block | GALs | Notes |
+## 3. The chips
+
+**Buses.**  D[15:0], the data bus: driven by the flash, the SRAM, the
+UART's low byte or the ALU, one per clock; loaded by A, B, the PC and
+the microinstruction register.  A[15:1], the address bus: driven by the
+A latch, except in the second half of a fetch clock or a literal read,
+when the PC drives it.  The memories decode A15 and A14 on their own
+chip-select pins, so control has no chip selects: one read strobe for
+the flash, one for the SRAM and UART, one write strobe for both.
+
+**The twelve GALs.**  "Clock" is pin 1; "reset" is the chip's
+asynchronous-reset term.
+
+| Chip | Clock | Reset | Inputs | Outputs |
+|---|---|---|---|---|
+| glue | CLK2X | none | WR, PCDRV#, PCLD, PCEQ, NE | CLK (divide by two), WE#, PCDRIVE, LOAD |
+| MIR | CLK | RESET | D6 to D15, EXEC | the ten control flops: loaded from the word at a fetch edge, cleared at an execute edge; PCDRV# is also active in every fetch clock |
+| PC-low | CLK | RESET | D1 to D8, LOAD, PCDRIVE | PC1 to PC8 (enabled by PCDRIVE), CO |
+| PC-high | CLK | RESET | D9 to D15, CO, LOAD, PCDRIVE | PC9 to PC15 (enabled by PCDRIVE) |
+| A-low | CLK | none | D0 to D7, ALD, PCDRIVE | A0 (always on), A1 to A7 (enabled by not PCDRIVE) |
+| A-high | CLK | none | D8 to D15, ALD, PCDRIVE | A8 to A15 (enabled by not PCDRIVE) |
+| B-low | CLK | none | D0 to D7, BLD, RST# | B0 to B7, RS1, RESET |
+| B-high | CLK | RESET | D8 to D15, BLD | B8 to B15, EXEC |
+| ALU 0 | none | none | A0..3, B0..3, F1, F0, ALUOE | S0..3 (enabled by ALUOE), C1, C2, C3, COUT0, NE0 |
+| ALU 1, 2 | none | none | the next four bits of A and B, the carry and NE from below, F1, F0, ALUOE | four sums, C1, C2, C3, carry out, NE out |
+| ALU 3 | none | none | A12..15, B12..15, COUT2, NE2, F1, F0, ALUOE | S12..15, C1, C2, C3, NE |
+
+| Signal | Made by | Meaning |
 |---|---|---|
-| PC | 2 | 15 flops; counts by 2; loads from D on a taken branch or jump; drives A while fetching |
-| rs, rt, rd | 3 | five flops each, loaded at F1 (rs, rt from D[9:0]) or F2 (rd from D[15:11]); each drives its index onto D[5:1] when asked |
-| Decode | 1 | at F1 the instruction class from D[15:10], at F2 the ALU function from D[5:0]; five flops to control and the ALU |
-| A latch | 2 | operand and address; loads a value or an index from D |
-| B latch | 2 | operand; the immediate lands here at F2 |
-| ALU | 4 | four 4-bit slices: add (ripple within the slice, carry between), and, nor, pass B; a not-equal output per slice for `beq`; drives D |
-| Control | 3 | state counter, the strobes, latch enables, output enables, PC count and load; the divide-by-two for the clock |
-| | **17** | plus or minus one once the pins are packed with `galpack` |
+| CLK2X | oscillator | 9.216 MHz; also the UART's XIN |
+| CLK | glue | 4.608 MHz, every other GAL's clock |
+| RST# | MAX811L | active low |
+| RS1, RESET | B-low | two-stage synchroniser; RESET is the async reset of PC, MIR, B-high and the UART's MR |
+| EXEC | B-high | 1 in an execute clock, 0 in a fetch clock; toggles every edge, reset to 0 |
+| PCDRV# | MIR | low in every fetch clock and in a literal read; the flash's OE# |
+| MEMRD# | MIR | low in an execute clock with MEMRD; the SRAM's and UART's OE# |
+| PCDRIVE | glue | PCDRV and CLK low: the PC has the address bus, and the PC counts at the edge |
+| WE# | glue | low while WR, CLK high and CLK2X low: quarter two of a writing execute clock |
+| LOAD | glue | PCLD, or PCEQ and not NE |
+| NE | ALU 3 | A differs from B |
 
-There is no instruction-register latch for the low half.  The
-immediate goes straight into B, `rd` and `funct` have their own flops,
-and a branch target is fetched again: the PC steps past the low half
-only when the instruction ends, so at BR the flash is still presenting
-it and the PC loads it from the bus.
+The latches are one equation per bit, `Q := LD & D + !LD & Q`.  The PC
+is a 15-bit counter that steps by one word when PCDRIVE is high at the
+edge and loads D when LOAD is high (LOAD wins).  The ALU slices are
+4-bit ripple adders with the function select folded into each sum
+term, a carry between slices and a not-equal chain beside it.  The
+microinstruction register's flops are `Q := !EXEC & Dk`, except PCDRV
+which is `!EXEC & LIT + EXEC`.
 
-Every instruction is a fixed sequence of states, one clock each unless
-marked:
+**The memories.**
 
-```
-F1   D = flash[PC]  -> rs, rt, class;   PC += 2
-F2   D = flash[PC]  -> rd, ALU function, B (the immediate);  PC += 2 unless beq or j
-RA1  D[5:1] = rs    -> A as 0x8000 | index << 1
-RA2  D = SRAM[A]    -> A
-RB1  D[5:1] = rt    -> A                              (R-type, beq, sw)
-RB2  D = SRAM[A]    -> B
-X1   ALU = f(A, B)                                    (ripple settles; for beq, control samples NE into TAKEN)
-X2   D = ALU        -> B                              (the result parks in B: A is about to become the index)
-WI   D[5:1] = rd or rt -> A
-WB   SRAM[A] = B (ALU passes B)                       (write pulse in the low half)
-MR   D = mem[A]     -> B                              (two clocks; A holds rs's value, the address)
-MW   mem[A] = B                                       (two clocks)
-BR   D = flash[PC], the low half again; PC loads it if TAKEN, else PC += 2
-```
+| Chip | Address pins | Data | Selects | Strobes |
+|---|---|---|---|---|
+| 2 x SST39SF040, DIP-32 | A0..A13 from bus A1..A14; A14, A15 to GND; A16..A18 to jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = A15 | OE# = PCDRV#, WE# = VCC |
+| 2 x AS7C164A, DIP-28 | A0..A12 from bus A1..A13 | as above | CE2 = A15, CE1# = A14 | OE# = MEMRD#, WE# = WE# |
+| TL16C550, LQFP-48 | A0..A2 from bus A1..A3 | D0..7 | CS0 = A14, CS1 = A15, CS2# = GND, ADS# = GND | RD1# = MEMRD#, WR1# = WE#, RD2 = WR2 = GND; MR = RESET |
 
-| Instruction | States | Clocks |
-|---|---|---|
-| addu, and, nor | F1 F2 RA1 RA2 RB1 RB2 X1 X2 WI WB | 10 |
-| addiu, andi | F1 F2 RA1 RA2 X1 X2 WI WB | 8 |
-| lw | F1 F2 RA1 RA2 MR MR WI WB | 8 |
-| sw | F1 F2 RB1 RB2 RA1 RA2 MW MW | 8 (rt into B first, then rs into A, which is the address) |
-| beq | F1 F2 RA1 RA2 RB1 RB2 X1 BR | 8 |
-| j | F1 BR | 2 |
+UART: XIN from the oscillator, XOUT open, BAUDOUT# to RCLK, DTR# looped
+to DSR# and DCD#, RI# high, SOUT/SIN and RTS#/CTS# through the SP3232's
+two pairs to a 5-pin header.  Divisor 5 is 115200 baud.
 
-About 0.85 million instructions a second at 7.4 MHz.  Plenty.
-`docs/grit-blocks.html` is the block diagram and the same table as
-control lines per state.
+## 4. Timing
 
-**Why there are no offsets.**  A store with an offset needs three
-values, the base, the offset and the data, and the machine has two
-latches, one of which is also the address.  With a zero offset the
-address is a register value that lands in A and stays there while B
-holds the data.  A full `sw rt, off(rs)` or `lw rt, off(rs)` would
-need the sum parked somewhere while the other register is read: a
-third latch (two GALs) or a hidden register slot and four more states.
+One clock is 217 ns, in quarters of 54.  Every flop in the machine is on
+the rising edge of CLK.  Two things happen inside a clock, both derived
+from CLK2X transitions so that neither can glitch:
 
-## 4. Timing, and why there are no delay lines
+- **WE#** is quarter two.  It starts when CLK2X falls with WR and CLK
+  already high, ends when CLK2X rises before CLK has moved.  The ALU
+  has driven the data since the edge (setup 45 ns against 8), the
+  address has been on the bus since an earlier edge, and it changes
+  109 ns after the pulse ends.  The UART gets the same pulse: 54 ns
+  against its 40.
+- **PCDRIVE** is the second half of a fetch or literal clock.  The flash
+  gets its address 108 ns before the capturing edge (tACC 70).  The chip
+  strobed in the previous execute clock keeps its address for the first
+  half of the fetch clock, which covers the UART's 20 ns address hold
+  and is why ADS# can be grounded.
 
-**Clock.**  One 14.7456 MHz oscillator drives the UART's XIN and a
-divide-by-two flop in the control GAL: the CPU clock is 7.3728 MHz,
-135.6 ns, 50 % by construction.  (8 MHz would need a second oscillator
-for nothing.)
+Reads: the SRAM's data is on the bus about 30 ns into an execute clock,
+the UART's about 50, a literal's at 178, captured at 217 with 3.5 ns of
+setup.  The 16-bit ripple settles in about 120 ns, always at least a
+clock before its result is used.
 
-**Fetch.**  Flash tACC is 70 ns; the PC's outputs enable and are valid
-within about 10 ns of the edge; the IR needs 3.5 ns before the next:
-under 85 of 135 ns.  One clock per half.
+**Bus turnaround.**  When the driver of D changes at an edge the
+outgoing chip takes up to 25 ns (flash), 7 ns (SRAM), 20 ns (UART) or
+about 10 ns (a GAL) to let go, and the incoming one can start within a
+few nanoseconds.  The overlap is tolerated by policy: it moves no data,
+it costs a current spike, and the model is to bound and report it
+rather than forbid it.  A delay-line-timed write and second-half-gated
+drivers would remove it at the cost of one part, if the scope ever
+says so.
 
-**Register and SRAM access.**  The SRAM is 15 ns.  A read is one clock;
-a write's WE# is the write state gated with the clock's low half, a
-68 ns pulse from the clock edge itself, no tap.  The data (ALU outputs
-on D) has been stable since the X states.  Every margin is tens of
-nanoseconds; there is nothing to bin.
-
-**Data access (lw, sw).**  Two clocks, always, whichever chip is
-addressed.  The strobe (RD# or WR#) is the whole first clock, 135 ns
-against the 16550's 40 ns; MAR has been valid for a clock before it
-(setup 7 ns needed); data is valid 45 ns into a read; the strobe ends
-and the state holds the address for another clock (hold 20 ns needed).
-Two accesses are at least 10 clocks apart, more than the 87 ns cycle
-time.  So "loads take long enough" is a property of the state machine,
-not of an address decoder or a bridge: the UART is just a slow memory,
-and the SRAM does not mind being read slowly.
-
-**Serial.**  As on crag: TL16C550, SP3232 with RTS#/CTS# on its second
-pair to the 5-pin header, auto-flow control, 115200 baud is divisor 8.
-The registers are polled through LSR.
+**Clock rate.**  4.608 MHz because a quarter clock must be 40 ns for the
+UART's write strobe.  Every other margin on the board is tens of
+nanoseconds.
 
 ## 5. Parts
 
 | Part | Count | Role |
 |---|---|---|
-| ATF22V10C-7 (DIP-24, socketed) | 17 | everything in section 3 |
-| SST39SF040 (DIP-32, socketed) | 2 | code, 16 bits wide |
-| AS7C164A 8K x 8 (DIP-28) | 2 | registers and data, 16 bits wide |
+| ATF22V10C-7 (DIP-24, socketed) | 12 | section 3 |
+| SST39SF040 (DIP-32, socketed) | 2 | code, constants, literals |
+| AS7C164A 8K x 8 (DIP-28) | 2 | registers and data |
 | TL16C550 (LQFP-48) | 1 | serial |
-| SP3232 (SSOP-16) + 4 x 100 nF | 1 | RS-232 levels, two pairs |
-| 14.7456 MHz oscillator | 1 | UART and CPU clock |
+| SP3232 (SSOP-16) + 5 x 100 nF | 1 | RS-232, two pairs |
+| 9.216 MHz oscillator | 1 | CLK2X and the UART's XIN |
 | MAX811L + button | 1 | reset |
-| 5-pin serial header, 3-way bank jumper, decoupling | | |
+| 5-pin serial header, 3 x 3-pin bank jumpers, decoupling | | |
 
-About 26 placed parts, 21 of them DIP in sockets, and the two SMD parts
-are the ones JLCPCB already had in stock.
+20 chips.
 
-## 6. Choices to argue about
+## 6. Choices made along the way
 
-1. **Registers in SRAM.**  Costs about four clocks per instruction, saves
-   about eight GALs or the dual-port chips.  A bad program can overwrite
-   its registers.  I would keep it: the whole point is a small board.
-1b. **The A latch as the address register.**  Saved the two-GAL MAR.
-   It forced the instruction register to be held as fields rather than
-   halves (rs, rt, rd and a decode chip), because the index has to ride
-   D[5:1] to fit the A latch's pins, and it costs ALU ops one clock to
-   park the result in B.  Going further, `rd == rt` as an assembler rule
-   would delete the rd chip: one more GAL, not taken for now.
-2. **16-bit data bus (two flashes, two SRAMs)** against an 8-bit bus with
-   one of each.  8 bits halves the memory chips and the data traces and
-   makes the UART a natural byte device, at the cost of a byte-phase in
-   every state (roughly twice the clocks) and a little more control
-   logic.  I lean 16 because the control is simpler and it uses the
-   chips; the 8-bit version is the fallback if the GAL count must drop.
-3. **One address space.**  An earlier draft was Harvard, with the PC
-   wired to the flash and MAR to the SRAM.  Sharing the address bus
-   costs an output-enable pin on the PC and MAR chips and a three-way
-   decode instead of two, no chips, and buys constants in flash and
-   the same bus model as crag.  The only way it could have saved chips
-   is by dropping the PC and keeping it in an SRAM slot, fetching
-   through MAR: about six clocks per fetch half and an increment
-   function in the ALU.  Not taken.  A later revision can give the
-   flash its WE# and program it in the socket through the UART.
-4. **Absolute branch targets, no delay slot, zero-offset `sw`.**  All
-   assembler-level differences from MIPS I; the instruction bit layout
-   is untouched.  A future pipelined board (pebble) can reintroduce
-   PC-relative and the slot; the code for grit will not be reused
-   anyway.
-5. **What is cheap to add later:** `bne` (the same states, the branch
-   condition inverted), `or`/`ori` (two product terms per ALU bit),
-   `sltu` (a subtract is add with B inverted and carry in: one more ALU
-   function and a carry-out bit), `jr` (four states, the ALU passing A
-   to the PC), `jal` (PC onto D: costs pins on the PC GALs, probably one
-   more chip), byte loads for the UART, offsets on `lw` (two states) and `sw` (above).
-6. **Clock.**  7.37 MHz from the UART's oscillator, or a separate 8 MHz
-   can and the same numbers.  Everything above has a factor of two of
-   margin at either.
+1. **Registers in SRAM.**  Saves about eight GALs or the dual-port
+   chips; a bad program can overwrite its registers.
+2. **Microcode instead of MIPS I.**  Removes the state machine, the
+   decoder and the instruction register's field latches, six GALs; loses
+   gcc's assembler.  The macro assembler keeps MIPS syntax.
+3. **The A latch is the address register.**  Its outputs are one net to
+   the ALU and the address bus; a register access is a literal load of
+   its address.  Saves the MAR.  The one-word register-address field
+   was designed, then left out for simplicity (section 2).
+4. **Horizontal microword.**  One bit per control line; the encoding
+   into DRV/LD fields was saving bits the word did not need.
+5. **Chip selects from address lines.**  The flash's CE#, the SRAM's two
+   enables and the UART's three select pins decode A15 and A14 with
+   wires; control has one read strobe per region and one write strobe.
+6. **Two read strobes, not one.**  The SRAM and UART must not be strobed
+   during fetch clocks (a UART read pops its FIFO), so the flash's OE#
+   and the SRAM/UART OE# are separate flops.
+7. **The 2x clock.**  A glitch-free write strobe that ends before the
+   edge needs a transition that is not the clock's own; quarter two is
+   it.  The 9.216 MHz oscillator serves the UART too.
+8. **Turnaround overlap accepted** (section 4).
+9. **A twelfth GAL for glue** rather than scattering four macrocells
+   into spare corners of the PC, ALU and B chips.
+10. **What is cheap to add later:** the register-address field, `or`,
+    `sltu`, byte access for the UART, in-socket flash programming
+    (WE# from a spare word bit and the 39SF040 command sequence).

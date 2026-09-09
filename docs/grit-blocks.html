@@ -31,14 +31,14 @@ table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin-top: 8
 th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { color: var(--ink-2); font-weight: 500; }
 td.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; white-space: nowrap; }
-pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; overflow-x: auto; max-width: 80ch; }
+pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; overflow-x: auto; max-width: 84ch; }
 </style>
 <main>
 <h1>Grit Block Diagram</h1>
-<p class="lede">Microcoded: every flash word is a microinstruction and there is no state machine. 11 GALs, 19 chips. A microop takes two clocks, fetch then execute, so the two shared buses are free in the execute clock. Blue is the data bus, gold the address bus, green point-to-point. Each block lists the lines it takes; all of them come from the microinstruction register.</p>
+<p class="lede">Microcoded: every flash word is a horizontal microinstruction, one bit per control line, executed in a fetch clock and an execute clock. 12 GALs, 20 chips. Blue is the data bus, gold the address bus, green point-to-point. Each block lists its own pins; every control line comes from the microinstruction register, and the four timing signals from the glue chip.</p>
 
 <figure class="scroll">
-<svg viewBox="0 0 1100 800" role="img" aria-label="Grit microcoded block diagram: PC, microinstruction register and clock above the data bus; A latch, B latch, ALU, flash, SRAM and UART below; the address bus under the memories driven by the PC while fetching and by the A latch otherwise">
+<svg viewBox="0 0 1100 820" role="img" aria-label="Grit block diagram: PC, microinstruction register, glue and clock above the data bus; A latch, B latch, ALU, flash, SRAM and UART below; the address bus under the memories driven by the PC while fetching and by the A latch otherwise">
 <defs>
 <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--bus)"/></marker>
 <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--abus)"/></marker>
@@ -47,171 +47,188 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 </defs>
 
 <!-- data bus -->
-<rect x="60" y="360" width="1010" height="16" rx="3" fill="var(--bus)"/>
-<text x="565" y="354" text-anchor="middle" class="bus t">D[15:0]  data bus: the flash in the fetch clock, the DRV field's choice in the execute clock</text>
+<rect x="60" y="380" width="1010" height="16" rx="3" fill="var(--bus)"/>
+<text x="565" y="374" text-anchor="middle" class="bus t">D[15:0]  data bus: the flash in a fetch clock or literal read; the SRAM, UART or ALU in an execute clock</text>
 <!-- address bus -->
-<rect x="30" y="690" width="1040" height="12" rx="3" fill="var(--abus)"/>
-<text x="565" y="722" text-anchor="middle" class="ab t">A[15:1]  address bus: PC while fetching or reading a literal, the A latch otherwise; flash CE# = A15, SRAM CE2 = A15, CE1# = A14, UART CS0 = A14, CS1 = A15</text>
+<rect x="30" y="710" width="1040" height="12" rx="3" fill="var(--abus)"/>
+<text x="565" y="742" text-anchor="middle" class="ab t">A[15:1]  address bus: the A latch, except the second half of a fetch or literal clock, when the PC drives; flash CE# = A15, SRAM CE2 = A15 and CE1# = A14, UART CS0 = A14 and CS1 = A15</text>
 
 <!-- PC -->
 <rect x="60" y="60" width="200" height="150" rx="3" class="blk"/>
 <text x="72" y="82" class="t">PC</text><text x="250" y="82" text-anchor="end" class="s">2 GALs</text>
-<text x="72" y="102" class="m">PCDRV  drive A, and count by 2</text>
-<text x="72" y="118" class="m">PCLD   load from D</text>
-<text x="72" y="134" class="m">PCEQ   load from D if A == B</text>
-<text x="72" y="150" class="m">RESET  to 0</text>
-<text x="72" y="178" class="s">15 flops, a carry out, and</text>
-<text x="72" y="192" class="s">LOAD = PCLD or (PCEQ and EQ)</text>
-<line x1="160" y1="360" x2="160" y2="212" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="167" y="290" class="bus s">load (jump target)</text>
+<text x="72" y="102" class="m">in  D1..D15, LOAD,</text>
+<text x="72" y="118" class="m">    PCDRIVE, CLK, RESET</text>
+<text x="72" y="134" class="m">out PC1..PC15 (on PCDRIVE),</text>
+<text x="72" y="150" class="m">    CO (carry into bit 9)</text>
+<text x="72" y="178" class="s">counts a word when PCDRIVE is</text>
+<text x="72" y="192" class="s">high at the edge; loads D on LOAD</text>
+<line x1="160" y1="380" x2="160" y2="212" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="167" y="300" class="bus s">load (jump target)</text>
 <line x1="58" y1="125" x2="36" y2="125" class="abl" stroke-width="1.5"/>
-<line x1="36" y1="125" x2="36" y2="688" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
-<text x="30" y="420" class="ab s" transform="rotate(-90 30 420)">drive A (fetch, literal)</text>
+<line x1="36" y1="125" x2="36" y2="708" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<text x="30" y="440" class="ab s" transform="rotate(-90 30 440)">drive A on PCDRIVE</text>
 
 <!-- MIR -->
-<rect x="330" y="60" width="330" height="150" rx="3" class="blk"/>
-<text x="342" y="82" class="t">Microinstruction register</text><text x="650" y="82" text-anchor="end" class="s">1 GAL</text>
-<text x="342" y="102" class="m">loads D[15:9] at the fetch edge,</text>
-<text x="342" y="118" class="m">clears at the execute edge</text>
-<text x="342" y="142" class="s">10 flops, decoded from the word:</text>
-<text x="342" y="156" class="m">RDALL ALUOE PCDRV  (from DRV)</text>
-<text x="342" y="170" class="m">ALD BLD PCLD PCEQ  (from LD, F0)</text>
-<text x="342" y="184" class="m">WR F1 F0</text>
-<text x="342" y="202" class="s">RDALL and PCDRV are also high during every fetch</text>
-<line x1="495" y1="212" x2="495" y2="358" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="502" y="290" class="bus s">load (fetch)</text>
-<text x="670" y="140" class="s">every control line below</text>
-<text x="670" y="154" class="s">comes from here</text>
+<rect x="300" y="60" width="300" height="150" rx="3" class="blk"/>
+<text x="312" y="82" class="t">Microinstruction register</text><text x="590" y="82" text-anchor="end" class="s">1 GAL</text>
+<text x="312" y="102" class="m">in  D6..D15, EXEC, CLK, RESET</text>
+<text x="312" y="118" class="m">out LIT MEMRD# ALUOE WR</text>
+<text x="312" y="134" class="m">    ALD BLD PCLD PCEQ F1 F0</text>
+<text x="312" y="162" class="s">ten flops: the word's bits 15..6,</text>
+<text x="312" y="176" class="s">loaded at a fetch edge, cleared at an</text>
+<text x="312" y="190" class="s">execute edge. The LIT flop is also set</text>
+<text x="312" y="204" class="s">at every execute edge: it is PCDRV#</text>
+<line x1="450" y1="212" x2="450" y2="378" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="457" y="300" class="bus s">load (fetch)</text>
+
+<!-- glue -->
+<rect x="640" y="60" width="200" height="150" rx="3" class="blk"/>
+<text x="652" y="82" class="t">Glue</text><text x="830" y="82" text-anchor="end" class="s">1 GAL, on CLK2X</text>
+<text x="652" y="102" class="m">in  CLK2X, WR, PCDRV#,</text>
+<text x="652" y="118" class="m">    PCLD, PCEQ, NE</text>
+<text x="652" y="134" class="m">out CLK      = CLK2X / 2</text>
+<text x="652" y="150" class="m">    WE#      = quarter two if WR</text>
+<text x="652" y="166" class="m">    PCDRIVE  = PCDRV and CLK low</text>
+<text x="652" y="182" class="m">    LOAD     = PCLD or PCEQ and EQ</text>
+<line x1="602" y1="120" x2="638" y2="120" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
 
 <!-- clock and reset -->
-<rect x="820" y="60" width="250" height="90" rx="3" class="blk"/>
-<text x="832" y="82" class="t">Clock and reset</text>
-<text x="832" y="102" class="m">7.3728 MHz osc -> CLK and UART XIN</text>
-<text x="832" y="118" class="m">MAX811L -> RST#, synchronised in B high</text>
-<text x="832" y="134" class="s">no divider: the 16550 takes 7.37 MHz (115200 = divisor 4)</text>
+<rect x="880" y="60" width="190" height="150" rx="3" class="blk"/>
+<text x="892" y="82" class="t">Clock and reset</text>
+<text x="892" y="102" class="m">9.216 MHz oscillator</text>
+<text x="892" y="118" class="m"> -> CLK2X: glue, UART XIN</text>
+<text x="892" y="134" class="m">CLK 4.608 MHz to all others</text>
+<text x="892" y="158" class="m">MAX811L -> RST#</text>
+<text x="892" y="174" class="m"> -> RS1, RESET in B-low</text>
+<text x="892" y="196" class="s">every flop is on CLK's rising edge</text>
 
 <!-- A latch -->
-<rect x="60" y="440" width="190" height="130" rx="3" class="blk"/>
-<text x="72" y="462" class="t">A latch = address</text><text x="240" y="462" text-anchor="end" class="s">2 GALs</text>
-<text x="72" y="482" class="m">ALD    load from D (execute)</text>
-<text x="72" y="498" class="m">fetch: bits 8, 7 set,</text>
-<text x="72" y="514" class="m">       A = 0x8000 | idx*2</text>
-<text x="72" y="530" class="m">PCDRV  release the address bus</text>
-<text x="72" y="556" class="s">16 flops; outputs feed the ALU</text>
-<line x1="155" y1="378" x2="155" y2="438" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="161" y="412" class="bus s">load value or index</text>
-<line x1="90" y1="572" x2="90" y2="688" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
-<text x="96" y="640" class="ab s">drive A (execute)</text>
+<rect x="60" y="460" width="190" height="130" rx="3" class="blk"/>
+<text x="72" y="482" class="t">A latch = address</text><text x="240" y="482" text-anchor="end" class="s">2 GALs</text>
+<text x="72" y="502" class="m">in  D0..D15, ALD,</text>
+<text x="72" y="518" class="m">    PCDRIVE, CLK</text>
+<text x="72" y="534" class="m">out A0..A15</text>
+<text x="72" y="558" class="s">A := ALD ? D : A. Outputs feed</text>
+<text x="72" y="572" class="s">the ALU and drive the address</text>
+<text x="72" y="586" class="s">bus while PCDRIVE is low</text>
+<line x1="155" y1="398" x2="155" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="161" y="432" class="bus s">load on ALD</text>
+<line x1="90" y1="592" x2="90" y2="708" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<text x="96" y="660" class="ab s">drive A unless PCDRIVE</text>
 
 <!-- B latch -->
-<rect x="280" y="440" width="170" height="130" rx="3" class="blk"/>
-<text x="292" y="462" class="t">B latch</text><text x="440" y="462" text-anchor="end" class="s">2 GALs</text>
-<text x="292" y="482" class="m">BLD  load from D (execute)</text>
-<text x="292" y="508" class="s">16 flops, plus the fetch/execute</text>
-<text x="292" y="522" class="s">phase flop and the reset sync,</text>
-<text x="292" y="536" class="s">plus WE# = WR and clock high</text>
-<text x="292" y="550" class="s">(a 55 ns pulse, ends mid-clock)</text>
-<line x1="365" y1="378" x2="365" y2="438" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="371" y="412" class="bus s">load</text>
+<rect x="280" y="460" width="170" height="130" rx="3" class="blk"/>
+<text x="292" y="482" class="t">B latch</text><text x="440" y="482" text-anchor="end" class="s">2 GALs</text>
+<text x="292" y="502" class="m">in  D0..D15, BLD, CLK,</text>
+<text x="292" y="518" class="m">    RST#</text>
+<text x="292" y="534" class="m">out B0..B15, RS1, RESET,</text>
+<text x="292" y="550" class="m">    EXEC</text>
+<text x="292" y="572" class="s">B := BLD ? D : B; the reset</text>
+<text x="292" y="586" class="s">synchroniser and the phase flop</text>
+<line x1="365" y1="398" x2="365" y2="458" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="371" y="432" class="bus s">load on BLD</text>
 
 <!-- ALU -->
-<rect x="480" y="440" width="180" height="130" rx="3" class="blk"/>
-<text x="492" y="462" class="t">ALU</text><text x="650" y="462" text-anchor="end" class="s">4 GALs</text>
-<text x="492" y="482" class="m">F1 F0  add, and, nor, pass B</text>
-<text x="492" y="498" class="m">ALUOE  drive D (execute)</text>
-<text x="492" y="514" class="m">PCEQ   -> EQ to the PC</text>
-<text x="492" y="540" class="s">4-bit slices, ripple carry; a</text>
-<text x="492" y="554" class="s">not-equal chain beside it</text>
-<line x1="570" y1="438" x2="570" y2="378" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="576" y="412" class="bus s">drive</text>
+<rect x="480" y="460" width="180" height="130" rx="3" class="blk"/>
+<text x="492" y="482" class="t">ALU</text><text x="650" y="482" text-anchor="end" class="s">4 GALs</text>
+<text x="492" y="502" class="m">in  A, B, F1, F0, ALUOE</text>
+<text x="492" y="518" class="m">out S0..S15 (on ALUOE), NE</text>
+<text x="492" y="542" class="s">4-bit slices, ripple carry</text>
+<text x="492" y="556" class="s">between them, a not-equal</text>
+<text x="492" y="570" class="s">chain beside it; add, and,</text>
+<text x="492" y="584" class="s">nor, pass B</text>
+<line x1="570" y1="458" x2="570" y2="398" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="576" y="432" class="bus s">drive on ALUOE</text>
 <!-- A, B -> ALU -->
-<line x1="200" y1="572" x2="200" y2="620" class="p2p" stroke-width="1.5"/>
-<line x1="365" y1="572" x2="365" y2="620" class="p2p" stroke-width="1.5"/>
-<line x1="200" y1="620" x2="520" y2="620" class="p2p" stroke-width="1.5"/>
-<line x1="520" y1="620" x2="520" y2="572" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
-<text x="360" y="636" text-anchor="middle" class="p2p s">A[15:0], B[15:0] to the ALU inputs</text>
-<!-- EQ -> PC dashed -->
-<line x1="662" y1="510" x2="700" y2="510" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="700" y1="510" x2="700" y2="660" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="700" y1="660" x2="48" y2="660" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="48" y1="660" x2="48" y2="220" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="48" y1="220" x2="110" y2="220" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<line x1="110" y1="220" x2="110" y2="214" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
-<text x="560" y="654" class="s">EQ and PCEQ, to the PC's load</text>
+<line x1="200" y1="592" x2="200" y2="640" class="p2p" stroke-width="1.5"/>
+<line x1="365" y1="592" x2="365" y2="640" class="p2p" stroke-width="1.5"/>
+<line x1="200" y1="640" x2="520" y2="640" class="p2p" stroke-width="1.5"/>
+<line x1="520" y1="640" x2="520" y2="592" class="p2p" stroke-width="1.5" marker-end="url(#ap)"/>
+<text x="360" y="656" text-anchor="middle" class="p2p s">A[15:0], B[15:0] to the ALU inputs</text>
+<!-- NE -> glue dashed -->
+<line x1="662" y1="520" x2="700" y2="520" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="700" y1="520" x2="700" y2="240" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="700" y1="240" x2="700" y2="212" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
+<text x="706" y="300" class="s">NE to the glue</text>
 
 <!-- Flash -->
-<rect x="700" y="440" width="120" height="130" rx="3" class="blk"/>
-<text x="712" y="462" class="t">Flash</text><text x="810" y="462" text-anchor="end" class="s">2 chips</text>
-<text x="712" y="482" class="m">CE#  A15</text>
-<text x="712" y="498" class="m">OE#  RD#</text>
-<text x="712" y="522" class="s">0x0000..0x7FFF</text>
-<text x="712" y="536" class="s">microcode, literals,</text>
-<text x="712" y="550" class="s">constants; A16-18 jumper</text>
-<line x1="760" y1="438" x2="760" y2="378" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
-<text x="766" y="412" class="bus s">drive (fetch, literal, read)</text>
-<line x1="760" y1="688" x2="760" y2="572" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<rect x="700" y="460" width="120" height="130" rx="3" class="blk"/>
+<text x="712" y="482" class="t">Flash</text><text x="810" y="482" text-anchor="end" class="s">2 chips</text>
+<text x="712" y="502" class="m">CE#  A15</text>
+<text x="712" y="518" class="m">OE#  PCDRV#</text>
+<text x="712" y="534" class="m">WE#  VCC</text>
+<text x="712" y="558" class="s">0x0000..0x7FFF</text>
+<text x="712" y="572" class="s">A16-18 bank jumpers</text>
+<line x1="760" y1="458" x2="760" y2="398" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="766" y="432" class="bus s">drive (fetch, literal)</text>
+<line x1="760" y1="708" x2="760" y2="592" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 
 <!-- SRAM -->
-<rect x="850" y="440" width="120" height="130" rx="3" class="blk"/>
-<text x="862" y="462" class="t">SRAM</text><text x="960" y="462" text-anchor="end" class="s">2 chips</text>
-<text x="862" y="482" class="m">CE2 A15 CE1# A14</text>
-<text x="862" y="498" class="m">OE# RD# WE# WE#</text>
-<text x="862" y="522" class="s">0x8000..0xBFFF;</text>
-<text x="862" y="536" class="s">r0..r31 at</text>
-<text x="862" y="550" class="s">0x8000 + 2n</text>
-<line x1="910" y1="378" x2="910" y2="438" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
-<text x="916" y="404" class="bus s">read (DRV = mem)</text>
-<text x="916" y="420" class="bus s">write (WR)</text>
-<line x1="910" y1="688" x2="910" y2="572" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<rect x="850" y="460" width="120" height="130" rx="3" class="blk"/>
+<text x="862" y="482" class="t">SRAM</text><text x="960" y="482" text-anchor="end" class="s">2 chips</text>
+<text x="862" y="502" class="m">CE2 A15 CE1# A14</text>
+<text x="862" y="518" class="m">OE# MEMRD#</text>
+<text x="862" y="534" class="m">WE# WE#</text>
+<text x="862" y="558" class="s">0x8000..0xBFFF;</text>
+<text x="862" y="572" class="s">r0..r31 at 0x8000+2n</text>
+<line x1="910" y1="398" x2="910" y2="458" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
+<text x="916" y="424" class="bus s">read on MEMRD</text>
+<text x="916" y="440" class="bus s">write on WR</text>
+<line x1="910" y1="708" x2="910" y2="592" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 
 <!-- UART -->
-<rect x="990" y="440" width="80" height="130" rx="3" class="blk"/>
-<text x="1000" y="462" class="t">UART</text>
-<text x="1000" y="482" class="m">CS A14</text>
-<text x="1000" y="498" class="m">   A15</text>
-<text x="1000" y="514" class="m">RD# WE#</text>
-<text x="1000" y="538" class="s">0xC000+2n</text>
-<text x="1000" y="552" class="s">low byte</text>
-<text x="1000" y="566" class="s">+ SP3232</text>
-<line x1="1030" y1="378" x2="1030" y2="438" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
-<line x1="1030" y1="688" x2="1030" y2="572" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
+<rect x="990" y="460" width="80" height="130" rx="3" class="blk"/>
+<text x="1000" y="482" class="t">UART</text>
+<text x="1000" y="502" class="m">CS A14,</text>
+<text x="1000" y="518" class="m">   A15</text>
+<text x="1000" y="534" class="m">RD# MEMRD#</text>
+<text x="1000" y="550" class="m">WR# WE#</text>
+<text x="1000" y="572" class="s">0xC000+2n</text>
+<text x="1000" y="586" class="s">+ SP3232</text>
+<line x1="1030" y1="398" x2="1030" y2="458" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
+<line x1="1030" y1="708" x2="1030" y2="592" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 </svg>
-<figcaption>Blue: the data bus. Gold: the address bus, driven by the PC in every fetch clock and in the execute clock of a literal, by the A latch in every other execute clock; the memories select themselves from A15 and A14 and share one RD# and one WE#. Green: point-to-point. The microinstruction register is the whole of control.</figcaption>
+<figcaption>Blue: the data bus. Gold: the address bus. Green: point-to-point. Dashed grey: the ALU's not-equal into the glue, and the microinstruction register's lines into the glue. The memories select themselves from A15 and A14; the microinstruction register is the whole of control.</figcaption>
 </figure>
 
-<h2>The microword</h2>
+<h2>The microword: one bit per control line</h2>
 <div class="scroll"><table>
-<tr><th>Bits</th><th>Field</th><th>Meaning in the execute clock</th></tr>
-<tr><td class="m">15:14</td><td class="m">DRV</td><td>who drives D: 00 nobody, 01 memory at A, 10 the ALU, 11 the next flash word (a literal; the PC drives the address and steps past it)</td></tr>
-<tr><td class="m">13:12</td><td class="m">LD</td><td>who loads D at the end of the clock: 00 nobody, 01 A, 10 B, 11 PC</td></tr>
-<tr><td class="m">11</td><td class="m">WR</td><td>memory at A takes D; the pulse is the first half of the clock</td></tr>
-<tr><td class="m">10:9</td><td class="m">F</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B. When LD is PC and DRV is a literal, bit 9 set means "only if A == B"</td></tr>
-<tr><td class="m">8, 7</td><td class="m">AIDX</td><td>at the fetch edge, before this word executes, A becomes 0x8000 + 2 x idx: the address of register idx (bit 8 for the high byte, bit 7 for the low; the assembler sets both)</td></tr>
-<tr><td class="m">5:1</td><td class="m">idx</td><td>register number, 0 to 31</td></tr>
-<tr><td class="m">6, 0</td><td></td><td>spare</td></tr>
+<tr><th>Bit</th><th>Signal</th><th>In the execute clock</th></tr>
+<tr><td class="m">15</td><td class="m">LIT</td><td>the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word</td></tr>
+<tr><td class="m">14</td><td class="m">MEMRD</td><td>memory at A drives D</td></tr>
+<tr><td class="m">13</td><td class="m">ALUOE</td><td>the ALU drives D</td></tr>
+<tr><td class="m">12</td><td class="m">WR</td><td>memory at A takes D, a quarter-clock pulse</td></tr>
+<tr><td class="m">11</td><td class="m">ALD</td><td>A loads D at the end of the clock</td></tr>
+<tr><td class="m">10</td><td class="m">BLD</td><td>B loads D</td></tr>
+<tr><td class="m">9</td><td class="m">PCLD</td><td>the PC loads D</td></tr>
+<tr><td class="m">8</td><td class="m">PCEQ</td><td>the PC loads D if A equals B</td></tr>
+<tr><td class="m">7:6</td><td class="m">F1 F0</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
+<tr><td class="m">5:0</td><td></td><td>unused</td></tr>
 </table></div>
+<p>The assembler refuses a word with more than one of LIT, MEMRD, ALUOE, or with MEMRD and WR together.</p>
 
 <h2>The two clocks of a microop</h2>
-<pre>fetch    PC drives A; flash drives D; MIR loads D[15:9]; if AIDX, A loads 0x8000 | idx&lt;&lt;1; PC += 2
-execute  A drives the address (or the PC, for a literal); the DRV choice drives D;
-         the LD choice loads at the end; WR pulses WE# in the first half;
-         a literal also steps the PC past the literal word</pre>
+<pre>fetch    A drives the address bus for the first half, the PC for the second; the flash drives D;
+         at the edge: MIR := word[15:6], PC += 2, EXEC := 1
+execute  A drives the address bus (the PC, if LIT); MEMRD, ALUOE or LIT picks the driver of D;
+         WE# pulses in quarter two if WR; at the edge: ALD/BLD/PCLD/PCEQ load, PC += 2 if LIT,
+         MIR clears, EXEC := 0</pre>
 
-<h2>Immediates</h2>
-<p>There is no immediate field wide enough to be a value, so an immediate is a literal: a microop with DRV = 11 is followed by a data word. In that microop's execute clock the PC, which has already stepped to the data word, drives the address bus, the flash drives D with it, and whatever LD names loads it. The PC then steps past the data word as well. So <code>B = 0x1234</code> is two words and two clocks:</p>
-<pre>DRV=lit LD=B        ; execute: flash[PC] -> D -> B
-0x1234              ; the literal, skipped by the PC</pre>
-<p>A jump is the same thing aimed at the PC: <code>DRV=lit LD=PC</code> then the target address, with bit 9 set for "only if A == B". An <code>addiu</code> is a load of the register into A, a literal into B, the add parked into B, and a store to the destination register: five words including the literal, eight clocks. The 5-bit idx field is the one small immediate that rides inside the word, and it only ever means "the address of register idx".</p>
+<h2>Loading an immediate</h2>
+<pre>0x8400   LIT BLD                 ; execute: flash[PC] -> D -> B
+0x1234                           ; the literal, skipped by the PC
+0x8800   LIT ALD                 ; the same aimed at A: A = &amp;r5
+0x800A</pre>
 
 <h2>MIPS-like macros</h2>
 <div class="scroll"><table>
 <tr><th>Macro</th><th>Microops</th><th>Words</th><th>Clocks</th></tr>
-<tr><td class="m">lw rt, (rs)</td><td class="m">[&amp;rs; A=mem] [B=mem] [&amp;rt; mem=B]</td><td class="n">3</td><td class="n">6</td></tr>
-<tr><td class="m">sw rt, (rs)</td><td class="m">[&amp;rt; B=mem] [&amp;rs; A=mem] [mem=B]</td><td class="n">3</td><td class="n">6</td></tr>
-<tr><td class="m">addu rd, rs, rt</td><td class="m">[&amp;rt; B=mem] [&amp;rs; A=mem] [B=ALU add] [&amp;rd; mem=B]</td><td class="n">4</td><td class="n">8</td></tr>
-<tr><td class="m">addiu rt, rs, imm</td><td class="m">[&amp;rs; A=mem] [B=lit] imm [B=ALU add] [&amp;rt; mem=B]</td><td class="n">5</td><td class="n">8</td></tr>
-<tr><td class="m">beq rs, rt, target</td><td class="m">[&amp;rt; B=mem] [&amp;rs; A=mem] [PC=lit if EQ] target</td><td class="n">4</td><td class="n">6</td></tr>
-<tr><td class="m">j target</td><td class="m">[PC=lit] target</td><td class="n">2</td><td class="n">2</td></tr>
+<tr><td class="m">lw rt, (rs)</td><td class="m">A=&amp;rs  A=mem  B=mem  A=&amp;rt  mem=B</td><td class="n">7</td><td class="n">10</td></tr>
+<tr><td class="m">sw rt, (rs)</td><td class="m">A=&amp;rt  B=mem  A=&amp;rs  A=mem  mem=B</td><td class="n">7</td><td class="n">10</td></tr>
+<tr><td class="m">addu rd, rs, rt</td><td class="m">A=&amp;rt  B=mem  A=&amp;rs  A=mem  B=ALU  A=&amp;rd  mem=B</td><td class="n">10</td><td class="n">14</td></tr>
+<tr><td class="m">addiu rt, rs, imm</td><td class="m">A=&amp;rs  A=mem  B=imm  B=ALU  A=&amp;rt  mem=B</td><td class="n">9</td><td class="n">12</td></tr>
+<tr><td class="m">beq rs, rt, target</td><td class="m">A=&amp;rt  B=mem  A=&amp;rs  A=mem  PC=target if EQ</td><td class="n">8</td><td class="n">10</td></tr>
+<tr><td class="m">j target</td><td class="m">PC=target</td><td class="n">2</td><td class="n">2</td></tr>
 </table></div>
-<p>The word after a literal-taking microop is data, so the assembler owns that layout; a program written in raw microops just has to remember it. Registers are SRAM words at 0x8000 + 2n; the idx field is what keeps them one word away instead of three.</p>
+<p>Registers are SRAM words at 0x8000 + 2n and "A = &amp;rn" is a literal load of that address. About 0.4 million macro-instructions a second at 4.608 MHz.</p>
 </main>
