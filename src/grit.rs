@@ -38,6 +38,10 @@ pub const F1: u16 = 1 << 10;
 /// A drives Addr (and so the ALU sees A).  Never in the word next to a
 /// PCDRV word: the address bus changes hands with an idle word between.
 pub const ADRV: u16 = 1 << 11;
+/// The UART is deselected (its CS2# high).  Set in the words where A
+/// changes at an edge that ends a read strobe: the new value could be
+/// a UART address and the UART must not see a runt read.
+pub const IOOFF: u16 = 1 << 12;
 pub const F_ADD: u16 = 0;
 pub const F_AND: u16 = F0;
 pub const F_NOR: u16 = F1;
@@ -46,7 +50,7 @@ pub const F_PASSB: u16 = F1 | F0;
 pub const FETCH: u16 = PCDRV | MEMRD | IRLD;
 
 /// Microword bit names, bit 0 first.
-pub const BIT_NAMES: [&str; 12] = ["PCDRV", "MEMRD", "ALUOE", "WE", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV"];
+pub const BIT_NAMES: [&str; 13] = ["PCDRV", "MEMRD", "ALUOE", "WE", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "IOOFF"];
 
 // ---------------------------------------------------------------------------
 // The instruction set
@@ -145,7 +149,10 @@ pub fn sequence(op: Op, ne: bool) -> Vec<u16> {
         // with side effects).  A's data hold then rests on the memory's
         // output-disable time against the clock skew between the pipeline
         // register and the A chips: under 2 ns of skew (docs/grit.md).
-        Op::LdaA => vec![0, ADRV, ADRV | MEMRD | ALD, ADRV, PCINC, FETCH, FETCH_HOLD],
+        // LDA (A) cannot read the UART (IOOFF): the value it loads changes
+        // the address at the edge that ends the strobe, and were the new
+        // value a UART address the UART would see a runt read.
+        Op::LdaA => vec![0, ADRV, ADRV | MEMRD | ALD | IOOFF, ADRV | IOOFF, PCINC, FETCH, FETCH_HOLD],
         Op::LdbA => vec![0, ADRV, ADRV | MEMRD | BLD, ADRV | MEMRD, PCINC, FETCH, FETCH_HOLD],
         Op::StbA => vec![0, ADRV, ADRV | ALUOE | F_PASSB | WE, ADRV | ALUOE | F_PASSB, 0, PCINC, FETCH, FETCH_HOLD],
         Op::AddA => alu(F_ADD, ALD),
@@ -218,6 +225,9 @@ fn check_sequence(op: Op, s: &[u16]) {
             // PC changes the address at the edge: the next word keeps the
             // PC on Addr but drops the strobe.
             let addr_changes = w & PCLD != 0 || (w & ALD != 0 && w & ADRV != 0);
+            if w & ALD != 0 && w & ADRV != 0 && w & MEMRD != 0 {
+                assert!(w & IOOFF != 0 && n & IOOFF != 0, "{op:?} step {k}: a load into A from memory must deselect the UART through the address change");
+            }
             if addr_changes {
                 let other = (PCDRV | ADRV) & !(w & (PCDRV | ADRV));
                 assert!(n & other == 0 && n & (MEMRD | WE) == 0, "{op:?} step {k}: the address changes at this edge: no strobe in the next word");
@@ -536,7 +546,7 @@ fn b_specs() -> Vec<GalSpec> {
 /// The pipeline register: `mir0` holds M0..M7, `mir1` M8..M15.  The
 /// pins the memories want are active low.
 fn mir_specs() -> Vec<GalSpec> {
-    let names = ["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "AUX0", "AUX1", "AUX2", "AUX3"];
+    let names = ["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "IOOFF", "AUX0", "AUX1", "AUX2"];
     let eq = |i: usize| {
         let e = with_reset(Eq::sop(names[i], Mode::Reg, vec![vec![l(&n("M", i))]]));
         if names[i].ends_with("_n") { e.active_low() } else { e }
@@ -883,7 +893,9 @@ pub fn build_netlist() -> Netlist {
             let net = nl.net(net);
             nl.connect(net, c, uart_pin_of(p));
         }
-        for p in [UartPin::Cs2N, UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
+        let iooff = nl.net("IOOFF");
+        nl.connect(iooff, c, uart_pin_of(UartPin::Cs2N));
+        for p in [UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
             nl.connect(gnd, c, uart_pin_of(p));
         }
         nl.connect(gnd, c, uart_pin_of(UartPin::Gnd));

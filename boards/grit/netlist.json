@@ -1109,7 +1109,7 @@
             ]
           },
           {
-            "out": "AUX0",
+            "out": "IOOFF",
             "mode": "reg",
             "terms": [
               [
@@ -1125,7 +1125,7 @@
             ]
           },
           {
-            "out": "AUX1",
+            "out": "AUX0",
             "mode": "reg",
             "terms": [
               [
@@ -1141,7 +1141,7 @@
             ]
           },
           {
-            "out": "AUX2",
+            "out": "AUX1",
             "mode": "reg",
             "terms": [
               [
@@ -1157,7 +1157,7 @@
             ]
           },
           {
-            "out": "AUX3",
+            "out": "AUX2",
             "mode": "reg",
             "terms": [
               [
@@ -1232,19 +1232,19 @@
           ],
           [
             21,
-            "AUX0"
+            "IOOFF"
           ],
           [
             16,
-            "AUX1"
+            "AUX0"
           ],
           [
             22,
-            "AUX2"
+            "AUX1"
           ],
           [
             15,
-            "AUX3"
+            "AUX2"
           ]
         ]
       },
@@ -1317,14 +1317,14 @@
         },
         {
           "pin": 15,
-          "name": "AUX3",
-          "net": "AUX3",
+          "name": "AUX2",
+          "net": "AUX2",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "AUX1",
-          "net": "AUX1",
+          "name": "AUX0",
+          "net": "AUX0",
           "kind": "out"
         },
         {
@@ -1353,14 +1353,14 @@
         },
         {
           "pin": 21,
-          "name": "AUX0",
-          "net": "AUX0",
+          "name": "IOOFF",
+          "net": "IOOFF",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "AUX2",
-          "net": "AUX2",
+          "name": "AUX1",
+          "net": "AUX1",
           "kind": "out"
         },
         {
@@ -11444,7 +11444,7 @@
         {
           "pin": 11,
           "name": "CS2#",
-          "net": "GND",
+          "net": "IOOFF",
           "kind": "in"
         },
         {
@@ -11981,6 +11981,9 @@
       "name": "F1"
     },
     {
+      "name": "IOOFF"
+    },
+    {
       "name": "AUX0"
     },
     {
@@ -11988,9 +11991,6 @@
     },
     {
       "name": "AUX2"
-    },
-    {
-      "name": "AUX3"
     },
     {
       "name": "D1"
