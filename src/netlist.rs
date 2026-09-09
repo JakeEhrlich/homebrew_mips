@@ -1309,6 +1309,12 @@ impl Sim {
         // Tag per net: None (asynchronous or undetermined), Some(clock net).
         let tied: Vec<bool> = self.nets.iter().map(|n| n.tie != Level::Z).collect();
         let mut net_tag: Vec<Option<NetId>> = vec![None; nnets];
+        // The earliest a change on the net can follow the common edge,
+        // relative to the edge on the clock net: the smallest clock-pin
+        // delay among the registers it descends from (a lower bound; any
+        // combinational depth only adds).
+        let mut net_lead: Vec<Time> = vec![Time::MAX; nnets];
+        let mut pin_lead: Vec<Vec<Time>> = (0..nchips).map(|c| vec![Time::MAX; self.chips[c].1.pin_count() + 1]).collect();
         // Per chip: (clock net, registered output pins, other output pins, input pins).
         struct Info {
             clk: Option<NetId>,
@@ -1360,6 +1366,7 @@ impl Sim {
                         pin_tag[c][p] = info.clk;
                         changed = true;
                     }
+                    pin_lead[c][p] = self.pin_delay[c][1];
                 }
                 if info.comb_out.is_empty() {
                     continue;
@@ -1367,6 +1374,7 @@ impl Sim {
                 // All inputs on one clock (tied inputs are fine).
                 let mut clk: Option<NetId> = None;
                 let mut ok = true;
+                let mut lead = Time::MAX;
                 for &p in &info.inputs {
                     let n = self.pin_net[c][p].unwrap();
                     if tied[n] {
@@ -1378,13 +1386,18 @@ impl Sim {
                         (Some(t), Some(k)) if t != k => ok = false,
                         _ => {}
                     }
+                    lead = lead.min(net_lead[n].saturating_add(self.pin_delay[c][p]));
                 }
                 let tag = if ok { clk } else { None };
+                // A combinational level adds at least its minimum
+                // propagation delay to the lead.
+                let level = self.chips[c].1.as_any().downcast_ref::<Gal22v10>().map_or(0, |g| g.timing().tpd_min);
                 for &p in &info.comb_out {
                     if pin_tag[c][p] != tag {
                         pin_tag[c][p] = tag;
                         changed = true;
                     }
+                    pin_lead[c][p] = lead.saturating_add(level);
                 }
             }
             // A net is synchronous to a clock if every driver pin on it is.
@@ -1392,6 +1405,7 @@ impl Sim {
                 let mut tag: Option<NetId> = None;
                 let mut ok = !tied[n];
                 let mut any_driver = false;
+                let mut lead = Time::MAX;
                 for &(c, p) in &self.nets[n].pins {
                     let kind = self.chips[c].1.pin_kind(p);
                     if !matches!(kind, PinKind::Out | PinKind::Bidir) {
@@ -1411,12 +1425,14 @@ impl Sim {
                         (Some(t), Some(k)) if t != k => ok = false,
                         _ => {}
                     }
+                    lead = lead.min(pin_lead[c][p]);
                 }
                 let new = if ok && any_driver { tag } else { None };
                 if net_tag[n] != new {
                     net_tag[n] = new;
                     changed = true;
                 }
+                net_lead[n] = lead;
             }
             if !changed {
                 break;
@@ -1427,9 +1443,17 @@ impl Sim {
             let Some(info) = &infos[c] else { continue };
             let Some(clk) = info.clk else { continue };
             let mut arr_inputs = Vec::new();
+            let (tco_min, th) = {
+                let g = self.chips[c].1.as_any().downcast_ref::<Gal22v10>().unwrap();
+                (g.timing().tco_min, g.timing().th)
+            };
             for &p in &info.inputs {
                 let n = self.pin_net[c][p].unwrap();
-                if tied[n] || net_tag[n] == Some(clk) {
+                // Hold: the change follows the common edge by at least the
+                // source register's clock-to-output plus the wire delays;
+                // this chip sees the edge after its own clock-pin delay.
+                let hold_ok = tied[n] || (net_lead[n] != Time::MAX && tco_min.saturating_add(net_lead[n]).saturating_add(self.pin_delay[c][p]) >= self.pin_delay[c][1].saturating_add(th));
+                if tied[n] || (net_tag[n] == Some(clk) && hold_ok) {
                     let ai = if (1..=11).contains(&p) || p == 13 {
                         pin_array_input(p as u8)
                     } else {
@@ -1525,13 +1549,19 @@ impl Sim {
     /// Give every chip pin a propagation delay: `f(chip, pin)` in ps.
     /// Call once, before running.
     pub fn set_pin_delays(&mut self, mut f: impl FnMut(&str, usize) -> Time) {
+        let mut max = 0;
         for c in 0..self.chips.len() {
             for p in 1..=self.chips[c].1.pin_count() {
                 if self.pin_net[c][p].is_some() {
                     self.pin_delay[c][p] = f(&self.chips[c].0, p);
+                    max = max.max(self.pin_delay[c][p]);
                 }
             }
         }
+        // The same-clock analysis depends on the delays (clock skew
+        // against the sources' minimum clock-to-output).
+        let _ = max;
+        self.tag_sync_inputs();
     }
 
     /// Advance to `t`, processing everything on the way.

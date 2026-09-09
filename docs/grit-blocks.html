@@ -219,22 +219,23 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <h2>The instruction set</h2>
 <div class="scroll"><table>
 <tr><th>Op</th><th>Instruction</th><th>Does</th><th>Microcode, one word per clock</th></tr>
-<tr><td class="m">0</td><td class="m">RESET</td><td>fetch from PC</td><td class="m">PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">1</td><td class="m">LDA imm</td><td>A = next word</td><td class="m">PCINC; PCDRV MEMRD ALD; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">2</td><td class="m">LDB imm</td><td>B = next word</td><td class="m">PCINC; PCDRV MEMRD BLD; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A]</td><td class="m">ADRV; ADRV MEMRD ALD; ADRV; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A]</td><td class="m">ADRV; ADRV MEMRD BLD; ADRV; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] = B</td><td class="m">ADRV; ADRV ALUOE passB WE; ADRV ALUOE passB; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">6, 7</td><td class="m">ADDA, ADDB</td><td>A or B = A + B</td><td class="m">ADRV; ADRV ALUOE add ALD|BLD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m"></td><td class="m">FETCH, HOLD</td><td>the fetch and the word after it</td><td class="m">FETCH = PCDRV MEMRD IRLD; HOLD = PCDRV MEMRD</td></tr>
+<tr><td class="m">0</td><td class="m">RESET</td><td>fetch from PC</td><td class="m">FETCH; HOLD</td></tr>
+<tr><td class="m">1</td><td class="m">LDA imm</td><td>A = next word</td><td class="m">PCINC; PCDRV MEMRD ALD; PCDRV MEMRD; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">2</td><td class="m">LDB imm</td><td>B = next word</td><td class="m">PCINC; PCDRV MEMRD BLD; PCDRV MEMRD; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A]</td><td class="m">nop; ADRV; ADRV MEMRD ALD; ADRV; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A]</td><td class="m">nop; ADRV; ADRV MEMRD BLD; ADRV MEMRD; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] = B</td><td class="m">nop; ADRV; ADRV ALUOE passB WE; ADRV ALUOE passB; nop; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">6, 7</td><td class="m">ADDA, ADDB</td><td>A or B = A + B</td><td class="m">nop; ADRV; ADRV ALUOE add ALD|BLD; nop; PCINC; FETCH; HOLD</td></tr>
 <tr><td class="m">8, 9</td><td class="m">ANDA, ANDB</td><td>A or B = A and B</td><td class="m">as ADD with F = and</td></tr>
 <tr><td class="m">10, 11</td><td class="m">NORA, NORB</td><td>A or B = not (A or B)</td><td class="m">as ADD with F = nor</td></tr>
-<tr><td class="m">12</td><td class="m">MOVAB</td><td>A = B</td><td class="m">ADRV; ADRV ALUOE passB ALD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">13</td><td class="m">JMP imm</td><td>PC = next word</td><td class="m">PCINC; PCDRV MEMRD PCLD; nop; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">14</td><td class="m">JEQ imm</td><td>if A == B: PC = next word, else skip it</td><td class="m">ADRV; PCINC; then NEL=0: PCDRV MEMRD PCLD; nop, or NEL=1: PCINC; nop; then PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">15</td><td class="m">NOP</td><td></td><td class="m">PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">12</td><td class="m">MOVAB</td><td>A = B</td><td class="m">nop; ADRV; ADRV ALUOE passB ALD; nop; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">13</td><td class="m">JMP imm</td><td>PC = next word</td><td class="m">PCINC; PCDRV MEMRD PCLD; PCDRV; FETCH; HOLD</td></tr>
+<tr><td class="m">14</td><td class="m">JEQ imm</td><td>if A == B: PC = next word, else skip it</td><td class="m">nop; ADRV; PCINC; then NEL=0: PCDRV MEMRD PCLD; PCDRV, or NEL=1: PCINC; nop; then FETCH; HOLD</td></tr>
+<tr><td class="m">15</td><td class="m">NOP</td><td></td><td class="m">PCINC; FETCH; HOLD</td></tr>
 <tr><td class="m">16</td><td class="m">HALT</td><td>loops in microcode</td><td class="m">nop x 16</td></tr>
 </table></div>
-<p>Four rules shape every sequence, and the microcode generator checks them: the driver of D, and the driver of Addr, never change between consecutive words (an idle word lets the old driver float for a whole clock); an access at A is preceded by a word with only ADRV, so the address is valid a clock before anything strobes it; a MEMRD or WE word at A is followed by a word with ADRV still set, and ALUOE still set after WE, so every hold time is a clock long; and JEQ's two variants differ only at the step whose ROM read sees a fresh NEL. The word after a fetch is always a nop because the ROM's word for the next step is already in flight when the IR changes.</p>
+<p>Five rules shape every sequence, and the microcode generator checks them: the driver of D, and the driver of Addr, never change between consecutive words (an idle word lets the old driver float for a whole clock); an access at A is preceded by a word with only ADRV, so the address is valid a clock before anything strobes it; a word that loads B or the IR from memory, or writes, is followed by the same word without the load, so the data outlives the capture by a clock whatever the clock skew; a word that changes the address at its edge (a load into the PC or into A) is followed by a word without a strobe, so no chip is read at a moving address; and JEQ's two variants differ only from the step whose ROM read sees a fresh NEL. The word after a fetch is the hold word because the ROM's word for the next step is already in flight when the IR changes.</p>
 
 <h2>Loading an immediate: LDA 0x1234</h2>
 <pre>program:   0x0800   LDA imm (opcode 1 in bits 15:11)
@@ -243,7 +244,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 clock  step  microword                 what happens at the ending edge
   1     0    PCINC                     PC -> the immediate
   2     1    PCDRV MEMRD ALD           flash[PC] on D; A := 0x1234
-  3     2    PCINC                     PC -> the next instruction
-  4     3    PCDRV MEMRD IRLD          flash[PC] on D; IR := its opcode, step := 0
-  5     4    nop                       the pipeline slot; the ROM is already presenting the next opcode's step 0</pre>
+  3     2    PCDRV MEMRD               the same, without the load: the data outlives the capture
+  4     3    PCINC                     PC -> the next instruction
+  5     4    PCDRV MEMRD IRLD          flash[PC] on D; IR := its opcode, step := 0
+  6     5    PCDRV MEMRD               the hold after the fetch; the ROM is already presenting the next opcode's step 0</pre>
 </main>

@@ -26,6 +26,18 @@ is not listed here.
       modelled.
 - [ ] Measured grades for the delay lines and the gate, once binned.
 
+## grit (the first board)
+
+- [x] Design, model, netlist, board file, soak and fuzz (docs/grit.md).
+- [ ] Bank jumper headers and the Addr14/Addr15 pull-downs as parts in
+      the board file (they are nets and pulls today).
+- [ ] The PCB (Jake, flatland).
+- [ ] The macro assembler (MIPS-looking syntax over the grit ISA).
+- [ ] Why the fuzz fails at 6 ns per pin: a PC bit's flop blinks unknown
+      at an edge with PCLD low (an unknown on D reaching a minimised
+      term?), and the flash's address goes unknown through a fetch.
+- [ ] JEDEC manifest for the 13 GALs and the two ROM images.
+
 ## Upgrades needed for Doom
 
 - [ ] Program size: 13-bit PC, 32 KB instruction memory.  Wider PC through

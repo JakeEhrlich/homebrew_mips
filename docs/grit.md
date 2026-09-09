@@ -43,20 +43,20 @@ the following word.
 | Op | Instruction | Does | Clocks |
 |---|---|---|---|
 | 0 | RESET | fetch from the PC (what runs out of reset, PC = 0) | 2 |
-| 1 | LDA imm | A = next word | 5 |
-| 2 | LDB imm | B = next word | 5 |
-| 3 | LDA (A) | A = mem[A] | 6 |
-| 4 | LDB (A) | B = mem[A] | 6 |
-| 5 | STB (A) | mem[A] = B | 7 |
-| 6 | ADDA | A = A + B | 6 |
-| 7 | ADDB | B = A + B | 6 |
-| 8 | ANDA | A = A and B | 6 |
-| 9 | ANDB | B = A and B | 6 |
-| 10 | NORA | A = not (A or B) | 6 |
-| 11 | NORB | B = not (A or B) | 6 |
-| 12 | MOVAB | A = B | 6 |
+| 1 | LDA imm | A = next word | 6 |
+| 2 | LDB imm | B = next word | 6 |
+| 3 | LDA (A) | A = mem[A] | 7 |
+| 4 | LDB (A) | B = mem[A] | 7 |
+| 5 | STB (A) | mem[A] = B | 8 |
+| 6 | ADDA | A = A + B | 7 |
+| 7 | ADDB | B = A + B | 7 |
+| 8 | ANDA | A = A and B | 7 |
+| 9 | ANDB | B = A and B | 7 |
+| 10 | NORA | A = not (A or B) | 7 |
+| 11 | NORB | B = not (A or B) | 7 |
+| 12 | MOVAB | A = B | 7 |
 | 13 | JMP imm | PC = next word | 5 |
-| 14 | JEQ imm | if A == B then PC = next word, else skip it | 6 |
+| 14 | JEQ imm | if A == B then PC = next word, else skip it | 7 |
 | 15 | NOP | | 3 |
 | 16 | HALT | never fetches; the step counter shows it | |
 
@@ -128,38 +128,51 @@ microcode generator checks them):
 2. An access at A (MEMRD, WE or ALUOE with ADRV) is preceded by a word
    with only ADRV: the address, and the ALU's operand, are valid a clock
    before anything strobes or samples them.
-3. After a MEMRD or WE word at A comes a word with ADRV still set and,
-   after WE, ALUOE still set: the address and data outlive the strobe by
-   a clock, which is every hold time on the board.
-4. A conditional instruction's two variants differ only at a step whose
-   ROM read happens while NEL is fresh: word 0 has ADRV (NEL latches at
-   its end), word 1 has not, the variants differ at step 2.
+3. A word that loads B or the IR from memory, or writes, is followed by
+   the same word without the load: the address and the data outlive
+   the capture by a clock, so no clock skew between the chips can turn
+   the capture into a hold violation.  The word after a fetch is that
+   hold word, `PCDRV MEMRD`, so an instruction that starts by taking
+   the address bus from the PC begins with an idle word.
+4. A word that changes the address at its edge (a load into the PC, or
+   into A from memory) is followed by a word with no strobe: no chip
+   sees its address move under a read, which for the UART would be a
+   read with side effects.  The PC is its own data source and needs no
+   hold; A's hold then rests on the memory's output-disable time
+   against the clock skew between the pipeline register and the A
+   chips, under 2 ns.
+5. A conditional instruction's two variants differ only at steps whose
+   ROM read happens while NEL is fresh: word 1 has ADRV (NEL latches at
+   its end), word 2 has not, the variants differ from step 3.
 
 **The sequences.**  Each line is one clock.
 
 ```
-RESET     PCDRV MEMRD IRLD ; nop
-LDA imm   PCINC ; PCDRV MEMRD ALD ; PCINC ; PCDRV MEMRD IRLD ; nop
-LDB imm   PCINC ; PCDRV MEMRD BLD ; PCINC ; PCDRV MEMRD IRLD ; nop
-LDA (A)   ADRV ; ADRV MEMRD ALD ; ADRV ; PCINC ; PCDRV MEMRD IRLD ; nop
-LDB (A)   ADRV ; ADRV MEMRD BLD ; ADRV ; PCINC ; PCDRV MEMRD IRLD ; nop
-STB (A)   ADRV ; ADRV ALUOE passB WE ; ADRV ALUOE passB ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-ADDA      ADRV ; ADRV ALUOE add ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-ADDB      ADRV ; ADRV ALUOE add BLD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-MOVAB     ADRV ; ADRV ALUOE passB ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-JMP imm   PCINC ; PCDRV MEMRD PCLD ; nop ; PCDRV MEMRD IRLD ; nop
-JEQ imm   ADRV ; PCINC ; then NEL=0: PCDRV MEMRD PCLD ; nop      NEL=1: PCINC ; nop
-          then both: PCDRV MEMRD IRLD ; nop
-NOP       PCINC ; PCDRV MEMRD IRLD ; nop
+FETCH   = PCDRV MEMRD IRLD      HOLD = PCDRV MEMRD
+RESET     FETCH ; HOLD
+LDA imm   PCINC ; PCDRV MEMRD ALD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
+LDB imm   PCINC ; PCDRV MEMRD BLD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
+LDA (A)   nop ; ADRV ; ADRV MEMRD ALD ; ADRV ; PCINC ; FETCH ; HOLD
+LDB (A)   nop ; ADRV ; ADRV MEMRD BLD ; ADRV MEMRD ; PCINC ; FETCH ; HOLD
+STB (A)   nop ; ADRV ; ADRV ALUOE passB WE ; ADRV ALUOE passB ; nop ; PCINC ; FETCH ; HOLD
+ADDA      nop ; ADRV ; ADRV ALUOE add ALD ; nop ; PCINC ; FETCH ; HOLD
+ADDB      nop ; ADRV ; ADRV ALUOE add BLD ; nop ; PCINC ; FETCH ; HOLD
+MOVAB     nop ; ADRV ; ADRV ALUOE passB ALD ; nop ; PCINC ; FETCH ; HOLD
+JMP imm   PCINC ; PCDRV MEMRD PCLD ; PCDRV ; FETCH ; HOLD
+JEQ imm   nop ; ADRV ; PCINC ; then NEL=0: PCDRV MEMRD PCLD ; PCDRV     NEL=1: PCINC ; nop
+          then both: FETCH ; HOLD
+NOP       PCINC ; FETCH ; HOLD
 HALT      nop x 16 (the counter wraps and it repeats)
 ```
 
-ANDA/ANDB/NORA/NORB are ADDA/ADDB with F changed.  The word after
-`ADRV MEMRD ALD` in `LDA (A)` is rules 1 and 3 at once; the leading
-`ADRV` word is rule 2, and it was found by the model, not by thought:
-the first version turned A onto the bus and started the write strobe in
-the same word, and the SRAM saw its address change 8 ns into the
-write.
+ANDA/ANDB/NORA/NORB are ADDA/ADDB with F changed.  Rules 2, 3 and 4
+were each found by the model, not by thought: the first version turned
+A onto the bus and started the write strobe in the same word, and the
+SRAM saw its address change 8 ns into the write; the second passed the
+soak but, under 3 ns of clock skew, a literal read into B lost its
+data before B sampled it; the third held the strobe through the word
+after a load into A, and the random programs then read the UART by
+accident whenever the loaded value happened to be a UART address.
 
 ## 4. The chips
 
@@ -278,7 +291,28 @@ four is one more term if the scope says so.
    in-socket flash programming (WE# from a spare word bit), a register-
    index field in the instruction word.
 
-## 8. What the simulation found and taught
+## 8. Verification
+
+| What | Where | Result |
+|---|---|---|
+| Every GAL fits its chip; the microcode obeys its rules | `tests/grit.rs` | pass |
+| Hand-written programs: arithmetic and stores, loads from RAM and flash, a countdown loop, NOR and jumps, serial both ways | `tests/grit.rs` | pass, state matches the reference |
+| Reset released at nine phases of the clock; the reset button mid-run | `tests/grit.rs` | pass |
+| Random programs (`grit::soak`): registers, pointers, flash constants, ALU through A and B, forward JEQ, nested bounded loops, against the reference | `tests/grit_soak.rs` | 120 programs, about 60 000 instructions, no chip complaint, every register and data word matching |
+| The same under the physical fuzz: a delay on every pin (clock pins included, so it is clock skew too), CLK2X duty 45 to 55 %, jitter on every edge, random power-up SRAM | `tests/grit_soak.rs` | passes with every pin delayed by up to 1, 2 and 3 ns (up to 450 mm of trace; jitter up to 2 ns); fails at 6 ns |
+
+At 6 ns per pin (900 mm of trace, far outside any board) a fetch
+captures an unknown opcode: one PC bit blinks unknown at an edge while
+PCLD is low, and the flash's address with it.  Not yet diagnosed; the
+todo has it.  The design's real limit is clock skew between chips
+against the 2 ns minimum clock-to-output that every hold time here
+rests on, which is what the 3 ns pass shows.
+
+The fuzz knobs are `GRIT_FUZZ_DELAY_NS`, `GRIT_FUZZ_JITTER_NS`,
+`GRIT_FUZZ_DUTY`, `GRIT_FUZZ_PROGRAMS`, `GRIT_FUZZ_SEED`; the soak's
+are `GRIT_SOAK_PROGRAMS` and `GRIT_SOAK_SEED`.
+
+## 9. What the simulation found and taught
 
 Building it in the netlist changed three things, none of them in the
 block diagram.
@@ -287,6 +321,15 @@ block diagram.
   turned A onto the address bus and asserted WE in the same word; the
   SRAM model reported its address changing 8 ns into the write, because
   a GAL's output enable takes up to 10 ns to turn on.  Hence rule 2.
+- **A memory read's data must outlive the capture.**  With the address
+  or the strobe dropping at the same edge that loads B, the flash's
+  data (output hold 0 ns) can vanish 2 ns after the edge, which is
+  exactly the clock skew a pair of chips can have.  The fuzz found it
+  at 3 ns of per-pin delay; hence rule 3.
+- **A read at a changing address is a read of something else.**  Holding
+  the strobe through the word after a load into A meant a one-clock
+  read at whatever address was loaded; the random programs loaded UART
+  addresses and read the UART by accident.  Hence rule 4.
 - **The condition had to be latched.**  NE is only meaningful while A
   drives the bus (the ALU's A inputs are the address bus), so the ROM's
   condition bit is NEL, latched at the end of ADRV words, and JEQ is

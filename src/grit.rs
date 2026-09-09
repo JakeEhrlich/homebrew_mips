@@ -128,15 +128,26 @@ pub fn opcode(word: u16) -> u8 {
 pub fn sequence(op: Op, ne: bool) -> Vec<u16> {
     // Every access at A starts with a word that only puts A on the bus:
     // the address (and, for the ALU, the operand) is valid a clock before
-    // anything strobes or samples it.
-    let alu = |f: u16, ld: u16| vec![ADRV, ADRV | ALUOE | f | ld, 0, PCINC, FETCH, 0];
+    // anything strobes or samples it.  A word that loads a latch from
+    // memory is followed by the same word without the load: address and
+    // data outlive the capture by a clock, so no clock skew can turn the
+    // capture into a hold violation.  The word after a fetch is that hold
+    // word (`FETCH_HOLD`), so an instruction whose first word takes the
+    // address bus from the PC starts with an idle word.
+    const FETCH_HOLD: u16 = PCDRV | MEMRD;
+    let alu = |f: u16, ld: u16| vec![0, ADRV, ADRV | ALUOE | f | ld, 0, PCINC, FETCH, FETCH_HOLD];
     match op {
-        Op::Reset => vec![FETCH, 0],
-        Op::LdaImm => vec![PCINC, PCDRV | MEMRD | ALD, PCINC, FETCH, 0],
-        Op::LdbImm => vec![PCINC, PCDRV | MEMRD | BLD, PCINC, FETCH, 0],
-        Op::LdaA => vec![ADRV, ADRV | MEMRD | ALD, ADRV, PCINC, FETCH, 0],
-        Op::LdbA => vec![ADRV, ADRV | MEMRD | BLD, ADRV, PCINC, FETCH, 0],
-        Op::StbA => vec![ADRV, ADRV | ALUOE | F_PASSB | WE, ADRV | ALUOE | F_PASSB, 0, PCINC, FETCH, 0],
+        Op::Reset => vec![FETCH, FETCH_HOLD],
+        Op::LdaImm => vec![PCINC, PCDRV | MEMRD | ALD, PCDRV | MEMRD, PCINC, FETCH, FETCH_HOLD],
+        Op::LdbImm => vec![PCINC, PCDRV | MEMRD | BLD, PCDRV | MEMRD, PCINC, FETCH, FETCH_HOLD],
+        // Loading A changes the address at the edge, so the strobe drops in
+        // the hold word (a read at the new address could be a UART read
+        // with side effects).  A's data hold then rests on the memory's
+        // output-disable time against the clock skew between the pipeline
+        // register and the A chips: under 2 ns of skew (docs/grit.md).
+        Op::LdaA => vec![0, ADRV, ADRV | MEMRD | ALD, ADRV, PCINC, FETCH, FETCH_HOLD],
+        Op::LdbA => vec![0, ADRV, ADRV | MEMRD | BLD, ADRV | MEMRD, PCINC, FETCH, FETCH_HOLD],
+        Op::StbA => vec![0, ADRV, ADRV | ALUOE | F_PASSB | WE, ADRV | ALUOE | F_PASSB, 0, PCINC, FETCH, FETCH_HOLD],
         Op::AddA => alu(F_ADD, ALD),
         Op::AddB => alu(F_ADD, BLD),
         Op::AndA => alu(F_AND, ALD),
@@ -144,14 +155,17 @@ pub fn sequence(op: Op, ne: bool) -> Vec<u16> {
         Op::NorA => alu(F_NOR, ALD),
         Op::NorB => alu(F_NOR, BLD),
         Op::MovAB => alu(F_PASSB, ALD),
-        Op::Jmp => vec![PCINC, PCDRV | MEMRD | PCLD, 0, FETCH, 0],
-        // The condition: word 0 puts A on the bus so that NE is valid and
+        // After PCLD the address changes: the strobe is dropped for that
+        // word (no chip sees its address move under a read), and the PC
+        // needs no data hold, being its own source.
+        Op::Jmp => vec![PCINC, PCDRV | MEMRD | PCLD, PCDRV, FETCH, FETCH_HOLD],
+        // The condition: word 1 puts A on the bus so that NE is valid and
         // the NEL flop latches it at the word's end; the ROM read for step
-        // 2, during word 1, is the one that sees the fresh NEL, so the two
-        // variants differ at step 2 only.
-        Op::Jeq if !ne => vec![ADRV, PCINC, PCDRV | MEMRD | PCLD, 0, FETCH, 0],
-        Op::Jeq => vec![ADRV, PCINC, PCINC, 0, FETCH, 0],
-        Op::Nop => vec![PCINC, FETCH, 0],
+        // 3, during word 2, is the one that sees the fresh NEL, so the two
+        // variants differ from step 3 on.
+        Op::Jeq if !ne => vec![0, ADRV, PCINC, PCDRV | MEMRD | PCLD, PCDRV, FETCH, FETCH_HOLD],
+        Op::Jeq => vec![0, ADRV, PCINC, PCINC, 0, FETCH, FETCH_HOLD],
+        Op::Nop => vec![PCINC, FETCH, FETCH_HOLD],
         Op::Halt => vec![],
     }
 }
@@ -199,15 +213,21 @@ fn check_sequence(op: Op, s: &[u16]) {
             if (w & PCDRV != 0 && n & ADRV != 0) || (w & ADRV != 0 && n & PCDRV != 0) {
                 panic!("{op:?} step {k}: driver of Addr changes without an idle word");
             }
-            if w & (MEMRD | WE) != 0 && w & ADRV != 0 {
-                assert!(n & ADRV != 0, "{op:?} step {k}: address not held after a memory access at A");
-            }
-            if w & WE != 0 {
-                assert!(n & ALUOE != 0, "{op:?} step {k}: data not held after WE");
+            // A load from memory into A, B or the IR, or a write: the next
+            // word keeps the same drivers on Addr and D.  A load into the
+            // PC changes the address at the edge: the next word keeps the
+            // PC on Addr but drops the strobe.
+            let addr_changes = w & PCLD != 0 || (w & ALD != 0 && w & ADRV != 0);
+            if addr_changes {
+                let other = (PCDRV | ADRV) & !(w & (PCDRV | ADRV));
+                assert!(n & other == 0 && n & (MEMRD | WE) == 0, "{op:?} step {k}: the address changes at this edge: no strobe in the next word");
+            } else if (w & MEMRD != 0 && w & (ALD | BLD | IRLD) != 0) || w & WE != 0 {
+                let drivers = PCDRV | ADRV | MEMRD | ALUOE;
+                assert_eq!(n & drivers, w & drivers, "{op:?} step {k}: address or data not held after a load or a write");
             }
         }
         if w & IRLD != 0 {
-            assert!(k + 1 < s.len() && s[k + 1] == 0, "{op:?} step {k}: the word after a fetch must be a nop");
+            assert!(k + 1 < s.len() && s[k + 1] == PCDRV | MEMRD, "{op:?} step {k}: the word after a fetch must be the fetch hold");
         }
     }
 }
@@ -956,19 +976,37 @@ pub struct Build {
     pub uart_xin_hz: f64,
     /// Characters the terminal sends, from when the program first polls.
     pub uart_rx: Vec<u8>,
-    /// Power-up contents of the SRAM (None: zero).
+    /// Power-up contents of the SRAM (None: zero, or random from the fuzz
+    /// seed).
     pub ram_image: Option<Vec<u16>>,
+    /// Physical fuzz (docs/fuzz.md): 0 = off.  Otherwise the seed for a
+    /// propagation delay on every chip pin drawn from 0..`pin_delay_ns`,
+    /// CLK2X's duty cycle drawn per period from `clock_duty` and up to
+    /// `clock_jitter_ns` on every edge, and random power-up SRAM
+    /// contents (give the reference the same, `fuzz_ram`).
+    pub fuzz_seed: u64,
+    pub pin_delay_ns: f64,
+    pub clock_duty: (f64, f64),
+    pub clock_jitter_ns: f64,
 }
 
 impl Default for Build {
     fn default() -> Build {
-        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: CLK2X_HZ, uart_rx: Vec::new(), ram_image: None }
+        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: CLK2X_HZ, uart_rx: Vec::new(), ram_image: None, fuzz_seed: 0, pin_delay_ns: 0.0, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
     }
+}
+
+/// The random power-up SRAM image for a fuzz seed.
+pub fn fuzz_ram(seed: u64) -> Vec<u16> {
+    let mut r = crate::cpu::Lcg(seed ^ 0x9e3779b97f4a7c15);
+    (0..RAM_WORDS).map(|_| r.next() as u16).collect()
 }
 
 pub struct Grit {
     pub sim: Sim,
     pub clocks: u64,
+    /// Fuzz: (generator, duty range, jitter ps).
+    clock_fuzz: Option<(crate::cpu::Lcg, (f64, f64), Time)>,
     /// When RESET (the synchronised one) fell (ps).
     pub reset_release: Time,
     clk2x: NetId,
@@ -1022,12 +1060,13 @@ impl Grit {
                 chip.preload(i as u32, (w >> (8 * lane)) as u8);
             }
         }
+        let image: Option<Vec<u16>> = opt.ram_image.clone().or_else(|| (opt.fuzz_seed != 0).then(|| fuzz_ram(opt.fuzz_seed)));
         let mut ram = Vec::new();
         for (id, role) in nl.chips_with_role("ram:") {
             let lane: usize = role["ram:".len()..].parse().unwrap();
             let chip = nl.chip_mut::<As7c164a>(id);
             for i in 0..RAM_WORDS {
-                let v = opt.ram_image.as_ref().map_or(0, |im| im[i]);
+                let v = image.as_ref().map_or(0, |im| im[i]);
                 chip.preload(i as u32, (v >> (8 * lane)) as u8);
             }
             ram.push(id);
@@ -1036,14 +1075,20 @@ impl Grit {
         if let Some(id) = nl.chips_with_role("uart").first().map(|(id, _)| *id) {
             nl.chip_mut::<Uart16550>(id).core.send(&opt.uart_rx);
         }
-        let sim = nl.build();
+        let mut sim = nl.build();
+        if opt.fuzz_seed != 0 && opt.pin_delay_ns > 0.0 {
+            let mut r = crate::cpu::Lcg(opt.fuzz_seed ^ 0xde1a);
+            let max = opt.pin_delay_ns;
+            sim.set_pin_delays(|_, _| Self::ns(r.unit() * max));
+        }
+        let clock_fuzz = (opt.fuzz_seed != 0).then(|| (crate::cpu::Lcg(opt.fuzz_seed ^ 0xc10c), opt.clock_duty, Self::ns(opt.clock_jitter_ns)));
         let clk2x = sim.net_id("CLK2X");
         let reset = sim.net_id("RESET");
         let ir = (0..5).map(|i| sim.net_id(&n("IR", i))).collect();
         let step = (0..4).map(|i| sim.net_id(&n("STEP", i))).collect();
         let addr = (1..=15).map(|i| sim.net_id(&n("ADDR", i))).collect();
         let pcdrv = sim.net_id("PCDRV");
-        let mut g = Grit { sim, clocks: 0, reset_release: 0, clk2x, reset, ir, step, addr, pcdrv, ram };
+        let mut g = Grit { sim, clocks: 0, clock_fuzz, reset_release: 0, clk2x, reset, ir, step, addr, pcdrv, ram };
         g.wait_reset_release();
         g
     }
@@ -1053,8 +1098,17 @@ impl Grit {
     /// edge.
     fn tick(&mut self) {
         let base = self.sim.now();
-        self.sim.schedule(base, self.clk2x, Level::L);
-        self.sim.schedule(base + PERIOD2X / 2, self.clk2x, Level::H);
+        let (fall, rise) = match &mut self.clock_fuzz {
+            None => (base, base + PERIOD2X / 2),
+            Some((r, duty, jitter)) => {
+                let d = duty.0 + r.unit() * (duty.1 - duty.0);
+                let j1 = (r.unit() * *jitter as f64) as Time;
+                let j2 = (r.unit() * *jitter as f64) as Time;
+                (base + j1, base + (PERIOD2X as f64 * (1.0 - d)) as Time + j2)
+            }
+        };
+        self.sim.schedule(fall, self.clk2x, Level::L);
+        self.sim.schedule(rise, self.clk2x, Level::H);
         self.sim.run_until(base + PERIOD2X);
     }
 
@@ -1188,5 +1242,137 @@ impl Grit {
     /// of registers without a reset.
     pub fn reset_warnings(&self) -> Vec<String> {
         self.sim.warnings().into_iter().filter(|w| warning_time(w).is_some_and(|t| t < self.reset_release)).filter(|w| !w.contains("CapturedX")).collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Random programs
+
+/// Random programs for the soak and the fuzz: statements over the
+/// registers r1..r7 (SRAM words), two pointer registers into a data area,
+/// a table of constants in the flash, forward conditional branches and
+/// bounded loops, ending in HALT.  Everything is defined behaviour; the
+/// reference interpreter says what the result must be.
+pub mod soak {
+    use super::*;
+    use crate::cpu::Lcg;
+
+    fn imm(r: &mut Lcg) -> u16 {
+        match r.next() % 4 {
+            0 => (r.next() % 16) as u16,
+            1 => (r.next() % 256) as u16,
+            2 => 0u16.wrapping_sub((r.next() % 16) as u16),
+            _ => r.next() as u16,
+        }
+    }
+    fn reg(r: &mut Lcg) -> u32 {
+        1 + r.next() % 7
+    }
+    fn alu_b(r: &mut Lcg) -> &'static str {
+        ["ADDB", "ANDB", "NORB"][(r.next() % 3) as usize]
+    }
+    fn alu_a(r: &mut Lcg) -> &'static str {
+        ["ADDA", "ANDA", "NORA"][(r.next() % 3) as usize]
+    }
+
+    /// The program text for `seed`, about `len` statements long.
+    pub fn program(seed: u64, len: usize) -> String {
+        let mut r = Lcg(seed.wrapping_mul(0x2545F491_4F6CDD1D) ^ 0x5eed);
+        let mut out = String::new();
+        let mut labels = 0;
+        let mut table: Vec<u16> = (0..8).map(|_| r.next() as u16).collect();
+        // Pointers: r8 and r9 hold addresses in the data area.
+        let p8 = 0x8100 + 2 * (r.next() % 64) as u16;
+        let p9 = 0x8200 + 2 * (r.next() % 64) as u16;
+        out.push_str(&format!("    LDA &r8\n    LDB {p8:#06x}\n    STB (A)\n    LDA &r9\n    LDB {p9:#06x}\n    STB (A)\n"));
+        for i in 1..8 {
+            let v = imm(&mut r);
+            out.push_str(&format!("    LDA &r{i}\n    LDB {v:#06x}\n    STB (A)\n"));
+        }
+        let mut pending_loops: Vec<(String, u32)> = Vec::new();
+        let mut n = 0;
+        while n < len {
+            n += 1;
+            match r.next() % 12 {
+                0 => {
+                    let (x, v) = (reg(&mut r), imm(&mut r));
+                    out.push_str(&format!("    LDA &r{x}\n    LDB {v:#06x}\n    STB (A)\n"));
+                }
+                1 | 2 => {
+                    let (x, y, z, op) = (reg(&mut r), reg(&mut r), reg(&mut r), alu_b(&mut r));
+                    out.push_str(&format!("    LDA &r{z}\n    LDB (A)\n    LDA &r{y}\n    LDA (A)\n    {op}\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                3 => {
+                    let (x, y, v, op) = (reg(&mut r), reg(&mut r), imm(&mut r), alu_b(&mut r));
+                    out.push_str(&format!("    LDA &r{y}\n    LDA (A)\n    LDB {v:#06x}\n    {op}\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                4 => {
+                    // Through A: rX = rY op rZ computed into A, moved to B.
+                    let (x, y, z, op) = (reg(&mut r), reg(&mut r), reg(&mut r), alu_a(&mut r));
+                    out.push_str(&format!("    LDA &r{z}\n    LDB (A)\n    LDA &r{y}\n    LDA (A)\n    {op}\n    LDB 0\n    ADDB\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                5 => {
+                    // Store rX through a pointer.
+                    let (x, p) = (reg(&mut r), 8 + r.next() % 2);
+                    out.push_str(&format!("    LDA &r{x}\n    LDB (A)\n    LDA &r{p}\n    LDA (A)\n    STB (A)\n"));
+                }
+                6 => {
+                    // Load rX through a pointer.
+                    let (x, p) = (reg(&mut r), 8 + r.next() % 2);
+                    out.push_str(&format!("    LDA &r{p}\n    LDA (A)\n    LDB (A)\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                7 => {
+                    // A constant from the flash.
+                    let (x, k) = (reg(&mut r), r.next() % 8);
+                    out.push_str(&format!("    LDA table{k}\n    LDB (A)\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                8 => {
+                    // MOVAB and a store of A.
+                    let (x, y) = (reg(&mut r), reg(&mut r));
+                    out.push_str(&format!("    LDA &r{y}\n    LDB (A)\n    MOVAB\n    LDB 0\n    ADDB\n    LDA &r{x}\n    STB (A)\n"));
+                }
+                9 => {
+                    // Forward conditional skip: compare rX with rY or an immediate.
+                    let (x, l) = (reg(&mut r), labels);
+                    labels += 1;
+                    if r.next() % 2 == 0 {
+                        let y = reg(&mut r);
+                        out.push_str(&format!("    LDA &r{y}\n    LDB (A)\n"));
+                    } else {
+                        let v = imm(&mut r);
+                        out.push_str(&format!("    LDB {v:#06x}\n"));
+                    }
+                    out.push_str(&format!("    LDA &r{x}\n    LDA (A)\n    JEQ skip{l}\n"));
+                    let (z, v) = (reg(&mut r), imm(&mut r));
+                    out.push_str(&format!("    LDA &r{z}\n    LDB {v:#06x}\n    STB (A)\n    NOP\nskip{l}:\n"));
+                }
+                10 if pending_loops.len() < 2 => {
+                    // A bounded loop: r(10 + depth) counts down from 1..4.
+                    let depth = pending_loops.len() as u32;
+                    let c = 10 + depth;
+                    let count = 1 + r.next() % 4;
+                    let l = labels;
+                    labels += 1;
+                    out.push_str(&format!("    LDA &r{c}\n    LDB {count}\n    STB (A)\nloop{l}:\n"));
+                    pending_loops.push((format!("loop{l}"), c));
+                }
+                _ => {
+                    // Close the innermost loop, if any: counter -= 1, exit at zero.
+                    if let Some((label, c)) = pending_loops.pop() {
+                        out.push_str(&format!("    LDA &r{c}\n    LDA (A)\n    LDB -1\n    ADDB\n    LDA &r{c}\n    STB (A)\n    LDA 0\n    JEQ {label}_x\n    JMP {label}\n{label}_x:\n"));
+                    } else {
+                        out.push_str("    NOP\n");
+                    }
+                }
+            }
+        }
+        while let Some((label, c)) = pending_loops.pop() {
+            out.push_str(&format!("    LDA &r{c}\n    LDA (A)\n    LDB -1\n    ADDB\n    LDA &r{c}\n    STB (A)\n    LDA 0\n    JEQ {label}_x\n    JMP {label}\n{label}_x:\n"));
+        }
+        out.push_str("    HALT\n");
+        for (k, v) in table.drain(..).enumerate() {
+            out.push_str(&format!("table{k}:\n    .word {v:#06x}\n"));
+        }
+        out
     }
 }

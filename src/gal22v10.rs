@@ -544,8 +544,9 @@ impl Gal22v10 {
     }
 
     /// Mark array inputs as synchronous to this chip's clock (see
-    /// `sync_input`).
+    /// `sync_input`); the rest are not.
     pub fn set_sync_inputs(&mut self, inputs: &[usize]) {
+        self.sync_input = [false; ARRAY_INPUTS];
         for &i in inputs {
             self.sync_input[i] = true;
         }
