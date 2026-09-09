@@ -1,0 +1,549 @@
+<title>Crag Chip Map</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F1F3F5; --ink: #1C2530; --ink-2: #5B6B7A; --chip: #FFFFFF; --reg: #E3E8ED; --rule: #C9D1D9; --corridor: #E8ECF0;
+  --copper: #C46A22; --slate: #7A8794; --back: #1F6FB5; --hi: #0B8F6A; --hi-bg: #D6F0E6; --stim: #9A7A2F; --panel: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --chip: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+    --copper: #E8964F; --slate: #8E9CAA; --back: #62AEEE; --hi: #3FD39E; --hi-bg: #173A2E; --stim: #C9A86A; --panel: #1B2129;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151A20; --ink: #E4E9EE; --ink-2: #9AA8B5; --chip: #202832; --reg: #2A3440; --rule: #3A4652; --corridor: #1B2129;
+  --copper: #E8964F; --slate: #8E9CAA; --back: #62AEEE; --hi: #3FD39E; --hi-bg: #173A2E; --stim: #C9A86A; --panel: #1B2129;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14px; height: 100vh; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+header { display: flex; align-items: baseline; gap: 18px; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--bg); }
+header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+header .meta { color: var(--ink-2); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+header .spacer { flex: 1; }
+header button { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--rule); background: var(--chip); color: var(--ink); border-radius: 3px; cursor: pointer; }
+header button:focus-visible { outline: 2px solid var(--hi); outline-offset: 1px; }
+main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+#view { position: relative; overflow: hidden; cursor: grab; }
+#view.dragging { cursor: grabbing; }
+svg { display: block; width: 100%; height: 100%; }
+aside { border-left: 1px solid var(--rule); background: var(--panel); padding: 14px 16px; overflow: auto; font-size: 13px; }
+aside h2 { font-size: 12px; font-weight: 600; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+aside h3 { font-size: 15px; margin: 0 0 10px; font-weight: 600; }
+aside .mono, aside table { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+aside table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+aside td, aside th { text-align: left; padding: 3px 6px 3px 0; line-height: 1.35; border-bottom: 1px solid var(--rule); vertical-align: top; }
+aside th { color: var(--ink-2); font-weight: 500; }
+aside p { margin: 6px 0; line-height: 1.45; }
+aside .out { color: var(--copper); }
+aside .legend { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--ink-2); font-size: 12px; }
+aside .legend div { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+aside .legend svg { width: 42px; height: 12px; flex: none; }
+.stage-title { font: 500 12px "IBM Plex Sans", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; fill: var(--ink-2); }
+.divider { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 3 5; }
+.corridor { fill: var(--corridor); }
+.corridor-label { font: 500 10px "IBM Plex Sans", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; fill: var(--ink-2); }
+.block > rect.body { fill: var(--bg); stroke: var(--ink); stroke-width: 1; }
+.block.register > rect.body { fill: var(--reg); }
+.block > text.title { font: 600 12px "IBM Plex Sans", sans-serif; fill: var(--ink); }
+.block > text.count { font: 400 11px "IBM Plex Mono", monospace; fill: var(--ink-2); }
+.chip rect { fill: var(--chip); stroke: var(--ink); stroke-width: 1.2; }
+.chip text { font: 500 10.5px "IBM Plex Mono", monospace; fill: var(--ink); pointer-events: none; }
+.chip.sram rect { stroke-width: 2; }
+.chip:hover rect, .chip.sel rect { stroke: var(--hi); stroke-width: 2.2; fill: var(--hi-bg); }
+.rail text { font: 400 10px "IBM Plex Mono", monospace; fill: var(--ink); }
+.rail text.w { fill: var(--ink-2); }
+.rail rect.hit { fill: transparent; }
+.rail .port { fill: var(--ink); }
+.rail.hi text { fill: var(--hi); font-weight: 500; }
+.pinline { stroke: var(--copper); stroke-width: 0.6; opacity: 0.3; fill: none; }
+.pinline.ctl { stroke: var(--slate); }
+.pinline.hi { opacity: 1; stroke: var(--hi); stroke-width: 1.4; }
+.bus { fill: none; stroke: var(--copper); stroke-linejoin: round; opacity: 0.8; }
+.bus.ctl { stroke: var(--slate); opacity: 0.75; }
+.bus.back { stroke: var(--back); }
+.bus.stim { stroke: var(--stim); stroke-dasharray: 6 4; }
+.bus.hi { stroke: var(--hi); opacity: 1; }
+.bus.dim { opacity: 0.1; }
+.bus-hit { fill: none; stroke: transparent; stroke-width: 10; cursor: pointer; }
+.arrow { fill: var(--copper); }
+.arrow.ctl { fill: var(--slate); }
+.arrow.back { fill: var(--back); }
+.arrow.stim { fill: var(--stim); }
+.arrow.hi { fill: var(--hi); }
+.src { fill: var(--copper); }
+.src.ctl { fill: var(--slate); } .src.back { fill: var(--back); } .src.stim { fill: var(--stim); }
+.note { font: 400 11px "IBM Plex Sans", sans-serif; fill: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .bus, .pinline, .chip rect { transition: opacity .12s, stroke .12s; } }
+</style>
+<header>
+  <h1>MIPS-I Chip Map</h1>
+  <span class="meta" id="meta"></span>
+  <span class="spacer"></span>
+  <button id="fit" type="button">Fit</button>
+  <button id="clear" type="button">Clear selection</button>
+</header>
+<main>
+  <div id="view"><svg id="svg" role="img" aria-label="Every chip of the phase-1 CPU netlist grouped into named blocks inside the five pipeline stages; forward buses run in the channels between columns, backward and same-stage edges loop over the top corridor in blue, control signals run along the bottom"></svg></div>
+  <aside id="panel"></aside>
+</main>
+<script id="data" type="application/json">{"name":"grit","description":"Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART, MAX811L reset, 9.216 MHz oscillator.","period_ns":217.014,"params":{},"layout":[{"title":"Control","width":300,"blocks":["IR + step counter","Microcode ROM","Pipeline register"],"reg":false},{"title":"Datapath","width":330,"blocks":["PC","A","B","ALU"],"reg":false},{"title":"Memory","width":240,"blocks":["Program flash","SRAM"],"reg":false},{"title":"I/O","width":300,"blocks":["UART","Serial port","Clock","Reset"],"reg":false}],"chips":[{"name":"seq0","part":"ATF22V10C-7PX","package":"DIP-24","block":"IR + step counter","stage":"Control","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"IR0","mode":"reg","terms":[[["IRLD",true],["D11",true],["RESET",false]],[["IRLD",false],["IR0",true],["RESET",false]]]},{"out":"IR1","mode":"reg","terms":[[["IRLD",true],["D12",true],["RESET",false]],[["IRLD",false],["IR1",true],["RESET",false]]]},{"out":"IR2","mode":"reg","terms":[[["IRLD",true],["D13",true],["RESET",false]],[["IRLD",false],["IR2",true],["RESET",false]]]},{"out":"IR3","mode":"reg","terms":[[["IRLD",true],["D14",true],["RESET",false]],[["IRLD",false],["IR3",true],["RESET",false]]]},{"out":"IR4","mode":"reg","terms":[[["IRLD",true],["D15",true],["RESET",false]],[["IRLD",false],["IR4",true],["RESET",false]]]},{"out":"STEP0","mode":"reg","terms":[[["IRLD",false],["STEP0",false],["RESET",false]]]},{"out":"STEP1","mode":"reg","terms":[[["IRLD",false],["STEP0",true],["STEP1",false],["RESET",false]],[["IRLD",false],["STEP0",false],["STEP1",true],["RESET",false]]]},{"out":"STEP2","mode":"reg","terms":[[["IRLD",false],["STEP0",true],["STEP1",true],["STEP2",false],["RESET",false]],[["IRLD",false],["STEP1",false],["STEP2",true],["RESET",false]],[["IRLD",false],["STEP0",false],["STEP2",true],["RESET",false]]]},{"out":"STEP3","mode":"reg","terms":[[["IRLD",false],["STEP0",true],["STEP1",true],["STEP2",true],["STEP3",false],["RESET",false]],[["IRLD",false],["STEP2",false],["STEP3",true],["RESET",false]],[["IRLD",false],["STEP1",false],["STEP3",true],["RESET",false]],[["IRLD",false],["STEP0",false],["STEP3",true],["RESET",false]]]},{"out":"NEL","mode":"reg","terms":[[["ADRV",true],["NE",true],["RESET",false]],[["ADRV",false],["NEL",true],["RESET",false]]]}],"pins":[[1,"CLK"],[2,"ADRV"],[3,"D11"],[4,"D12"],[5,"D13"],[6,"D14"],[7,"D15"],[8,"IRLD"],[9,"NE"],[10,"RESET"],[20,"IR0"],[17,"IR1"],[21,"IR2"],[16,"IR3"],[22,"IR4"],[14,"STEP0"],[15,"STEP1"],[18,"STEP2"],[19,"STEP3"],[23,"NEL"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"ADRV","net":"ADRV","kind":"in"},{"pin":3,"name":"D11","net":"D11","kind":"in"},{"pin":4,"name":"D12","net":"D12","kind":"in"},{"pin":5,"name":"D13","net":"D13","kind":"in"},{"pin":6,"name":"D14","net":"D14","kind":"in"},{"pin":7,"name":"D15","net":"D15","kind":"in"},{"pin":8,"name":"IRLD","net":"IRLD","kind":"in"},{"pin":9,"name":"NE","net":"NE","kind":"in"},{"pin":10,"name":"RESET","net":"RESET","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":14,"name":"STEP0","net":"STEP0","kind":"out"},{"pin":15,"name":"STEP1","net":"STEP1","kind":"out"},{"pin":16,"name":"IR3","net":"IR3","kind":"out"},{"pin":17,"name":"IR1","net":"IR1","kind":"out"},{"pin":18,"name":"STEP2","net":"STEP2","kind":"out"},{"pin":19,"name":"STEP3","net":"STEP3","kind":"out"},{"pin":20,"name":"IR0","net":"IR0","kind":"out"},{"pin":21,"name":"IR2","net":"IR2","kind":"out"},{"pin":22,"name":"IR4","net":"IR4","kind":"out"},{"pin":23,"name":"NEL","net":"NEL","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"mir0","part":"ATF22V10C-7PX","package":"DIP-24","block":"Pipeline register","stage":"Control","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"PCDRV","mode":"reg","terms":[[["M0",true],["RESET",false]]]},{"out":"MEMRD_n","mode":"reg","active_low":true,"terms":[[["M1",true],["RESET",false]]]},{"out":"ALUOE","mode":"reg","terms":[[["M2",true],["RESET",false]]]},{"out":"WE_n","mode":"reg","active_low":true,"terms":[[["M3",true],["RESET",false]]]},{"out":"ALD","mode":"reg","terms":[[["M4",true],["RESET",false]]]},{"out":"BLD","mode":"reg","terms":[[["M5",true],["RESET",false]]]},{"out":"PCLD","mode":"reg","terms":[[["M6",true],["RESET",false]]]},{"out":"PCINC","mode":"reg","terms":[[["M7",true],["RESET",false]]]}],"pins":[[1,"CLK"],[2,"M0"],[3,"M1"],[4,"M2"],[5,"M3"],[6,"M4"],[7,"M5"],[8,"M6"],[9,"M7"],[10,"RESET"],[19,"PCDRV"],[18,"MEMRD_n"],[20,"ALUOE"],[17,"WE_n"],[21,"ALD"],[16,"BLD"],[22,"PCLD"],[15,"PCINC"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"M0","net":"M0","kind":"in"},{"pin":3,"name":"M1","net":"M1","kind":"in"},{"pin":4,"name":"M2","net":"M2","kind":"in"},{"pin":5,"name":"M3","net":"M3","kind":"in"},{"pin":6,"name":"M4","net":"M4","kind":"in"},{"pin":7,"name":"M5","net":"M5","kind":"in"},{"pin":8,"name":"M6","net":"M6","kind":"in"},{"pin":9,"name":"M7","net":"M7","kind":"in"},{"pin":10,"name":"RESET","net":"RESET","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":15,"name":"PCINC","net":"PCINC","kind":"out"},{"pin":16,"name":"BLD","net":"BLD","kind":"out"},{"pin":17,"name":"WE_n","net":"WE_n","kind":"out"},{"pin":18,"name":"MEMRD_n","net":"MEMRD_n","kind":"out"},{"pin":19,"name":"PCDRV","net":"PCDRV","kind":"out"},{"pin":20,"name":"ALUOE","net":"ALUOE","kind":"out"},{"pin":21,"name":"ALD","net":"ALD","kind":"out"},{"pin":22,"name":"PCLD","net":"PCLD","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"mir1","part":"ATF22V10C-7PX","package":"DIP-24","block":"Pipeline register","stage":"Control","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"IRLD","mode":"reg","terms":[[["M8",true],["RESET",false]]]},{"out":"F0","mode":"reg","terms":[[["M9",true],["RESET",false]]]},{"out":"F1","mode":"reg","terms":[[["M10",true],["RESET",false]]]},{"out":"ADRV","mode":"reg","terms":[[["M11",true],["RESET",false]]]},{"out":"AUX0","mode":"reg","terms":[[["M12",true],["RESET",false]]]},{"out":"AUX1","mode":"reg","terms":[[["M13",true],["RESET",false]]]},{"out":"AUX2","mode":"reg","terms":[[["M14",true],["RESET",false]]]},{"out":"AUX3","mode":"reg","terms":[[["M15",true],["RESET",false]]]}],"pins":[[1,"CLK"],[2,"M10"],[3,"M11"],[4,"M12"],[5,"M13"],[6,"M14"],[7,"M15"],[8,"M8"],[9,"M9"],[10,"RESET"],[19,"IRLD"],[18,"F0"],[20,"F1"],[17,"ADRV"],[21,"AUX0"],[16,"AUX1"],[22,"AUX2"],[15,"AUX3"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"M10","net":"M10","kind":"in"},{"pin":3,"name":"M11","net":"M11","kind":"in"},{"pin":4,"name":"M12","net":"M12","kind":"in"},{"pin":5,"name":"M13","net":"M13","kind":"in"},{"pin":6,"name":"M14","net":"M14","kind":"in"},{"pin":7,"name":"M15","net":"M15","kind":"in"},{"pin":8,"name":"M8","net":"M8","kind":"in"},{"pin":9,"name":"M9","net":"M9","kind":"in"},{"pin":10,"name":"RESET","net":"RESET","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":15,"name":"AUX3","net":"AUX3","kind":"out"},{"pin":16,"name":"AUX1","net":"AUX1","kind":"out"},{"pin":17,"name":"ADRV","net":"ADRV","kind":"out"},{"pin":18,"name":"F0","net":"F0","kind":"out"},{"pin":19,"name":"IRLD","net":"IRLD","kind":"out"},{"pin":20,"name":"F1","net":"F1","kind":"out"},{"pin":21,"name":"AUX0","net":"AUX0","kind":"out"},{"pin":22,"name":"AUX2","net":"AUX2","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"pc0","part":"ATF22V10C-7PX","package":"DIP-24","block":"PC","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"ADDR1","mode":"reg","terms":[[["PCLD",true],["D1",true],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR1",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR2","mode":"reg","terms":[[["PCLD",true],["D2",true],["RESET",false]],[["PCLD",false],["ADDR2",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR2",false],["ADDR1",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR2",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR3","mode":"reg","terms":[[["PCLD",true],["D3",true],["RESET",false]],[["PCLD",false],["ADDR3",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR3",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR3",false],["ADDR1",true],["ADDR2",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR3",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR4","mode":"reg","terms":[[["PCLD",true],["D4",true],["RESET",false]],[["PCLD",false],["ADDR4",true],["ADDR3",false],["RESET",false]],[["PCLD",false],["ADDR4",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR4",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR4",false],["ADDR1",true],["ADDR2",true],["ADDR3",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR4",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR5","mode":"reg","terms":[[["PCLD",true],["D5",true],["RESET",false]],[["PCLD",false],["ADDR5",true],["ADDR4",false],["RESET",false]],[["PCLD",false],["ADDR5",true],["ADDR3",false],["RESET",false]],[["PCLD",false],["ADDR5",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR5",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR5",false],["ADDR1",true],["ADDR2",true],["ADDR3",true],["ADDR4",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR5",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR6","mode":"reg","terms":[[["PCLD",true],["D6",true],["RESET",false]],[["PCLD",false],["ADDR6",true],["ADDR5",false],["RESET",false]],[["PCLD",false],["ADDR6",true],["ADDR4",false],["RESET",false]],[["PCLD",false],["ADDR6",true],["ADDR3",false],["RESET",false]],[["PCLD",false],["ADDR6",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR6",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR6",false],["ADDR1",true],["ADDR2",true],["ADDR3",true],["ADDR4",true],["ADDR5",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR6",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR7","mode":"reg","terms":[[["PCLD",true],["D7",true],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR6",false],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR5",false],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR4",false],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR3",false],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR7",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR7",false],["ADDR1",true],["ADDR2",true],["ADDR3",true],["ADDR4",true],["ADDR5",true],["ADDR6",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR7",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR8","mode":"reg","terms":[[["PCLD",true],["D8",true],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR7",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR6",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR5",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR4",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR3",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR2",false],["RESET",false]],[["PCLD",false],["ADDR8",true],["ADDR1",false],["RESET",false]],[["PCLD",false],["PCINC",true],["ADDR8",false],["ADDR1",true],["ADDR2",true],["ADDR3",true],["ADDR4",true],["ADDR5",true],["ADDR6",true],["ADDR7",true],["RESET",false]],[["PCLD",false],["PCINC",false],["ADDR8",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"CO","mode":"comb","terms":[[["PCINC",true],["ADDR1",true],["ADDR2",true],["ADDR3",true],["ADDR4",true],["ADDR5",true],["ADDR6",true],["ADDR7",true],["ADDR8",true]]]}],"pins":[[1,"CLK"],[2,"D1"],[3,"D2"],[4,"D3"],[5,"D4"],[6,"D5"],[7,"D6"],[8,"D7"],[9,"D8"],[10,"PCDRV"],[11,"PCINC"],[13,"PCLD"],[14,"RESET"],[15,"ADDR1"],[22,"ADDR2"],[16,"ADDR3"],[21,"ADDR4"],[17,"ADDR5"],[20,"ADDR6"],[18,"ADDR7"],[19,"ADDR8"],[23,"CO"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"D1","net":"D1","kind":"in"},{"pin":3,"name":"D2","net":"D2","kind":"in"},{"pin":4,"name":"D3","net":"D3","kind":"in"},{"pin":5,"name":"D4","net":"D4","kind":"in"},{"pin":6,"name":"D5","net":"D5","kind":"in"},{"pin":7,"name":"D6","net":"D6","kind":"in"},{"pin":8,"name":"D7","net":"D7","kind":"in"},{"pin":9,"name":"D8","net":"D8","kind":"in"},{"pin":10,"name":"PCDRV","net":"PCDRV","kind":"in"},{"pin":11,"name":"PCINC","net":"PCINC","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"PCLD","net":"PCLD","kind":"in"},{"pin":14,"name":"RESET","net":"RESET","kind":"in"},{"pin":15,"name":"ADDR1","net":"ADDR1","kind":"out"},{"pin":16,"name":"ADDR3","net":"ADDR3","kind":"out"},{"pin":17,"name":"ADDR5","net":"ADDR5","kind":"out"},{"pin":18,"name":"ADDR7","net":"ADDR7","kind":"out"},{"pin":19,"name":"ADDR8","net":"ADDR8","kind":"out"},{"pin":20,"name":"ADDR6","net":"ADDR6","kind":"out"},{"pin":21,"name":"ADDR4","net":"ADDR4","kind":"out"},{"pin":22,"name":"ADDR2","net":"ADDR2","kind":"out"},{"pin":23,"name":"CO","net":"CO","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"pc1","part":"ATF22V10C-7PX","package":"DIP-24","block":"PC","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"ADDR9","mode":"reg","terms":[[["PCLD",true],["D9",true],["RESET",false]],[["PCLD",false],["CO",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",false],["ADDR9",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR10","mode":"reg","terms":[[["PCLD",true],["D10",true],["RESET",false]],[["PCLD",false],["ADDR10",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR10",false],["ADDR9",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR10",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR11","mode":"reg","terms":[[["PCLD",true],["D11",true],["RESET",false]],[["PCLD",false],["ADDR11",true],["ADDR10",false],["RESET",false]],[["PCLD",false],["ADDR11",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR11",false],["ADDR9",true],["ADDR10",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR11",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR12","mode":"reg","terms":[[["PCLD",true],["D12",true],["RESET",false]],[["PCLD",false],["ADDR12",true],["ADDR11",false],["RESET",false]],[["PCLD",false],["ADDR12",true],["ADDR10",false],["RESET",false]],[["PCLD",false],["ADDR12",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR12",false],["ADDR9",true],["ADDR10",true],["ADDR11",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR12",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR13","mode":"reg","terms":[[["PCLD",true],["D13",true],["RESET",false]],[["PCLD",false],["ADDR13",true],["ADDR12",false],["RESET",false]],[["PCLD",false],["ADDR13",true],["ADDR11",false],["RESET",false]],[["PCLD",false],["ADDR13",true],["ADDR10",false],["RESET",false]],[["PCLD",false],["ADDR13",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR13",false],["ADDR9",true],["ADDR10",true],["ADDR11",true],["ADDR12",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR13",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR14","mode":"reg","terms":[[["PCLD",true],["D14",true],["RESET",false]],[["PCLD",false],["ADDR14",true],["ADDR13",false],["RESET",false]],[["PCLD",false],["ADDR14",true],["ADDR12",false],["RESET",false]],[["PCLD",false],["ADDR14",true],["ADDR11",false],["RESET",false]],[["PCLD",false],["ADDR14",true],["ADDR10",false],["RESET",false]],[["PCLD",false],["ADDR14",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR14",false],["ADDR9",true],["ADDR10",true],["ADDR11",true],["ADDR12",true],["ADDR13",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR14",true],["RESET",false]]],"oe":[["PCDRV",true]]},{"out":"ADDR15","mode":"reg","terms":[[["PCLD",true],["D15",true],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR14",false],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR13",false],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR12",false],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR11",false],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR10",false],["RESET",false]],[["PCLD",false],["ADDR15",true],["ADDR9",false],["RESET",false]],[["PCLD",false],["CO",true],["ADDR15",false],["ADDR9",true],["ADDR10",true],["ADDR11",true],["ADDR12",true],["ADDR13",true],["ADDR14",true],["RESET",false]],[["PCLD",false],["CO",false],["ADDR15",true],["RESET",false]]],"oe":[["PCDRV",true]]}],"pins":[[1,"CLK"],[2,"CO"],[3,"D10"],[4,"D11"],[5,"D12"],[6,"D13"],[7,"D14"],[8,"D15"],[9,"D9"],[10,"PCDRV"],[11,"PCLD"],[13,"RESET"],[22,"ADDR9"],[16,"ADDR10"],[21,"ADDR11"],[17,"ADDR12"],[20,"ADDR13"],[18,"ADDR14"],[19,"ADDR15"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"CO","net":"CO","kind":"in"},{"pin":3,"name":"D10","net":"D10","kind":"in"},{"pin":4,"name":"D11","net":"D11","kind":"in"},{"pin":5,"name":"D12","net":"D12","kind":"in"},{"pin":6,"name":"D13","net":"D13","kind":"in"},{"pin":7,"name":"D14","net":"D14","kind":"in"},{"pin":8,"name":"D15","net":"D15","kind":"in"},{"pin":9,"name":"D9","net":"D9","kind":"in"},{"pin":10,"name":"PCDRV","net":"PCDRV","kind":"in"},{"pin":11,"name":"PCLD","net":"PCLD","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"RESET","net":"RESET","kind":"in"},{"pin":16,"name":"ADDR10","net":"ADDR10","kind":"out"},{"pin":17,"name":"ADDR12","net":"ADDR12","kind":"out"},{"pin":18,"name":"ADDR14","net":"ADDR14","kind":"out"},{"pin":19,"name":"ADDR15","net":"ADDR15","kind":"out"},{"pin":20,"name":"ADDR13","net":"ADDR13","kind":"out"},{"pin":21,"name":"ADDR11","net":"ADDR11","kind":"out"},{"pin":22,"name":"ADDR9","net":"ADDR9","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"a0","part":"ATF22V10C-7PX","package":"DIP-24","block":"A","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"A0","mode":"reg","terms":[[["ALD",true],["D0",true]],[["ALD",false],["A0",true]]]},{"out":"ADDR1","mode":"reg","terms":[[["ALD",true],["D1",true]],[["ALD",false],["ADDR1",true]]],"oe":[["ADRV",true]]},{"out":"ADDR2","mode":"reg","terms":[[["ALD",true],["D2",true]],[["ALD",false],["ADDR2",true]]],"oe":[["ADRV",true]]},{"out":"ADDR3","mode":"reg","terms":[[["ALD",true],["D3",true]],[["ALD",false],["ADDR3",true]]],"oe":[["ADRV",true]]},{"out":"ADDR4","mode":"reg","terms":[[["ALD",true],["D4",true]],[["ALD",false],["ADDR4",true]]],"oe":[["ADRV",true]]},{"out":"ADDR5","mode":"reg","terms":[[["ALD",true],["D5",true]],[["ALD",false],["ADDR5",true]]],"oe":[["ADRV",true]]},{"out":"ADDR6","mode":"reg","terms":[[["ALD",true],["D6",true]],[["ALD",false],["ADDR6",true]]],"oe":[["ADRV",true]]},{"out":"ADDR7","mode":"reg","terms":[[["ALD",true],["D7",true]],[["ALD",false],["ADDR7",true]]],"oe":[["ADRV",true]]}],"pins":[[1,"CLK"],[2,"ADRV"],[3,"ALD"],[4,"D0"],[5,"D1"],[6,"D2"],[7,"D3"],[8,"D4"],[9,"D5"],[10,"D6"],[11,"D7"],[19,"A0"],[18,"ADDR1"],[20,"ADDR2"],[17,"ADDR3"],[21,"ADDR4"],[16,"ADDR5"],[22,"ADDR6"],[15,"ADDR7"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"ADRV","net":"ADRV","kind":"in"},{"pin":3,"name":"ALD","net":"ALD","kind":"in"},{"pin":4,"name":"D0","net":"D0","kind":"in"},{"pin":5,"name":"D1","net":"D1","kind":"in"},{"pin":6,"name":"D2","net":"D2","kind":"in"},{"pin":7,"name":"D3","net":"D3","kind":"in"},{"pin":8,"name":"D4","net":"D4","kind":"in"},{"pin":9,"name":"D5","net":"D5","kind":"in"},{"pin":10,"name":"D6","net":"D6","kind":"in"},{"pin":11,"name":"D7","net":"D7","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":15,"name":"ADDR7","net":"ADDR7","kind":"out"},{"pin":16,"name":"ADDR5","net":"ADDR5","kind":"out"},{"pin":17,"name":"ADDR3","net":"ADDR3","kind":"out"},{"pin":18,"name":"ADDR1","net":"ADDR1","kind":"out"},{"pin":19,"name":"A0","net":"A0","kind":"out"},{"pin":20,"name":"ADDR2","net":"ADDR2","kind":"out"},{"pin":21,"name":"ADDR4","net":"ADDR4","kind":"out"},{"pin":22,"name":"ADDR6","net":"ADDR6","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"a1","part":"ATF22V10C-7PX","package":"DIP-24","block":"A","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"ADDR8","mode":"reg","terms":[[["ALD",true],["D8",true]],[["ALD",false],["ADDR8",true]]],"oe":[["ADRV",true]]},{"out":"ADDR9","mode":"reg","terms":[[["ALD",true],["D9",true]],[["ALD",false],["ADDR9",true]]],"oe":[["ADRV",true]]},{"out":"ADDR10","mode":"reg","terms":[[["ALD",true],["D10",true]],[["ALD",false],["ADDR10",true]]],"oe":[["ADRV",true]]},{"out":"ADDR11","mode":"reg","terms":[[["ALD",true],["D11",true]],[["ALD",false],["ADDR11",true]]],"oe":[["ADRV",true]]},{"out":"ADDR12","mode":"reg","terms":[[["ALD",true],["D12",true]],[["ALD",false],["ADDR12",true]]],"oe":[["ADRV",true]]},{"out":"ADDR13","mode":"reg","terms":[[["ALD",true],["D13",true]],[["ALD",false],["ADDR13",true]]],"oe":[["ADRV",true]]},{"out":"ADDR14","mode":"reg","terms":[[["ALD",true],["D14",true]],[["ALD",false],["ADDR14",true]]],"oe":[["ADRV",true]]},{"out":"ADDR15","mode":"reg","terms":[[["ALD",true],["D15",true]],[["ALD",false],["ADDR15",true]]],"oe":[["ADRV",true]]}],"pins":[[1,"CLK"],[2,"ADRV"],[3,"ALD"],[4,"D10"],[5,"D11"],[6,"D12"],[7,"D13"],[8,"D14"],[9,"D15"],[10,"D8"],[11,"D9"],[19,"ADDR8"],[18,"ADDR9"],[20,"ADDR10"],[17,"ADDR11"],[21,"ADDR12"],[16,"ADDR13"],[22,"ADDR14"],[15,"ADDR15"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"ADRV","net":"ADRV","kind":"in"},{"pin":3,"name":"ALD","net":"ALD","kind":"in"},{"pin":4,"name":"D10","net":"D10","kind":"in"},{"pin":5,"name":"D11","net":"D11","kind":"in"},{"pin":6,"name":"D12","net":"D12","kind":"in"},{"pin":7,"name":"D13","net":"D13","kind":"in"},{"pin":8,"name":"D14","net":"D14","kind":"in"},{"pin":9,"name":"D15","net":"D15","kind":"in"},{"pin":10,"name":"D8","net":"D8","kind":"in"},{"pin":11,"name":"D9","net":"D9","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":15,"name":"ADDR15","net":"ADDR15","kind":"out"},{"pin":16,"name":"ADDR13","net":"ADDR13","kind":"out"},{"pin":17,"name":"ADDR11","net":"ADDR11","kind":"out"},{"pin":18,"name":"ADDR9","net":"ADDR9","kind":"out"},{"pin":19,"name":"ADDR8","net":"ADDR8","kind":"out"},{"pin":20,"name":"ADDR10","net":"ADDR10","kind":"out"},{"pin":21,"name":"ADDR12","net":"ADDR12","kind":"out"},{"pin":22,"name":"ADDR14","net":"ADDR14","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"b0","part":"ATF22V10C-7PX","package":"DIP-24","block":"B","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"B0","mode":"reg","terms":[[["BLD",true],["D0",true]],[["BLD",false],["B0",true]]]},{"out":"B1","mode":"reg","terms":[[["BLD",true],["D1",true]],[["BLD",false],["B1",true]]]},{"out":"B2","mode":"reg","terms":[[["BLD",true],["D2",true]],[["BLD",false],["B2",true]]]},{"out":"B3","mode":"reg","terms":[[["BLD",true],["D3",true]],[["BLD",false],["B3",true]]]},{"out":"B4","mode":"reg","terms":[[["BLD",true],["D4",true]],[["BLD",false],["B4",true]]]},{"out":"B5","mode":"reg","terms":[[["BLD",true],["D5",true]],[["BLD",false],["B5",true]]]},{"out":"B6","mode":"reg","terms":[[["BLD",true],["D6",true]],[["BLD",false],["B6",true]]]},{"out":"B7","mode":"reg","terms":[[["BLD",true],["D7",true]],[["BLD",false],["B7",true]]]},{"out":"RS1","mode":"reg","active_low":true,"terms":[[["RST_n",true]]],"sync":true},{"out":"RESET","mode":"reg","active_low":true,"terms":[[["RS1",false]]]}],"pins":[[1,"CLK"],[2,"BLD"],[3,"D0"],[4,"D1"],[5,"D2"],[6,"D3"],[7,"D4"],[8,"D5"],[9,"D6"],[10,"D7"],[11,"RST_n"],[19,"B0"],[18,"B1"],[20,"B2"],[17,"B3"],[21,"B4"],[16,"B5"],[22,"B6"],[15,"B7"],[23,"RS1"],[14,"RESET"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"BLD","net":"BLD","kind":"in"},{"pin":3,"name":"D0","net":"D0","kind":"in"},{"pin":4,"name":"D1","net":"D1","kind":"in"},{"pin":5,"name":"D2","net":"D2","kind":"in"},{"pin":6,"name":"D3","net":"D3","kind":"in"},{"pin":7,"name":"D4","net":"D4","kind":"in"},{"pin":8,"name":"D5","net":"D5","kind":"in"},{"pin":9,"name":"D6","net":"D6","kind":"in"},{"pin":10,"name":"D7","net":"D7","kind":"in"},{"pin":11,"name":"RST_n","net":"RST_n","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":14,"name":"RESET","net":"RESET","kind":"out"},{"pin":15,"name":"B7","net":"B7","kind":"out"},{"pin":16,"name":"B5","net":"B5","kind":"out"},{"pin":17,"name":"B3","net":"B3","kind":"out"},{"pin":18,"name":"B1","net":"B1","kind":"out"},{"pin":19,"name":"B0","net":"B0","kind":"out"},{"pin":20,"name":"B2","net":"B2","kind":"out"},{"pin":21,"name":"B4","net":"B4","kind":"out"},{"pin":22,"name":"B6","net":"B6","kind":"out"},{"pin":23,"name":"RS1","net":"RS1","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"b1","part":"ATF22V10C-7PX","package":"DIP-24","block":"B","stage":"Datapath","model":{"kind":"gal","clk":"CLK","ar":null,"eqs":[{"out":"B8","mode":"reg","terms":[[["BLD",true],["D8",true]],[["BLD",false],["B8",true]]]},{"out":"B9","mode":"reg","terms":[[["BLD",true],["D9",true]],[["BLD",false],["B9",true]]]},{"out":"B10","mode":"reg","terms":[[["BLD",true],["D10",true]],[["BLD",false],["B10",true]]]},{"out":"B11","mode":"reg","terms":[[["BLD",true],["D11",true]],[["BLD",false],["B11",true]]]},{"out":"B12","mode":"reg","terms":[[["BLD",true],["D12",true]],[["BLD",false],["B12",true]]]},{"out":"B13","mode":"reg","terms":[[["BLD",true],["D13",true]],[["BLD",false],["B13",true]]]},{"out":"B14","mode":"reg","terms":[[["BLD",true],["D14",true]],[["BLD",false],["B14",true]]]},{"out":"B15","mode":"reg","terms":[[["BLD",true],["D15",true]],[["BLD",false],["B15",true]]]}],"pins":[[1,"CLK"],[2,"BLD"],[3,"D10"],[4,"D11"],[5,"D12"],[6,"D13"],[7,"D14"],[8,"D15"],[9,"D8"],[10,"D9"],[19,"B8"],[18,"B9"],[20,"B10"],[17,"B11"],[21,"B12"],[16,"B13"],[22,"B14"],[15,"B15"]]},"pins":[{"pin":1,"name":"CLK","net":"CLK","kind":"in"},{"pin":2,"name":"BLD","net":"BLD","kind":"in"},{"pin":3,"name":"D10","net":"D10","kind":"in"},{"pin":4,"name":"D11","net":"D11","kind":"in"},{"pin":5,"name":"D12","net":"D12","kind":"in"},{"pin":6,"name":"D13","net":"D13","kind":"in"},{"pin":7,"name":"D14","net":"D14","kind":"in"},{"pin":8,"name":"D15","net":"D15","kind":"in"},{"pin":9,"name":"D8","net":"D8","kind":"in"},{"pin":10,"name":"D9","net":"D9","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":15,"name":"B15","net":"B15","kind":"out"},{"pin":16,"name":"B13","net":"B13","kind":"out"},{"pin":17,"name":"B11","net":"B11","kind":"out"},{"pin":18,"name":"B9","net":"B9","kind":"out"},{"pin":19,"name":"B8","net":"B8","kind":"out"},{"pin":20,"name":"B10","net":"B10","kind":"out"},{"pin":21,"name":"B12","net":"B12","kind":"out"},{"pin":22,"name":"B14","net":"B14","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"alu0","part":"ATF22V10C-7PX","package":"DIP-24","block":"ALU","stage":"Datapath","model":{"kind":"gal","clk":"CLK2X","ar":null,"eqs":[{"out":"D0","mode":"comb","terms":[[["A0",true],["B0",false],["F1",false],["F0",false]],[["A0",false],["B0",true],["F1",false],["F0",false]],[["A0",false],["B0",false],["F1",true],["F0",false]],[["A0",true],["B0",true],["F0",true]],[["B0",true],["F1",true],["F0",true]]],"oe":[["ALUOE",true]]},{"out":"ALU0_C1","mode":"comb","terms":[[["A0",true],["B0",true],["F1",false],["F0",false]]]},{"out":"D1","mode":"comb","terms":[[["ADDR1",true],["B1",false],["F1",false],["F0",false],["ALU0_C1",false]],[["ADDR1",false],["B1",true],["F1",false],["F0",false],["ALU0_C1",false]],[["ADDR1",false],["B1",false],["F1",true],["F0",false]],[["ADDR1",true],["B1",true],["F0",true]],[["B1",true],["F1",true],["F0",true]],[["ADDR1",false],["B1",false],["F0",false],["ALU0_C1",true]],[["ADDR1",true],["B1",true],["F1",false],["ALU0_C1",true]]],"oe":[["ALUOE",true]]},{"out":"ALU0_C2","mode":"comb","terms":[[["ADDR1",true],["B1",true],["F1",false],["F0",false]],[["ADDR1",true],["F1",false],["F0",false],["ALU0_C1",true]],[["B1",true],["F1",false],["F0",false],["ALU0_C1",true]]]},{"out":"D2","mode":"comb","terms":[[["ADDR2",true],["B2",false],["F1",false],["F0",false],["ALU0_C2",false]],[["ADDR2",false],["B2",true],["F1",false],["F0",false],["ALU0_C2",false]],[["ADDR2",false],["B2",false],["F1",true],["F0",false]],[["ADDR2",true],["B2",true],["F0",true]],[["B2",true],["F1",true],["F0",true]],[["ADDR2",false],["B2",false],["F0",false],["ALU0_C2",true]],[["ADDR2",true],["B2",true],["F1",false],["ALU0_C2",true]]],"oe":[["ALUOE",true]]},{"out":"ALU0_C3","mode":"comb","terms":[[["ADDR2",true],["B2",true],["F1",false],["F0",false]],[["ADDR2",true],["F1",false],["F0",false],["ALU0_C2",true]],[["B2",true],["F1",false],["F0",false],["ALU0_C2",true]]]},{"out":"D3","mode":"comb","terms":[[["ADDR3",true],["B3",false],["F1",false],["F0",false],["ALU0_C3",false]],[["ADDR3",false],["B3",true],["F1",false],["F0",false],["ALU0_C3",false]],[["ADDR3",false],["B3",false],["F1",true],["F0",false]],[["ADDR3",true],["B3",true],["F0",true]],[["B3",true],["F1",true],["F0",true]],[["ADDR3",false],["B3",false],["F0",false],["ALU0_C3",true]],[["ADDR3",true],["B3",true],["F1",false],["ALU0_C3",true]]],"oe":[["ALUOE",true]]},{"out":"COUT0","mode":"comb","terms":[[["ADDR3",true],["B3",true],["F1",false],["F0",false]],[["ADDR3",true],["F1",false],["F0",false],["ALU0_C3",true]],[["B3",true],["F1",false],["F0",false],["ALU0_C3",true]]]},{"out":"NE0","mode":"comb","terms":[[["A0",true],["B0",false]],[["ADDR1",true],["B1",false]],[["ADDR2",true],["B2",false]],[["ADDR3",true],["B3",false]],[["A0",false],["B0",true]],[["ADDR1",false],["B1",true]],[["ADDR2",false],["B2",true]],[["ADDR3",false],["B3",true]]]},{"out":"CLK","mode":"reg","terms":[[["CLK",false]]]}],"pins":[[1,"CLK2X"],[2,"A0"],[3,"ADDR1"],[4,"ADDR2"],[5,"ADDR3"],[6,"ALUOE"],[7,"B0"],[8,"B1"],[9,"B2"],[10,"B3"],[11,"F0"],[13,"F1"],[21,"D0"],[23,"ALU0_C1"],[18,"D1"],[16,"ALU0_C2"],[20,"D2"],[22,"ALU0_C3"],[17,"D3"],[15,"COUT0"],[19,"NE0"],[14,"CLK"]]},"pins":[{"pin":1,"name":"CLK2X","net":"CLK2X","kind":"in"},{"pin":2,"name":"A0","net":"A0","kind":"in"},{"pin":3,"name":"ADDR1","net":"ADDR1","kind":"in"},{"pin":4,"name":"ADDR2","net":"ADDR2","kind":"in"},{"pin":5,"name":"ADDR3","net":"ADDR3","kind":"in"},{"pin":6,"name":"ALUOE","net":"ALUOE","kind":"in"},{"pin":7,"name":"B0","net":"B0","kind":"in"},{"pin":8,"name":"B1","net":"B1","kind":"in"},{"pin":9,"name":"B2","net":"B2","kind":"in"},{"pin":10,"name":"B3","net":"B3","kind":"in"},{"pin":11,"name":"F0","net":"F0","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"F1","net":"F1","kind":"in"},{"pin":14,"name":"CLK","net":"CLK","kind":"out"},{"pin":15,"name":"COUT0","net":"COUT0","kind":"out"},{"pin":16,"name":"ALU0_C2","net":"ALU0_C2","kind":"out"},{"pin":17,"name":"D3","net":"D3","kind":"out"},{"pin":18,"name":"D1","net":"D1","kind":"out"},{"pin":19,"name":"NE0","net":"NE0","kind":"out"},{"pin":20,"name":"D2","net":"D2","kind":"out"},{"pin":21,"name":"D0","net":"D0","kind":"out"},{"pin":22,"name":"ALU0_C3","net":"ALU0_C3","kind":"out"},{"pin":23,"name":"ALU0_C1","net":"ALU0_C1","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"alu1","part":"ATF22V10C-7PX","package":"DIP-24","block":"ALU","stage":"Datapath","model":{"kind":"gal","clk":null,"ar":null,"eqs":[{"out":"D4","mode":"comb","terms":[[["ADDR4",true],["B4",false],["F1",false],["F0",false],["COUT0",false]],[["ADDR4",false],["B4",true],["F1",false],["F0",false],["COUT0",false]],[["ADDR4",false],["B4",false],["F1",true],["F0",false]],[["ADDR4",true],["B4",true],["F0",true]],[["B4",true],["F1",true],["F0",true]],[["ADDR4",false],["B4",false],["F0",false],["COUT0",true]],[["ADDR4",true],["B4",true],["F1",false],["COUT0",true]]],"oe":[["ALUOE",true]]},{"out":"ALU1_C1","mode":"comb","terms":[[["ADDR4",true],["B4",true],["F1",false],["F0",false]],[["ADDR4",true],["F1",false],["F0",false],["COUT0",true]],[["B4",true],["F1",false],["F0",false],["COUT0",true]]]},{"out":"D5","mode":"comb","terms":[[["ADDR5",true],["B5",false],["F1",false],["F0",false],["ALU1_C1",false]],[["ADDR5",false],["B5",true],["F1",false],["F0",false],["ALU1_C1",false]],[["ADDR5",false],["B5",false],["F1",true],["F0",false]],[["ADDR5",true],["B5",true],["F0",true]],[["B5",true],["F1",true],["F0",true]],[["ADDR5",false],["B5",false],["F0",false],["ALU1_C1",true]],[["ADDR5",true],["B5",true],["F1",false],["ALU1_C1",true]]],"oe":[["ALUOE",true]]},{"out":"ALU1_C2","mode":"comb","terms":[[["ADDR5",true],["B5",true],["F1",false],["F0",false]],[["ADDR5",true],["F1",false],["F0",false],["ALU1_C1",true]],[["B5",true],["F1",false],["F0",false],["ALU1_C1",true]]]},{"out":"D6","mode":"comb","terms":[[["ADDR6",true],["B6",false],["F1",false],["F0",false],["ALU1_C2",false]],[["ADDR6",false],["B6",true],["F1",false],["F0",false],["ALU1_C2",false]],[["ADDR6",false],["B6",false],["F1",true],["F0",false]],[["ADDR6",true],["B6",true],["F0",true]],[["B6",true],["F1",true],["F0",true]],[["ADDR6",false],["B6",false],["F0",false],["ALU1_C2",true]],[["ADDR6",true],["B6",true],["F1",false],["ALU1_C2",true]]],"oe":[["ALUOE",true]]},{"out":"ALU1_C3","mode":"comb","terms":[[["ADDR6",true],["B6",true],["F1",false],["F0",false]],[["ADDR6",true],["F1",false],["F0",false],["ALU1_C2",true]],[["B6",true],["F1",false],["F0",false],["ALU1_C2",true]]]},{"out":"D7","mode":"comb","terms":[[["ADDR7",true],["B7",false],["F1",false],["F0",false],["ALU1_C3",false]],[["ADDR7",false],["B7",true],["F1",false],["F0",false],["ALU1_C3",false]],[["ADDR7",false],["B7",false],["F1",true],["F0",false]],[["ADDR7",true],["B7",true],["F0",true]],[["B7",true],["F1",true],["F0",true]],[["ADDR7",false],["B7",false],["F0",false],["ALU1_C3",true]],[["ADDR7",true],["B7",true],["F1",false],["ALU1_C3",true]]],"oe":[["ALUOE",true]]},{"out":"COUT1","mode":"comb","terms":[[["ADDR7",true],["B7",true],["F1",false],["F0",false]],[["ADDR7",true],["F1",false],["F0",false],["ALU1_C3",true]],[["B7",true],["F1",false],["F0",false],["ALU1_C3",true]]]},{"out":"NE1","mode":"comb","terms":[[["NE0",true]],[["ADDR4",true],["B4",false]],[["ADDR5",true],["B5",false]],[["ADDR6",true],["B6",false]],[["ADDR7",true],["B7",false]],[["ADDR4",false],["B4",true]],[["ADDR5",false],["B5",true]],[["ADDR6",false],["B6",true]],[["ADDR7",false],["B7",true]]]}],"pins":[[1,"ADDR4"],[2,"ADDR5"],[3,"ADDR6"],[4,"ADDR7"],[5,"ALUOE"],[6,"B4"],[7,"B5"],[8,"B6"],[9,"B7"],[10,"COUT0"],[11,"F0"],[13,"F1"],[14,"NE0"],[18,"D4"],[16,"ALU1_C1"],[20,"D5"],[22,"ALU1_C2"],[17,"D6"],[15,"ALU1_C3"],[21,"D7"],[23,"COUT1"],[19,"NE1"]]},"pins":[{"pin":1,"name":"ADDR4","net":"ADDR4","kind":"in"},{"pin":2,"name":"ADDR5","net":"ADDR5","kind":"in"},{"pin":3,"name":"ADDR6","net":"ADDR6","kind":"in"},{"pin":4,"name":"ADDR7","net":"ADDR7","kind":"in"},{"pin":5,"name":"ALUOE","net":"ALUOE","kind":"in"},{"pin":6,"name":"B4","net":"B4","kind":"in"},{"pin":7,"name":"B5","net":"B5","kind":"in"},{"pin":8,"name":"B6","net":"B6","kind":"in"},{"pin":9,"name":"B7","net":"B7","kind":"in"},{"pin":10,"name":"COUT0","net":"COUT0","kind":"in"},{"pin":11,"name":"F0","net":"F0","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"F1","net":"F1","kind":"in"},{"pin":14,"name":"NE0","net":"NE0","kind":"in"},{"pin":15,"name":"ALU1_C3","net":"ALU1_C3","kind":"out"},{"pin":16,"name":"ALU1_C1","net":"ALU1_C1","kind":"out"},{"pin":17,"name":"D6","net":"D6","kind":"out"},{"pin":18,"name":"D4","net":"D4","kind":"out"},{"pin":19,"name":"NE1","net":"NE1","kind":"out"},{"pin":20,"name":"D5","net":"D5","kind":"out"},{"pin":21,"name":"D7","net":"D7","kind":"out"},{"pin":22,"name":"ALU1_C2","net":"ALU1_C2","kind":"out"},{"pin":23,"name":"COUT1","net":"COUT1","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"alu2","part":"ATF22V10C-7PX","package":"DIP-24","block":"ALU","stage":"Datapath","model":{"kind":"gal","clk":null,"ar":null,"eqs":[{"out":"D8","mode":"comb","terms":[[["ADDR8",true],["B8",false],["F1",false],["F0",false],["COUT1",false]],[["ADDR8",false],["B8",true],["F1",false],["F0",false],["COUT1",false]],[["ADDR8",false],["B8",false],["F1",true],["F0",false]],[["ADDR8",true],["B8",true],["F0",true]],[["B8",true],["F1",true],["F0",true]],[["ADDR8",false],["B8",false],["F0",false],["COUT1",true]],[["ADDR8",true],["B8",true],["F1",false],["COUT1",true]]],"oe":[["ALUOE",true]]},{"out":"ALU2_C1","mode":"comb","terms":[[["ADDR8",true],["B8",true],["F1",false],["F0",false]],[["ADDR8",true],["F1",false],["F0",false],["COUT1",true]],[["B8",true],["F1",false],["F0",false],["COUT1",true]]]},{"out":"D9","mode":"comb","terms":[[["ADDR9",true],["B9",false],["F1",false],["F0",false],["ALU2_C1",false]],[["ADDR9",false],["B9",true],["F1",false],["F0",false],["ALU2_C1",false]],[["ADDR9",false],["B9",false],["F1",true],["F0",false]],[["ADDR9",true],["B9",true],["F0",true]],[["B9",true],["F1",true],["F0",true]],[["ADDR9",false],["B9",false],["F0",false],["ALU2_C1",true]],[["ADDR9",true],["B9",true],["F1",false],["ALU2_C1",true]]],"oe":[["ALUOE",true]]},{"out":"ALU2_C2","mode":"comb","terms":[[["ADDR9",true],["B9",true],["F1",false],["F0",false]],[["ADDR9",true],["F1",false],["F0",false],["ALU2_C1",true]],[["B9",true],["F1",false],["F0",false],["ALU2_C1",true]]]},{"out":"D10","mode":"comb","terms":[[["ADDR10",true],["B10",false],["F1",false],["F0",false],["ALU2_C2",false]],[["ADDR10",false],["B10",true],["F1",false],["F0",false],["ALU2_C2",false]],[["ADDR10",false],["B10",false],["F1",true],["F0",false]],[["ADDR10",true],["B10",true],["F0",true]],[["B10",true],["F1",true],["F0",true]],[["ADDR10",false],["B10",false],["F0",false],["ALU2_C2",true]],[["ADDR10",true],["B10",true],["F1",false],["ALU2_C2",true]]],"oe":[["ALUOE",true]]},{"out":"ALU2_C3","mode":"comb","terms":[[["ADDR10",true],["B10",true],["F1",false],["F0",false]],[["ADDR10",true],["F1",false],["F0",false],["ALU2_C2",true]],[["B10",true],["F1",false],["F0",false],["ALU2_C2",true]]]},{"out":"D11","mode":"comb","terms":[[["ADDR11",true],["B11",false],["F1",false],["F0",false],["ALU2_C3",false]],[["ADDR11",false],["B11",true],["F1",false],["F0",false],["ALU2_C3",false]],[["ADDR11",false],["B11",false],["F1",true],["F0",false]],[["ADDR11",true],["B11",true],["F0",true]],[["B11",true],["F1",true],["F0",true]],[["ADDR11",false],["B11",false],["F0",false],["ALU2_C3",true]],[["ADDR11",true],["B11",true],["F1",false],["ALU2_C3",true]]],"oe":[["ALUOE",true]]},{"out":"COUT2","mode":"comb","terms":[[["ADDR11",true],["B11",true],["F1",false],["F0",false]],[["ADDR11",true],["F1",false],["F0",false],["ALU2_C3",true]],[["B11",true],["F1",false],["F0",false],["ALU2_C3",true]]]},{"out":"NE2","mode":"comb","terms":[[["NE1",true]],[["ADDR8",true],["B8",false]],[["ADDR9",true],["B9",false]],[["ADDR10",true],["B10",false]],[["ADDR11",true],["B11",false]],[["ADDR8",false],["B8",true]],[["ADDR9",false],["B9",true]],[["ADDR10",false],["B10",true]],[["ADDR11",false],["B11",true]]]}],"pins":[[1,"ADDR10"],[2,"ADDR11"],[3,"ADDR8"],[4,"ADDR9"],[5,"ALUOE"],[6,"B10"],[7,"B11"],[8,"B8"],[9,"B9"],[10,"COUT1"],[11,"F0"],[13,"F1"],[14,"NE1"],[18,"D8"],[16,"ALU2_C1"],[20,"D9"],[22,"ALU2_C2"],[17,"D10"],[15,"ALU2_C3"],[21,"D11"],[23,"COUT2"],[19,"NE2"]]},"pins":[{"pin":1,"name":"ADDR10","net":"ADDR10","kind":"in"},{"pin":2,"name":"ADDR11","net":"ADDR11","kind":"in"},{"pin":3,"name":"ADDR8","net":"ADDR8","kind":"in"},{"pin":4,"name":"ADDR9","net":"ADDR9","kind":"in"},{"pin":5,"name":"ALUOE","net":"ALUOE","kind":"in"},{"pin":6,"name":"B10","net":"B10","kind":"in"},{"pin":7,"name":"B11","net":"B11","kind":"in"},{"pin":8,"name":"B8","net":"B8","kind":"in"},{"pin":9,"name":"B9","net":"B9","kind":"in"},{"pin":10,"name":"COUT1","net":"COUT1","kind":"in"},{"pin":11,"name":"F0","net":"F0","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"F1","net":"F1","kind":"in"},{"pin":14,"name":"NE1","net":"NE1","kind":"in"},{"pin":15,"name":"ALU2_C3","net":"ALU2_C3","kind":"out"},{"pin":16,"name":"ALU2_C1","net":"ALU2_C1","kind":"out"},{"pin":17,"name":"D10","net":"D10","kind":"out"},{"pin":18,"name":"D8","net":"D8","kind":"out"},{"pin":19,"name":"NE2","net":"NE2","kind":"out"},{"pin":20,"name":"D9","net":"D9","kind":"out"},{"pin":21,"name":"D11","net":"D11","kind":"out"},{"pin":22,"name":"ALU2_C2","net":"ALU2_C2","kind":"out"},{"pin":23,"name":"COUT2","net":"COUT2","kind":"out"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"alu3","part":"ATF22V10C-7PX","package":"DIP-24","block":"ALU","stage":"Datapath","model":{"kind":"gal","clk":null,"ar":null,"eqs":[{"out":"D12","mode":"comb","terms":[[["ADDR12",true],["B12",false],["F1",false],["F0",false],["COUT2",false]],[["ADDR12",false],["B12",true],["F1",false],["F0",false],["COUT2",false]],[["ADDR12",false],["B12",false],["F1",true],["F0",false]],[["ADDR12",true],["B12",true],["F0",true]],[["B12",true],["F1",true],["F0",true]],[["ADDR12",false],["B12",false],["F0",false],["COUT2",true]],[["ADDR12",true],["B12",true],["F1",false],["COUT2",true]]],"oe":[["ALUOE",true]]},{"out":"ALU3_C1","mode":"comb","terms":[[["ADDR12",true],["B12",true],["F1",false],["F0",false]],[["ADDR12",true],["F1",false],["F0",false],["COUT2",true]],[["B12",true],["F1",false],["F0",false],["COUT2",true]]]},{"out":"D13","mode":"comb","terms":[[["ADDR13",true],["B13",false],["F1",false],["F0",false],["ALU3_C1",false]],[["ADDR13",false],["B13",true],["F1",false],["F0",false],["ALU3_C1",false]],[["ADDR13",false],["B13",false],["F1",true],["F0",false]],[["ADDR13",true],["B13",true],["F0",true]],[["B13",true],["F1",true],["F0",true]],[["ADDR13",false],["B13",false],["F0",false],["ALU3_C1",true]],[["ADDR13",true],["B13",true],["F1",false],["ALU3_C1",true]]],"oe":[["ALUOE",true]]},{"out":"ALU3_C2","mode":"comb","terms":[[["ADDR13",true],["B13",true],["F1",false],["F0",false]],[["ADDR13",true],["F1",false],["F0",false],["ALU3_C1",true]],[["B13",true],["F1",false],["F0",false],["ALU3_C1",true]]]},{"out":"D14","mode":"comb","terms":[[["ADDR14",true],["B14",false],["F1",false],["F0",false],["ALU3_C2",false]],[["ADDR14",false],["B14",true],["F1",false],["F0",false],["ALU3_C2",false]],[["ADDR14",false],["B14",false],["F1",true],["F0",false]],[["ADDR14",true],["B14",true],["F0",true]],[["B14",true],["F1",true],["F0",true]],[["ADDR14",false],["B14",false],["F0",false],["ALU3_C2",true]],[["ADDR14",true],["B14",true],["F1",false],["ALU3_C2",true]]],"oe":[["ALUOE",true]]},{"out":"ALU3_C3","mode":"comb","terms":[[["ADDR14",true],["B14",true],["F1",false],["F0",false]],[["ADDR14",true],["F1",false],["F0",false],["ALU3_C2",true]],[["B14",true],["F1",false],["F0",false],["ALU3_C2",true]]]},{"out":"D15","mode":"comb","terms":[[["ADDR15",true],["B15",false],["F1",false],["F0",false],["ALU3_C3",false]],[["ADDR15",false],["B15",true],["F1",false],["F0",false],["ALU3_C3",false]],[["ADDR15",false],["B15",false],["F1",true],["F0",false]],[["ADDR15",true],["B15",true],["F0",true]],[["B15",true],["F1",true],["F0",true]],[["ADDR15",false],["B15",false],["F0",false],["ALU3_C3",true]],[["ADDR15",true],["B15",true],["F1",false],["ALU3_C3",true]]],"oe":[["ALUOE",true]]},{"out":"NE","mode":"comb","terms":[[["NE2",true]],[["ADDR12",true],["B12",false]],[["ADDR13",true],["B13",false]],[["ADDR14",true],["B14",false]],[["ADDR15",true],["B15",false]],[["ADDR12",false],["B12",true]],[["ADDR13",false],["B13",true]],[["ADDR14",false],["B14",true]],[["ADDR15",false],["B15",true]]]}],"pins":[[1,"ADDR12"],[2,"ADDR13"],[3,"ADDR14"],[4,"ADDR15"],[5,"ALUOE"],[6,"B12"],[7,"B13"],[8,"B14"],[9,"B15"],[10,"COUT2"],[11,"F0"],[13,"F1"],[23,"NE2"],[18,"D12"],[16,"ALU3_C1"],[20,"D13"],[22,"ALU3_C2"],[17,"D14"],[15,"ALU3_C3"],[21,"D15"],[19,"NE"]]},"pins":[{"pin":1,"name":"ADDR12","net":"ADDR12","kind":"in"},{"pin":2,"name":"ADDR13","net":"ADDR13","kind":"in"},{"pin":3,"name":"ADDR14","net":"ADDR14","kind":"in"},{"pin":4,"name":"ADDR15","net":"ADDR15","kind":"in"},{"pin":5,"name":"ALUOE","net":"ALUOE","kind":"in"},{"pin":6,"name":"B12","net":"B12","kind":"in"},{"pin":7,"name":"B13","net":"B13","kind":"in"},{"pin":8,"name":"B14","net":"B14","kind":"in"},{"pin":9,"name":"B15","net":"B15","kind":"in"},{"pin":10,"name":"COUT2","net":"COUT2","kind":"in"},{"pin":11,"name":"F0","net":"F0","kind":"in"},{"pin":12,"name":"GND","net":"GND","kind":"power"},{"pin":13,"name":"F1","net":"F1","kind":"in"},{"pin":15,"name":"ALU3_C3","net":"ALU3_C3","kind":"out"},{"pin":16,"name":"ALU3_C1","net":"ALU3_C1","kind":"out"},{"pin":17,"name":"D14","net":"D14","kind":"out"},{"pin":18,"name":"D12","net":"D12","kind":"out"},{"pin":19,"name":"NE","net":"NE","kind":"out"},{"pin":20,"name":"D13","net":"D13","kind":"out"},{"pin":21,"name":"D15","net":"D15","kind":"out"},{"pin":22,"name":"ALU3_C2","net":"ALU3_C2","kind":"out"},{"pin":23,"name":"NE2","net":"NE2","kind":"in"},{"pin":24,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"osc0","part":"SG-8018CA 9.216MHz","package":"3225","block":"Clock","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"EN","net":"VCC","kind":"passive"},{"pin":2,"name":"GND","net":"GND","kind":"passive"},{"pin":3,"name":"OUT","net":"CLK2X","kind":"passive"},{"pin":4,"name":"VCC","net":"VCC","kind":"passive"}]},{"name":"rst0","part":"MAX811LEUS+T","package":"SOT-143","block":"Reset","stage":"I/O","role":"supervisor","model":{"kind":"supervisor"},"pins":[{"pin":1,"name":"GND","net":"GND","kind":"power"},{"pin":2,"name":"RESET#","net":"RST_n","kind":"out"},{"pin":3,"name":"MR#","net":"MR_n","kind":"in"},{"pin":4,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"rom0","part":"SST39SF040-70-4C-PHE","package":"DIP-32","block":"Program flash","stage":"Memory","role":"rom:0","model":{"kind":"rom","tacc_ns":70,"toe_ns":35,"tdf_ns":25},"pins":[{"pin":1,"name":"A18","net":"PBANK2","kind":"in"},{"pin":2,"name":"A16","net":"PBANK0","kind":"in"},{"pin":3,"name":"A15","net":"GND","kind":"in"},{"pin":4,"name":"A12","net":"ADDR13","kind":"in"},{"pin":5,"name":"A7","net":"ADDR8","kind":"in"},{"pin":6,"name":"A6","net":"ADDR7","kind":"in"},{"pin":7,"name":"A5","net":"ADDR6","kind":"in"},{"pin":8,"name":"A4","net":"ADDR5","kind":"in"},{"pin":9,"name":"A3","net":"ADDR4","kind":"in"},{"pin":10,"name":"A2","net":"ADDR3","kind":"in"},{"pin":11,"name":"A1","net":"ADDR2","kind":"in"},{"pin":12,"name":"A0","net":"ADDR1","kind":"in"},{"pin":13,"name":"DQ0","net":"D0","kind":"bidir"},{"pin":14,"name":"DQ1","net":"D1","kind":"bidir"},{"pin":15,"name":"DQ2","net":"D2","kind":"bidir"},{"pin":16,"name":"GND","net":"GND","kind":"power"},{"pin":17,"name":"DQ3","net":"D3","kind":"bidir"},{"pin":18,"name":"DQ4","net":"D4","kind":"bidir"},{"pin":19,"name":"DQ5","net":"D5","kind":"bidir"},{"pin":20,"name":"DQ6","net":"D6","kind":"bidir"},{"pin":21,"name":"DQ7","net":"D7","kind":"bidir"},{"pin":22,"name":"CE#","net":"ADDR15","kind":"in"},{"pin":23,"name":"A10","net":"ADDR11","kind":"in"},{"pin":24,"name":"OE#","net":"MEMRD_n","kind":"in"},{"pin":25,"name":"A11","net":"ADDR12","kind":"in"},{"pin":26,"name":"A9","net":"ADDR10","kind":"in"},{"pin":27,"name":"A8","net":"ADDR9","kind":"in"},{"pin":28,"name":"A13","net":"ADDR14","kind":"in"},{"pin":29,"name":"A14","net":"GND","kind":"in"},{"pin":30,"name":"A17","net":"PBANK1","kind":"in"},{"pin":31,"name":"WE#","net":"VCC","kind":"in"},{"pin":32,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"rom1","part":"SST39SF040-70-4C-PHE","package":"DIP-32","block":"Program flash","stage":"Memory","role":"rom:1","model":{"kind":"rom","tacc_ns":70,"toe_ns":35,"tdf_ns":25},"pins":[{"pin":1,"name":"A18","net":"PBANK2","kind":"in"},{"pin":2,"name":"A16","net":"PBANK0","kind":"in"},{"pin":3,"name":"A15","net":"GND","kind":"in"},{"pin":4,"name":"A12","net":"ADDR13","kind":"in"},{"pin":5,"name":"A7","net":"ADDR8","kind":"in"},{"pin":6,"name":"A6","net":"ADDR7","kind":"in"},{"pin":7,"name":"A5","net":"ADDR6","kind":"in"},{"pin":8,"name":"A4","net":"ADDR5","kind":"in"},{"pin":9,"name":"A3","net":"ADDR4","kind":"in"},{"pin":10,"name":"A2","net":"ADDR3","kind":"in"},{"pin":11,"name":"A1","net":"ADDR2","kind":"in"},{"pin":12,"name":"A0","net":"ADDR1","kind":"in"},{"pin":13,"name":"DQ0","net":"D8","kind":"bidir"},{"pin":14,"name":"DQ1","net":"D9","kind":"bidir"},{"pin":15,"name":"DQ2","net":"D10","kind":"bidir"},{"pin":16,"name":"GND","net":"GND","kind":"power"},{"pin":17,"name":"DQ3","net":"D11","kind":"bidir"},{"pin":18,"name":"DQ4","net":"D12","kind":"bidir"},{"pin":19,"name":"DQ5","net":"D13","kind":"bidir"},{"pin":20,"name":"DQ6","net":"D14","kind":"bidir"},{"pin":21,"name":"DQ7","net":"D15","kind":"bidir"},{"pin":22,"name":"CE#","net":"ADDR15","kind":"in"},{"pin":23,"name":"A10","net":"ADDR11","kind":"in"},{"pin":24,"name":"OE#","net":"MEMRD_n","kind":"in"},{"pin":25,"name":"A11","net":"ADDR12","kind":"in"},{"pin":26,"name":"A9","net":"ADDR10","kind":"in"},{"pin":27,"name":"A8","net":"ADDR9","kind":"in"},{"pin":28,"name":"A13","net":"ADDR14","kind":"in"},{"pin":29,"name":"A14","net":"GND","kind":"in"},{"pin":30,"name":"A17","net":"PBANK1","kind":"in"},{"pin":31,"name":"WE#","net":"VCC","kind":"in"},{"pin":32,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"uc0","part":"SST39SF040-70-4C-PHE","package":"DIP-32","block":"Microcode ROM","stage":"Control","role":"ucode:0","model":{"kind":"rom","tacc_ns":70,"toe_ns":35,"tdf_ns":25},"pins":[{"pin":1,"name":"A18","net":"GND","kind":"in"},{"pin":2,"name":"A16","net":"GND","kind":"in"},{"pin":3,"name":"A15","net":"GND","kind":"in"},{"pin":4,"name":"A12","net":"UBANK2","kind":"in"},{"pin":5,"name":"A7","net":"IR2","kind":"in"},{"pin":6,"name":"A6","net":"IR1","kind":"in"},{"pin":7,"name":"A5","net":"IR0","kind":"in"},{"pin":8,"name":"A4","net":"NEL","kind":"in"},{"pin":9,"name":"A3","net":"STEP3","kind":"in"},{"pin":10,"name":"A2","net":"STEP2","kind":"in"},{"pin":11,"name":"A1","net":"STEP1","kind":"in"},{"pin":12,"name":"A0","net":"STEP0","kind":"in"},{"pin":13,"name":"DQ0","net":"M0","kind":"bidir"},{"pin":14,"name":"DQ1","net":"M1","kind":"bidir"},{"pin":15,"name":"DQ2","net":"M2","kind":"bidir"},{"pin":16,"name":"GND","net":"GND","kind":"power"},{"pin":17,"name":"DQ3","net":"M3","kind":"bidir"},{"pin":18,"name":"DQ4","net":"M4","kind":"bidir"},{"pin":19,"name":"DQ5","net":"M5","kind":"bidir"},{"pin":20,"name":"DQ6","net":"M6","kind":"bidir"},{"pin":21,"name":"DQ7","net":"M7","kind":"bidir"},{"pin":22,"name":"CE#","net":"GND","kind":"in"},{"pin":23,"name":"A10","net":"UBANK0","kind":"in"},{"pin":24,"name":"OE#","net":"GND","kind":"in"},{"pin":25,"name":"A11","net":"UBANK1","kind":"in"},{"pin":26,"name":"A9","net":"IR4","kind":"in"},{"pin":27,"name":"A8","net":"IR3","kind":"in"},{"pin":28,"name":"A13","net":"GND","kind":"in"},{"pin":29,"name":"A14","net":"GND","kind":"in"},{"pin":30,"name":"A17","net":"GND","kind":"in"},{"pin":31,"name":"WE#","net":"VCC","kind":"in"},{"pin":32,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"uc1","part":"SST39SF040-70-4C-PHE","package":"DIP-32","block":"Microcode ROM","stage":"Control","role":"ucode:1","model":{"kind":"rom","tacc_ns":70,"toe_ns":35,"tdf_ns":25},"pins":[{"pin":1,"name":"A18","net":"GND","kind":"in"},{"pin":2,"name":"A16","net":"GND","kind":"in"},{"pin":3,"name":"A15","net":"GND","kind":"in"},{"pin":4,"name":"A12","net":"UBANK2","kind":"in"},{"pin":5,"name":"A7","net":"IR2","kind":"in"},{"pin":6,"name":"A6","net":"IR1","kind":"in"},{"pin":7,"name":"A5","net":"IR0","kind":"in"},{"pin":8,"name":"A4","net":"NEL","kind":"in"},{"pin":9,"name":"A3","net":"STEP3","kind":"in"},{"pin":10,"name":"A2","net":"STEP2","kind":"in"},{"pin":11,"name":"A1","net":"STEP1","kind":"in"},{"pin":12,"name":"A0","net":"STEP0","kind":"in"},{"pin":13,"name":"DQ0","net":"M8","kind":"bidir"},{"pin":14,"name":"DQ1","net":"M9","kind":"bidir"},{"pin":15,"name":"DQ2","net":"M10","kind":"bidir"},{"pin":16,"name":"GND","net":"GND","kind":"power"},{"pin":17,"name":"DQ3","net":"M11","kind":"bidir"},{"pin":18,"name":"DQ4","net":"M12","kind":"bidir"},{"pin":19,"name":"DQ5","net":"M13","kind":"bidir"},{"pin":20,"name":"DQ6","net":"M14","kind":"bidir"},{"pin":21,"name":"DQ7","net":"M15","kind":"bidir"},{"pin":22,"name":"CE#","net":"GND","kind":"in"},{"pin":23,"name":"A10","net":"UBANK0","kind":"in"},{"pin":24,"name":"OE#","net":"GND","kind":"in"},{"pin":25,"name":"A11","net":"UBANK1","kind":"in"},{"pin":26,"name":"A9","net":"IR4","kind":"in"},{"pin":27,"name":"A8","net":"IR3","kind":"in"},{"pin":28,"name":"A13","net":"GND","kind":"in"},{"pin":29,"name":"A14","net":"GND","kind":"in"},{"pin":30,"name":"A17","net":"GND","kind":"in"},{"pin":31,"name":"WE#","net":"VCC","kind":"in"},{"pin":32,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"ram0","part":"AS7C164A-15PCN","package":"DIP-28","block":"SRAM","stage":"Memory","role":"ram:0","model":{"kind":"sram8k","timing":"AS7C164A-15"},"pins":[{"pin":2,"name":"A12","net":"ADDR13","kind":"in"},{"pin":3,"name":"A7","net":"ADDR8","kind":"in"},{"pin":4,"name":"A6","net":"ADDR7","kind":"in"},{"pin":5,"name":"A5","net":"ADDR6","kind":"in"},{"pin":6,"name":"A4","net":"ADDR5","kind":"in"},{"pin":7,"name":"A3","net":"ADDR4","kind":"in"},{"pin":8,"name":"A2","net":"ADDR3","kind":"in"},{"pin":9,"name":"A1","net":"ADDR2","kind":"in"},{"pin":10,"name":"A0","net":"ADDR1","kind":"in"},{"pin":11,"name":"DQ0","net":"D0","kind":"bidir"},{"pin":12,"name":"DQ1","net":"D1","kind":"bidir"},{"pin":13,"name":"DQ2","net":"D2","kind":"bidir"},{"pin":14,"name":"VSS","net":"GND","kind":"power"},{"pin":15,"name":"DQ3","net":"D3","kind":"bidir"},{"pin":16,"name":"DQ4","net":"D4","kind":"bidir"},{"pin":17,"name":"DQ5","net":"D5","kind":"bidir"},{"pin":18,"name":"DQ6","net":"D6","kind":"bidir"},{"pin":19,"name":"DQ7","net":"D7","kind":"bidir"},{"pin":20,"name":"CE#","net":"ADDR14","kind":"in"},{"pin":21,"name":"A10","net":"ADDR11","kind":"in"},{"pin":22,"name":"OE#","net":"MEMRD_n","kind":"in"},{"pin":23,"name":"A11","net":"ADDR12","kind":"in"},{"pin":24,"name":"A9","net":"ADDR10","kind":"in"},{"pin":25,"name":"A8","net":"ADDR9","kind":"in"},{"pin":26,"name":"CE2","net":"ADDR15","kind":"in"},{"pin":27,"name":"WE#","net":"WE_n","kind":"in"},{"pin":28,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"ram1","part":"AS7C164A-15PCN","package":"DIP-28","block":"SRAM","stage":"Memory","role":"ram:1","model":{"kind":"sram8k","timing":"AS7C164A-15"},"pins":[{"pin":2,"name":"A12","net":"ADDR13","kind":"in"},{"pin":3,"name":"A7","net":"ADDR8","kind":"in"},{"pin":4,"name":"A6","net":"ADDR7","kind":"in"},{"pin":5,"name":"A5","net":"ADDR6","kind":"in"},{"pin":6,"name":"A4","net":"ADDR5","kind":"in"},{"pin":7,"name":"A3","net":"ADDR4","kind":"in"},{"pin":8,"name":"A2","net":"ADDR3","kind":"in"},{"pin":9,"name":"A1","net":"ADDR2","kind":"in"},{"pin":10,"name":"A0","net":"ADDR1","kind":"in"},{"pin":11,"name":"DQ0","net":"D8","kind":"bidir"},{"pin":12,"name":"DQ1","net":"D9","kind":"bidir"},{"pin":13,"name":"DQ2","net":"D10","kind":"bidir"},{"pin":14,"name":"VSS","net":"GND","kind":"power"},{"pin":15,"name":"DQ3","net":"D11","kind":"bidir"},{"pin":16,"name":"DQ4","net":"D12","kind":"bidir"},{"pin":17,"name":"DQ5","net":"D13","kind":"bidir"},{"pin":18,"name":"DQ6","net":"D14","kind":"bidir"},{"pin":19,"name":"DQ7","net":"D15","kind":"bidir"},{"pin":20,"name":"CE#","net":"ADDR14","kind":"in"},{"pin":21,"name":"A10","net":"ADDR11","kind":"in"},{"pin":22,"name":"OE#","net":"MEMRD_n","kind":"in"},{"pin":23,"name":"A11","net":"ADDR12","kind":"in"},{"pin":24,"name":"A9","net":"ADDR10","kind":"in"},{"pin":25,"name":"A8","net":"ADDR9","kind":"in"},{"pin":26,"name":"CE2","net":"ADDR15","kind":"in"},{"pin":27,"name":"WE#","net":"WE_n","kind":"in"},{"pin":28,"name":"VCC","net":"VCC","kind":"power"}]},{"name":"uart0","part":"TL16C550DPTR","package":"LQFP-48","block":"UART","stage":"I/O","role":"uart","model":{"kind":"uart","xin_hz":9216000.0},"pins":[{"pin":2,"name":"D5","net":"D5","kind":"bidir"},{"pin":3,"name":"D6","net":"D6","kind":"bidir"},{"pin":4,"name":"D7","net":"D7","kind":"bidir"},{"pin":5,"name":"RCLK","net":"UBAUD","kind":"in"},{"pin":7,"name":"SIN","net":"SIN","kind":"in"},{"pin":8,"name":"SOUT","net":"SOUT","kind":"out"},{"pin":9,"name":"CS0","net":"ADDR14","kind":"in"},{"pin":10,"name":"CS1","net":"ADDR15","kind":"in"},{"pin":11,"name":"CS2#","net":"GND","kind":"in"},{"pin":12,"name":"BAUDOUT","net":"UBAUD","kind":"out"},{"pin":14,"name":"XIN","net":"CLK2X","kind":"in"},{"pin":16,"name":"WR1#","net":"WE_n","kind":"in"},{"pin":17,"name":"WR2","net":"GND","kind":"in"},{"pin":18,"name":"GND","net":"GND","kind":"power"},{"pin":19,"name":"RD1#","net":"MEMRD_n","kind":"in"},{"pin":20,"name":"RD2","net":"GND","kind":"in"},{"pin":24,"name":"ADS#","net":"GND","kind":"in"},{"pin":26,"name":"A2","net":"ADDR3","kind":"in"},{"pin":27,"name":"A1","net":"ADDR2","kind":"in"},{"pin":28,"name":"A0","net":"ADDR1","kind":"in"},{"pin":32,"name":"RTS#","net":"URTS_n","kind":"out"},{"pin":33,"name":"DTR#","net":"UDTR_n","kind":"out"},{"pin":35,"name":"MR","net":"RESET","kind":"in"},{"pin":38,"name":"CTS#","net":"UCTS_n","kind":"in"},{"pin":39,"name":"DSR#","net":"UDTR_n","kind":"in"},{"pin":40,"name":"DCD#","net":"UDTR_n","kind":"in"},{"pin":41,"name":"RI#","net":"VCC","kind":"in"},{"pin":42,"name":"VCC","net":"VCC","kind":"power"},{"pin":43,"name":"D0","net":"D0","kind":"bidir"},{"pin":44,"name":"D1","net":"D1","kind":"bidir"},{"pin":45,"name":"D2","net":"D2","kind":"bidir"},{"pin":46,"name":"D3","net":"D3","kind":"bidir"},{"pin":47,"name":"D4","net":"D4","kind":"bidir"}]},{"name":"xcvr0","part":"SP3232EEY-L/TR","package":"TSSOP-16","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"C1+","net":"XC_c1A","kind":"passive"},{"pin":2,"name":"V+","net":"XC_VP","kind":"passive"},{"pin":3,"name":"C1-","net":"XC_c1B","kind":"passive"},{"pin":4,"name":"C2+","net":"XC_c2A","kind":"passive"},{"pin":5,"name":"C2-","net":"XC_c2B","kind":"passive"},{"pin":6,"name":"V-","net":"XC_VM","kind":"passive"},{"pin":7,"name":"T2OUT","net":"RS232_RTS","kind":"passive"},{"pin":8,"name":"R2IN","net":"RS232_CTS","kind":"passive"},{"pin":9,"name":"R2OUT","net":"UCTS_n","kind":"passive"},{"pin":10,"name":"T2IN","net":"URTS_n","kind":"passive"},{"pin":11,"name":"T1IN","net":"SOUT","kind":"passive"},{"pin":12,"name":"R1OUT","net":"SIN","kind":"passive"},{"pin":13,"name":"R1IN","net":"RS232_RX","kind":"passive"},{"pin":14,"name":"T1OUT","net":"RS232_TX","kind":"passive"},{"pin":15,"name":"GND","net":"GND","kind":"passive"},{"pin":16,"name":"VCC","net":"VCC","kind":"passive"}]},{"name":"c1","part":"100nF 0603 X7R","package":"0603","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"1","net":"XC_c1A","kind":"passive"},{"pin":2,"name":"2","net":"XC_c1B","kind":"passive"}]},{"name":"c2","part":"100nF 0603 X7R","package":"0603","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"1","net":"XC_c2A","kind":"passive"},{"pin":2,"name":"2","net":"XC_c2B","kind":"passive"}]},{"name":"c3","part":"100nF 0603 X7R","package":"0603","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"1","net":"XC_VP","kind":"passive"},{"pin":2,"name":"2","net":"GND","kind":"passive"}]},{"name":"c4","part":"100nF 0603 X7R","package":"0603","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"1","net":"XC_VM","kind":"passive"},{"pin":2,"name":"2","net":"GND","kind":"passive"}]},{"name":"j1","part":"Header 1x5 2.54mm","package":"PinHeader_1x05","block":"Serial port","stage":"I/O","model":{"kind":"passive"},"pins":[{"pin":1,"name":"GND","net":"GND","kind":"passive"},{"pin":2,"name":"TX","net":"RS232_TX","kind":"passive"},{"pin":3,"name":"RX","net":"RS232_RX","kind":"passive"},{"pin":4,"name":"RTS","net":"RS232_RTS","kind":"passive"},{"pin":5,"name":"CTS","net":"RS232_CTS","kind":"passive"}]}],"nets":[{"name":"CLK"},{"name":"ADRV"},{"name":"D11"},{"name":"D12"},{"name":"D13"},{"name":"D14"},{"name":"D15"},{"name":"IRLD"},{"name":"NE"},{"name":"RESET","role":"reset"},{"name":"IR0"},{"name":"IR1"},{"name":"IR2"},{"name":"IR3"},{"name":"IR4"},{"name":"STEP0"},{"name":"STEP1"},{"name":"STEP2"},{"name":"STEP3"},{"name":"NEL"},{"name":"M0"},{"name":"M1"},{"name":"M2"},{"name":"M3"},{"name":"M4"},{"name":"M5"},{"name":"M6"},{"name":"M7"},{"name":"PCDRV"},{"name":"MEMRD_n"},{"name":"ALUOE"},{"name":"WE_n"},{"name":"ALD"},{"name":"BLD"},{"name":"PCLD"},{"name":"PCINC"},{"name":"M10"},{"name":"M11"},{"name":"M12"},{"name":"M13"},{"name":"M14"},{"name":"M15"},{"name":"M8"},{"name":"M9"},{"name":"F0"},{"name":"F1"},{"name":"AUX0"},{"name":"AUX1"},{"name":"AUX2"},{"name":"AUX3"},{"name":"D1"},{"name":"D2"},{"name":"D3"},{"name":"D4"},{"name":"D5"},{"name":"D6"},{"name":"D7"},{"name":"D8"},{"name":"ADDR1"},{"name":"ADDR2"},{"name":"ADDR3"},{"name":"ADDR4"},{"name":"ADDR5"},{"name":"ADDR6"},{"name":"ADDR7"},{"name":"ADDR8"},{"name":"CO"},{"name":"D10"},{"name":"D9"},{"name":"ADDR9"},{"name":"ADDR10"},{"name":"ADDR11"},{"name":"ADDR12"},{"name":"ADDR13"},{"name":"ADDR14","pull":"low"},{"name":"ADDR15","pull":"low"},{"name":"D0"},{"name":"A0"},{"name":"RST_n"},{"name":"B0"},{"name":"B1"},{"name":"B2"},{"name":"B3"},{"name":"B4"},{"name":"B5"},{"name":"B6"},{"name":"B7"},{"name":"RS1"},{"name":"B8"},{"name":"B9"},{"name":"B10"},{"name":"B11"},{"name":"B12"},{"name":"B13"},{"name":"B14"},{"name":"B15"},{"name":"CLK2X","role":"clk"},{"name":"ALU0_C1"},{"name":"ALU0_C2"},{"name":"ALU0_C3"},{"name":"COUT0"},{"name":"NE0"},{"name":"ALU1_C1"},{"name":"ALU1_C2"},{"name":"ALU1_C3"},{"name":"COUT1"},{"name":"NE1"},{"name":"ALU2_C1"},{"name":"ALU2_C2"},{"name":"ALU2_C3"},{"name":"COUT2"},{"name":"NE2"},{"name":"ALU3_C1"},{"name":"ALU3_C2"},{"name":"ALU3_C3"},{"name":"GND","tie":"low"},{"name":"VCC","tie":"high"},{"name":"MR_n","pull":"high","role":"reset_button"},{"name":"PBANK0","tie":"low"},{"name":"PBANK1","tie":"low"},{"name":"PBANK2","tie":"low"},{"name":"UBANK0","tie":"low"},{"name":"UBANK1","tie":"low"},{"name":"UBANK2","tie":"low"},{"name":"SIN"},{"name":"SOUT"},{"name":"UDTR_n"},{"name":"UBAUD"},{"name":"URTS_n"},{"name":"UCTS_n"},{"name":"RS232_TX"},{"name":"RS232_RX"},{"name":"RS232_RTS"},{"name":"RS232_CTS"},{"name":"XC_c1A"},{"name":"XC_c1B"},{"name":"XC_c2A"},{"name":"XC_c2B"},{"name":"XC_VP"},{"name":"XC_VM"}]}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const STIM = new Set(['CLK']);
+const DESC = {
+"PC": "Program counter, word address bits 14:2. Byte bits 1:0 are implicit zero; bits above 14 are hard zero (32 KB code space).",
+"INC": "PC + 4, as a word address (PC[14:2] + 1). Next sequential fetch address and the PC+4 that travels with the instruction.",
+"INCG": "All-ones detect of PC bits 10:2: the carry from the low incrementer slice into the high one.",
+"IM": "Instruction word read from instruction memory at PC. Valid 10 ns after the PC settles (IS61C64AL-10).",
+"IR": "Instruction register (IF/ID): the 32-bit instruction now in ID. Captured as all zeros (NOP) when KILL is set.",
+"P4": "PC+4 of the instruction in ID (IF/ID copy of INC). Base for the branch target adder and the JAL link.",
+"KILL": "Discard the instruction being fetched: a taken branch or JR is in EX. Forces IF/ID to capture NOP.",
+"SELINC": "Next PC = PC+4 (no branch, jump or JR).",
+"SELJT": "Next PC = jump target from the instruction in ID (J / JAL).",
+"SELBT": "Next PC = branch target: BEQ/BNE in EX resolved taken.",
+"SELAF": "Next PC = forwarded rs (JR in EX).",
+"XBT": "Branch target of the instruction in EX, computed in ID and registered: P4 + offset, word address.",
+"FA": "Operand A in EX after forwarding: rs from ID/EX, EX/MEM or MEM/WB. Bits 14:2 double as the JR / JALR target; bits 4:0 are the shift amount, complemented for right shifts.",
+"FB": "Operand B in EX after forwarding, inverted when XSUB (subtract = A + !B + 1).",
+"RA": "Register file bank A read data: register rs of the instruction in ID.",
+"RB": "Register file bank B read data: register rt of the instruction in ID.",
+"CERA_n": "Bank A read-port chip enable, high (port off) when rs is the register being written this cycle.",
+"CERB_n": "Bank B read-port chip enable, high when rt is the register being written this cycle.",
+"STA": "Steer A: rs equals the register MEM/WB is writing, so operand A comes from WD instead of the file.",
+"STB": "Steer B: rt equals the register MEM/WB is writing, so operand B / store data comes from WD.",
+"WD": "Write-back data (MEM/WB): ALU result or load data of the instruction in WB. Written to the register file and forwarded.",
+"WDEST": "Register number written by the instruction in WB.",
+"WREG": "Instruction in WB writes a register (dest is not r0).",
+"RTYPERW": "Decode: R-type instruction that writes rd.",
+"ITYPERW": "Decode: I-type instruction that writes rt (ALU immediates, LUI, LW).",
+"JAL": "Decode: JAL. Destination is r31; with LINK the link goes through operand B.",
+"SELIMM": "Decode: operand B is the immediate.",
+"SEXT": "Decode: immediate is sign-extended (else zero-extended).",
+"LUI": "Decode: immediate goes to bits 31:16.",
+"DSELJT": "Decode: J or JAL, requests the jump target as next PC.",
+"USESRT": "Decode: rt is an operand (R-type, shifts, BEQ, BNE, BLEZ, BGTZ), so B is eligible for forwarding.",
+"STORE": "Decode: SW, so the store data path is eligible for forwarding.",
+"XA": "ID/EX operand A: rs from the register file or WD (steer). For constant shifts bits 4:0 take the shamt field instead (rs is r0).",
+"XB": "ID/EX operand B: rt, WD (steer), the extended immediate, or the link (PC+8 = INC of the instruction in ID) for JAL / JALR.",
+"XSD": "ID/EX store data: rt from the register file or WD (steer).",
+"XOP": "ALU operation code, 3 bits: 0 add (subtract when XSUB), 1 pass B (links), 2 and, 3 or, 4 xor, 5 nor, 6 slt, 7 sltu.",
+"XSUB": "ALU control: invert B and carry in 1 (SUBU, SLT, SLTU, SLTI, SLTIU).",
+"XBEQ": "Instruction in EX is BEQ.",
+"XBNE": "Instruction in EX is BNE.",
+"XJR": "Instruction in EX is JR or JALR: next PC comes from FA.",
+"XMR": "Instruction in EX is a load.",
+"XMW": "Instruction in EX is a store.",
+"XRW": "Instruction in EX writes a register.",
+"XDEST": "Register written by the instruction in EX.",
+"XRS": "rs field of the instruction in EX.",
+"XRT": "rt field of the instruction in EX.",
+"XFAE": "Forward A from EX/MEM (writer one ahead).",
+"XFAM": "Forward A from MEM/WB (writer two ahead).",
+"XFBE": "Forward B from EX/MEM.",
+"XFBM": "Forward B from MEM/WB.",
+"XFSE": "Forward store data from EX/MEM.",
+"XFSM": "Forward store data from MEM/WB.",
+"BS0": "Branch adder: per-group sums of P4 + offset assuming carry-in 0.",
+"BS1": "Branch adder: per-group sums assuming carry-in 1.",
+"BG": "Branch adder: group carry-out with carry-in 0.",
+"BP": "Branch adder: group carry-out with carry-in 1.",
+"BC": "Branch adder: carry into each 3-bit group (lookahead).",
+"S0": "ALU: per-group sums of FA + FB assuming carry-in 0.",
+"S1": "ALU: per-group sums assuming carry-in 1.",
+"SUM": "ALU bit 0 sum with the carry-in (XSUB) folded in; the address bit 0 of a load or store.",
+"G": "ALU: group carry-out with carry-in 0.",
+"PP": "ALU: group carry-out with carry-in 1.",
+"C": "ALU: carry into each 3-bit group (lookahead over G and PP).",
+"NEQ": "Compare: per 8-bit group, FA differs from FB.",
+"MR": "EX/MEM result: ALU output (sum selected by the group carry, the logic op, or pass B) or the shifter output when XSH. Also the data-memory address for loads and stores.",
+"DQ": "Data memory bus: driven by the SRAMs whenever OE# is low (loads), by the EX/MEM store-data drivers during a store's MEM cycle.",
+"MDEST": "Register written by the instruction in MEM.",
+"MRW": "Instruction in MEM writes a register.",
+"MMR": "Instruction in MEM is a load (MEM/WB takes DQ instead of MR).",
+"MMW": "Instruction in MEM is a store: enables the store-data drivers and, with the tap, the write pulse.",
+"T1": "Delay line tap, CLK delayed 6 ns (DS1100-30, +-3 ns over 0..70 C). Clocks the second write-copy stage.",
+"T2": "Delay line tap, CLK delayed 12 ns (unused).",
+"T3": "Delay line tap, CLK delayed 18 ns. Clocks the first write-copy stage, which samples the MEM-stage destination, write flag, store address and store flag while they are stable mid-cycle.",
+"T4": "Delay line tap, CLK delayed 24 ns (unused).",
+"T5": "Delay line tap, CLK delayed 30 ns (unused).",
+"WC1D": "Write copy stage 1: MEM-stage destination register, sampled at T3.",
+"WC1W_n": "Write copy stage 1: MEM-stage write flag (low = write), sampled at T3; forced to write during RESET so r0 is zeroed.",
+"WDESTC": "Register file write-port address: stage-2 copy (T1) of the WB destination. Valid ~13 ns into the WB cycle, held ~4 ns past the edge that ends the write.",
+"WREGC_n": "Register file write-port R/W and A5 (low = write): stage-2 copy of the write flag. Idle parks the port at 32..63.",
+"HOLD": "Interlock: a load in ID right behind a store in EX, or a store in ID right behind a load in EX. PC and IF/ID hold, ID/EX takes a bubble; EX, MEM and WB proceed. Keeps loads out of the cycles where the data memory's outputs are off.",
+"LOAD": "Decode: LW.",
+"OEN": "Data memory OE#, registered: high during a store's EX cycle (from the decode of a store in ID, unless a load is in EX), its MEM cycle (the write) and the cycle after, so the SRAM outputs and the store-data drivers never overlap on DQ.",
+"WEN": "Data memory WE#: the write pulse, NAND of the 8 ns tap U1 and the store-in-MEM flag through one fast gate. Falls ~9 ns, rises ~28 ns into the store's MEM cycle.",
+"U1": "Second delay line (DS1100-40), CLK delayed 8 ns: timing input of the write gate.",
+"U2": "DS1100-40 tap, CLK delayed 16 ns (unused).",
+"U3": "DS1100-40 tap, CLK delayed 24 ns (unused).",
+"U4": "DS1100-40 tap, CLK delayed 32 ns (unused).",
+"U5": "DS1100-40 tap, CLK delayed 40 ns (unused).",
+"BOOT": "Boot copier active: from power-up until a cycle after DONE. Instruction memory OE# and the ROMs' gating follow it.",
+"BOOTCNT": "Boot copier counting: the PC is the address counter (released from reset through RESET_PC), held except in step 4 of each word.",
+"BOOTCNTD": "BOOTCNT delayed one cycle: sequences the hand-over of the data-memory address nets between the EX/MEM chips and the boot address buffers.",
+"STEP": "Boot step counter, 0..4 per word: 0-2 wait for the ROM, 3 write, 4 hold the address; the PC advances at the end of 4.",
+"WRAP": "PC bit above the boot region (PC15 on the board): the region has been copied.",
+"PCCLR": "Clears the PC at a phase change (through RESET_PC).",
+"RESET_PC": "The PC register's async reset: RESET while the copier is not counting, plus PCCLR.",
+"CODE": "Boot phase: 1 = code (writing instruction memory), 0 = data regions.",
+"PHASE": "Boot data region being copied, counting down from NPH to 0.",
+"NPH": "Wired constant: the number of the last data region to copy.",
+"LAST": "Copier is on the last data region.",
+"DONE": "Boot copy finished: turns the ROMs off and lets the reset synchroniser release the CPU.",
+"SKIP": "Wired: boot without copying (memories filled another way).",
+"BOOTD": "Boot data phase: the boot data buffers drive the data bus from the instruction bus.",
+"BOOTWI_n": "Instruction memory WE# during the boot code phase: a full-cycle write (registered, no gate).",
+"IMEN": "Instruction memory CE2: high after boot and during boot code-phase writes.",
+"DMEN_n": "Data memory CE#: high (deselected) during the boot code phase only.",
+"MMWB": "Store gate flag (registered): a store in MEM, or a boot data-phase write.",
+"ROMOE_n": "Boot ROM OE#: low until DONE.",
+"BA": "Boot address buffers: PC bits and the region number onto the data-memory address nets while the copier counts.",
+"PC15": "The incrementer's carry out: the PC has passed 8K words. The boot copier's WRAP on the board.",
+"INC15": "Carry out of the PC incrementer.",
+"CLK": "System clock, 34 ns period, 50% duty. Every pipeline register captures on the rising edge; both SRAM write ports are enabled by it (the write is the low half and ends at the edge). Also the delay line input.",
+"RST_n": "MAX811L RESET# (active low): held low from power-on for the part's 140 ms minimum timeout and while the button is pressed, released at an instant unrelated to the clock. 4.63 V threshold; the 5 V rail is set to about 5.1 V.",
+"MR_n": "MAX811L MR# (active low): the reset button, to ground, debounced inside the part. Wired high in the simulator.",
+"MIO": "I/O access in MEM: a load or store whose base register has bit 31 set (docs/bus.md). Deselects data memory, suppresses the write pulse, makes the bus strobes.",
+"BRD_n": "Bus read strobe: MIO and a load (docs/bus.md).",
+"BWR_n": "Bus write strobe: MIO and a store.",
+"BWEQ": "Bus write qualifier, registered: an I/O store in MEM, for a memory card's write pulse (docs/bus.md).",
+"BB8": "Bus byte-device flag from the selected device (tri-state, pulled down): only BD[7:0] is driven, the CPU zero-extends.",
+"SLOT0": "Serial bridge: the address is in slot 0 (A[26:23] = 0).",
+"SBCMD": "Serial bridge: write of the command register (offset 0).",
+"SBRDD": "Serial bridge: read of RDATA (offset 0).",
+"SBRDS": "Serial bridge: read of STATUS (offset 4).",
+"START": "Serial bridge: a command while not busy.",
+"UDOE": "Serial bridge: drive the 16550's data bus (a write command in progress).",
+"UD": "The 16550's private data bus: the bridge's data latch during a write, the chip during a read.",
+"SBA": "Serial bridge: the 16550 register address, latched from the command.",
+"SBRW": "Serial bridge: the command is a read.",
+"BUSY": "Serial bridge: a command is running; also the 16550's chip select.",
+"K": "Serial bridge: cycle count within the command.",
+"URD_n": "16550 RD1#: low for bridge cycles 1..3 of a read.",
+"UWR_n": "16550 WR1#: low for bridge cycles 1..2 of a write.",
+"LATCH": "Serial bridge: cycle 3 of a read; RDATA takes the chip's data at its end.",
+"RDATA": "Serial bridge: the result of the last read command.",
+"SZB": "Decode: byte-sized access (LB, LBU, SB). ID/EX store data lane 1 takes the low byte.",
+"NSTORE": "Decode: byte or halfword store, for the narrow-store hold.",
+"SFE": "Narrow store in ID names the destination of the instruction in EX: hold (its data would have to be forwarded, and only the register-file path replicates).",
+"SFM": "Narrow store in ID names the destination of the instruction in MEM: hold.",
+"XSZB": "ID/EX: byte-sized access.",
+"XSZH": "ID/EX: halfword-sized access.",
+"XLSX": "ID/EX: signed narrow load (LB, LH).",
+"XNAR": "ID/EX: narrow access; the EX/MEM store-data lanes 2 and 3 repeat lanes 0 and 1.",
+"MBE": "Data memory byte enables (active low), registered with the address: high for the lanes a narrow store leaves alone.",
+"MSZB": "MEM: byte-sized access.",
+"MSZH": "MEM: halfword-sized access.",
+"MLSX": "MEM: signed narrow load.",
+"LSGN": "Sign bit of the selected byte or halfword of DQ, for the load extension.",
+"MNR": "MEM/WB select: not a load, WD takes the ALU result (off during a bus wait).",
+"ML": "MEM/WB selects for WD bits 7:0: DQ lane 0, 1, 2 or 3.",
+"MW8": "MEM/WB select: bits 15:8 from their own lane (word, or halfword from the low half).",
+"MH1": "MEM/WB select: bits 15:8 from the high half's low byte (halfword at address 2).",
+"MSB": "MEM/WB select: bits 15:8 take the sign (signed byte load).",
+"MW16": "MEM/WB select: bits 31:16 from their own lane (word load).",
+"MSN": "MEM/WB select: bits 31:16 take the sign (signed narrow load).",
+"RS1": "Reset synchroniser stage 1 (active low): RST_n sampled on CLK. The one flip-flop allowed to see an asynchronous input; a setup violation resolves to a legal value (model assumption, see docs/memory-timing.md section 7).",
+"RESET": "Synchronised asynchronous reset, active high: RS1 registered once more, so it falls 2 to 5.5 ns after a clock edge. Clears the PC and every pipeline register; the write copies take it as synchronous data.",
+"LINK": "Decode: JAL or JALR. Operand B takes PC+8 and the ALU passes it through to the destination.",
+"SHIMM": "Decode: constant shift (SLL, SRL, SRA): ID/EX A bits 4:0 capture the shamt field.",
+"XSH": "Instruction in EX is a shift: EX/MEM takes the shifter output instead of the ALU.",
+"XSHR": "Shift right (SRL, SRA, SRLV, SRAV): amount complemented in Forward A, rotation +1, mask reversed.",
+"XSRA": "Arithmetic right shift: vacated bits fill with the sign of FB.",
+"XBRS": "Branch on a condition of rs alone (BLEZ, BGTZ, BLTZ, BGEZ): sign of FA, optionally OR rs == 0.",
+"XBZ": "rs-conditioned branch also tests rs == 0 (BLEZ, BGTZ).",
+"XBINV": "Invert the rs condition (BGTZ, BGEZ).",
+"SY": "Shifter stage 1: FB rotated left by FA[2:0] (an 8:1 sliding-window mux per bit).",
+"KEEP": "Shifter mask: for bit class j (bit index mod 8), whether an output whose 8-bit block equals the amount's high part keeps its rotated bit rather than the fill.",
+"FILL": "Shifter fill bit: the sign of FB for SRA / SRAV, else 0.",
+"SH": "Shifter stage 2: SY rotated by 8 * FA[4:3] (plus one more for right shifts), with the mask and fill folded in. The final shift result.",
+};
+const descOf = bus => DESC[bus] || '';
+function busOf(net){ const m = /^([A-Za-z][A-Za-z0-9]*?_?)(\d+)$/.exec(net); if (m && !/\d$/.test(m[1].replace(/_$/,'')) ) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; if (m) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; return {bus:net, bit:null}; }
+// ---------- blocks ----------
+const blocks = new Map();
+for (const c of DATA.chips) {
+  if (!blocks.has(c.block)) blocks.set(c.block, {name:c.block, stage:c.stage, chips:[], ins:new Map(), outs:new Map()});
+  const b = blocks.get(c.block); b.chips.push(c);
+  for (const {pin, net, kind} of c.pins) {
+    if (kind === 'power' || kind === 'nc' || net === 'VCC' || net === 'GND') continue;
+    const out = kind === 'out' || kind === 'bidir';
+    const {bus, bit} = busOf(net);
+    const side = out ? b.outs : b.ins;
+    if (!side.has(bus)) side.set(bus, {bits:new Set(), chips:new Map()});
+    const e = side.get(bus); e.bits.add(bit); if (!e.chips.has(c.name)) e.chips.set(c.name, new Set()); e.chips.get(c.name).add(bit);
+  }
+}
+const producers = new Map(), consumers = new Map(), busWidth = new Map();
+for (const b of blocks.values()) {
+  for (const [bus,e] of b.outs) { if (!producers.has(bus)) producers.set(bus, []); producers.get(bus).push(b.name); }
+  for (const [bus,e] of b.ins) { if (!consumers.has(bus)) consumers.set(bus, []); consumers.get(bus).push(b.name); }
+  for (const side of [b.ins, b.outs]) for (const [bus, e] of side) busWidth.set(bus, Math.max(busWidth.get(bus)||0, e.bits.has(null) ? 1 : Math.max(...e.bits)+1));
+}
+function busClass(bus){ return STIM.has(bus) ? 'stim' : (busWidth.get(bus) === 1 ? 'ctl' : ''); }
+function bitsLabel(bits){ const a=[...bits].filter(b=>b!==null); if (!a.length) return ''; const lo=Math.min(...a), hi=Math.max(...a); return lo===hi ? `[${lo}]` : `[${hi}:${lo}]`; }
+// ---------- column plan ----------
+const COLS = DATA.layout.map(c => ({title:c.title, w:c.width, blocks:c.blocks, reg:!!c.reg}));
+// (column plan comes from the board file)
+const colOf = new Map(), rowOf = new Map();
+COLS.forEach((c, i) => c.blocks.forEach((b, r) => { colOf.set(b, i); rowOf.set(b, r); }));
+// ---------- edge classification ----------
+// edge: {bus, src (block or null=clock), dst, kind: 'chan'|'top'|'bottom'|'wrap'}
+const edges = [];
+for (const [bus, cons] of consumers) {
+  const prods = producers.get(bus) || [null];
+  for (const src of prods) for (const dst of cons) {
+    if (src === dst) continue;
+    let kind;
+    if (src === null) kind = 'bottom';
+    else {
+      const cs = colOf.get(src), cd = colOf.get(dst);
+      if (cd === cs + 1) kind = busWidth.get(bus) === 1 ? 'bottom' : 'chan';
+      else if (cd > cs + 1) kind = 'bottom';
+      else if (cd === cs && rowOf.get(dst) > rowOf.get(src)) kind = 'wrap';
+      else kind = 'top';
+    }
+    edges.push({bus, src, dst, kind});
+  }
+}
+// channel tracks: channel k sits right of column k (k = -1 is left of column 0)
+const TRACK = 7, CH_PAD = 12;
+const chanBuses = Array.from({length: COLS.length + 1}, () => new Map()); // index k+1 -> bus -> track
+function useChan(k, bus) { const m = chanBuses[k+1]; if (!m.has(bus)) m.set(bus, m.size); }
+const topLanes = new Map(), bottomLanes = new Map();
+for (const e of edges) {
+  const cs = e.src === null ? -1 : colOf.get(e.src), cd = colOf.get(e.dst);
+  if (e.kind === 'chan') useChan(cs, e.bus);
+  else if (e.kind === 'wrap') { useChan(cs, e.bus); useChan(cs - 1, e.bus); }
+  else if (e.kind === 'top') { useChan(cs, e.bus); useChan(cd - 1, e.bus); if (!topLanes.has(e.bus)) topLanes.set(e.bus, topLanes.size); }
+  else { if (e.src !== null) useChan(cs, e.bus); useChan(cd - 1, e.bus); if (!bottomLanes.has(e.bus)) bottomLanes.set(e.bus, bottomLanes.size); }
+}
+const LANE = 8;
+const TOP_H = 30 + topLanes.size * LANE + 20;
+const TOP = TOP_H + 42; // stage titles between corridor and blocks
+// column x positions with channel widths
+let x = 0;
+const chanX = [];
+for (let k = -1; k < COLS.length; k++) {
+  const w = CH_PAD*2 + Math.max(0, chanBuses[k+1].size - 1) * TRACK;
+  chanX[k+1] = {x, w};
+  x += w;
+  if (k + 1 < COLS.length) { COLS[k+1].x = x; x += COLS[k+1].w; }
+}
+const totalW = x;
+function trackX(k, bus) { const c = chanX[k+1]; return c.x + CH_PAD + chanBuses[k+1].get(bus) * TRACK; }
+// ---------- block layout ----------
+const RAILW = 84, CHIPW = 46, CHIPH = 24, CGAP = 8, TITLEH = 22, BGAP = 30;
+const layout = new Map();
+let maxBottom = 0;
+for (const col of COLS) {
+  let y = TOP;
+  for (const name of col.blocks) {
+    const b = blocks.get(name);
+    const inner = col.w - 2*RAILW - 16;
+    const perRow = Math.max(1, Math.floor((inner + CGAP) / (CHIPW + CGAP)));
+    const rows = Math.ceil(b.chips.length / perRow);
+    const railRows = Math.max(b.ins.size, b.outs.size);
+    const h = TITLEH + 10 + Math.max(rows * (CHIPH + CGAP), railRows * 14) + 10;
+    layout.set(name, {x: col.x, y, w: col.w, h, perRow, reg: !!col.reg});
+    y += h + BGAP;
+  }
+  maxBottom = Math.max(maxBottom, y - BGAP);
+}
+const BOT0 = maxBottom + 40;
+const totalH = BOT0 + bottomLanes.size * LANE + 40;
+// ---------- render ----------
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+const el = (t, a={}, parent) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
+const root = el('g', {}, svg);
+const defs = el('defs', {}, root);
+for (const cls of ['', 'ctl', 'back', 'stim', 'hi']) {
+  const m = el('marker', {id:'arrow'+(cls||'data'), viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'6', markerHeight:'6', orient:'auto'}, defs);
+  el('path', {d:'M0,0 L10,5 L0,10 z', class:'arrow '+cls}, m);
+}
+const gBg = el('g', {}, root), gBuses = el('g', {}, root), gBlocks = el('g', {}, root);
+el('rect', {x:0, y:0, width:totalW, height:TOP_H, class:'corridor'}, gBg);
+el('text', {x:12, y:18, class:'corridor-label'}, gBg).textContent = 'back edges: results returning to earlier stages, and same-stage reuse';
+el('rect', {x:0, y:BOT0 - 16, width:totalW, height: totalH - BOT0 + 16, class:'corridor'}, gBg);
+el('text', {x:12, y:BOT0 - 2, class:'corridor-label'}, gBg).textContent = 'control signals forward, stage-skipping data, clock-generator strobes';
+for (const col of COLS) {
+  if (col.title) el('text', {x: col.x + col.w/2, y: TOP - 16, 'text-anchor':'middle', class:'stage-title'}, gBg).textContent = col.title;
+  if (col.reg) { const cx = col.x + col.w/2; el('line', {x1:cx, y1:TOP_H + 6, x2:cx, y2:BOT0 - 20, class:'divider'}, gBg); }
+}
+const wb = COLS[COLS.length - 1];
+['Write-back has no chips of its own:', 'MEM/WB drives WD, WDEST and WREG', 'back to the register file write port', '(blue, over the top).'].forEach((t, i) => el('text', {x: wb.x + 10, y: TOP + 14 + 16*i, class:'note'}, gBg).textContent = t);
+const ports = new Map(), chipPos = new Map(), railEls = new Map();
+for (const [name, L] of layout) {
+  const b = blocks.get(name);
+  const g = el('g', {class:'block' + (L.reg ? ' register' : '')}, gBlocks);
+  el('rect', {x:L.x, y:L.y, width:L.w, height:L.h, rx:2, class:'body'}, g);
+  el('text', {x:L.x+8, y:L.y+15, class:'title'}, g).textContent = name;
+  el('text', {x:L.x+L.w-8, y:L.y+15, 'text-anchor':'end', class:'count'}, g).textContent = b.chips.length + ' ' + kindLabel(b.chips[0]);
+  g.addEventListener('click', ev => { if (ev.target.classList.contains('body') || ev.target.classList.contains('title')) select({type:'block', name}); });
+  const cx0 = L.x + RAILW + 8, cy0 = L.y + TITLEH + 10;
+  b.chips.forEach((c, i) => {
+    const r = Math.floor(i / L.perRow), k = i % L.perRow;
+    const cx = cx0 + k*(CHIPW+CGAP), cy = cy0 + r*(CHIPH+CGAP);
+    chipPos.set(c.name, {x:cx, y:cy});
+    const gc = el('g', {class:'chip' + (c.model.kind==='gal' ? '' : ' sram'), 'data-chip':c.name}, g);
+    el('rect', {x:cx, y:cy, width:CHIPW, height:CHIPH, rx:1.5}, gc);
+    el('text', {x:cx+CHIPW/2, y:cy+CHIPH/2+3.5, 'text-anchor':'middle'}, gc).textContent = c.name;
+    gc.addEventListener('click', ev => { ev.stopPropagation(); select({type:'chip', name:c.name}); });
+    gc.addEventListener('mouseenter', () => hover({type:'chip', name:c.name}));
+    gc.addEventListener('mouseleave', () => hover(null));
+  });
+  const p = new Map(); ports.set(name, p);
+  const mkRail = (side, entries) => {
+    let i = 0;
+    for (const [bus, e] of [...entries].sort((a,b)=>a[0].localeCompare(b[0]))) {
+      const y = L.y + TITLEH + 18 + i*14; i++;
+      const xPort = side==='in' ? L.x : L.x+L.w;
+      const gr = el('g', {class:'rail', 'data-bus':bus}, g);
+      el('rect', {x: side==='in' ? L.x : L.x+L.w-RAILW, y:y-9, width:RAILW, height:13, class:'hit'}, gr);
+      el('text', {x: side==='in' ? L.x+6 : L.x+L.w-6, y, 'text-anchor': side==='in' ? 'start' : 'end'}, gr).textContent = bus;
+      el('text', {x: side==='in' ? L.x+RAILW-4 : L.x+L.w-RAILW+4, y, 'text-anchor': side==='in' ? 'end' : 'start', class:'w'}, gr).textContent = bitsLabel(e.bits);
+      el('circle', {cx:xPort, cy:y, r:2, class:'port'}, gr);
+      gr.appendChild(el('title')).textContent = `${bus}${bitsLabel(e.bits)}: ${descOf(bus)}`;
+      if (!p.has(bus)) p.set(bus, {}); p.get(bus)[side] = {x:xPort, y};
+      if (!railEls.has(bus)) railEls.set(bus, []); railEls.get(bus).push(gr);
+      gr.addEventListener('mouseenter', () => hover({type:'bus', name:bus}));
+      gr.addEventListener('mouseleave', () => hover(null));
+      gr.addEventListener('click', ev => { ev.stopPropagation(); select({type:'bus', name:bus}); });
+      for (const [chip, bits] of e.chips) {
+        const cp = chipPos.get(chip);
+        const x1 = side==='in' ? L.x+RAILW : L.x+L.w-RAILW;
+        const x2 = side==='in' ? cp.x : cp.x+CHIPW;
+        const y2 = cp.y + CHIPH/2 + (side==='in' ? -4 : 4);
+        const xm = side==='in' ? x1 + 6 + (i % 5) * 1.5 : x1 - 6 - (i % 5) * 1.5;
+        const path = el('path', {d:`M${x1},${y} H${xm} V${y2} H${x2}`, class:'pinline ' + busClass(bus), 'data-bus':bus, 'data-chip':chip}, g);
+        path.appendChild(el('title')).textContent = `${chip}: ${bus}${bitsLabel(bits)}`;
+        g.insertBefore(path, g.firstChild.nextSibling);
+      }
+    }
+  };
+  mkRail('in', b.ins);
+  mkRail('out', b.outs);
+}
+// ---------- route edges ----------
+const CLKX = 8;
+for (const e of edges) {
+  const bus = e.bus, w = busWidth.get(bus);
+  const sw = w >= 32 ? 3 : w >= 8 ? 2.2 : w >= 2 ? 1.6 : 1.1;
+  let cls = busClass(bus); if (e.kind === 'top' || e.kind === 'wrap' && false) cls = (cls === 'stim' ? 'stim' : 'back');
+  const dst = ports.get(e.dst).get(bus).in;
+  const cd = colOf.get(e.dst);
+  let d, sx, sy;
+  if (e.src === null) {
+    // clock generator: enters from the bottom-left, along a bottom lane
+    const ly = BOT0 + bottomLanes.get(bus) * LANE;
+    const tx = trackX(cd - 1, bus);
+    sx = CLKX; sy = ly;
+    d = `M${sx},${sy} H${tx} V${dst.y} H${dst.x}`;
+  } else {
+    const src = ports.get(e.src).get(bus).out; sx = src.x; sy = src.y;
+    const cs = colOf.get(e.src);
+    if (e.kind === 'chan') {
+      const tx = trackX(cs, bus);
+      d = `M${sx},${sy} H${tx} V${dst.y} H${dst.x}`;
+    } else if (e.kind === 'wrap') {
+      const tr = trackX(cs, bus), tl = trackX(cs - 1, bus);
+      const Ld = layout.get(e.dst);
+      const gy = Ld.y - BGAP/2 + (chanBuses[cs+1].get(bus) % 3) * 4 - 4;
+      d = `M${sx},${sy} H${tr} V${gy} H${tl} V${dst.y} H${dst.x}`;
+    } else if (e.kind === 'top') {
+      const tr = trackX(cs, bus), tl = trackX(cd - 1, bus);
+      const ly = 30 + topLanes.get(bus) * LANE;
+      d = `M${sx},${sy} H${tr} V${ly} H${tl} V${dst.y} H${dst.x}`;
+    } else {
+      const tr = trackX(cs, bus), tl = trackX(cd - 1, bus);
+      const ly = BOT0 + bottomLanes.get(bus) * LANE;
+      d = `M${sx},${sy} H${tr} V${ly} H${tl} V${dst.y} H${dst.x}`;
+    }
+  }
+  const path = el('path', {d, class:'bus '+cls, 'stroke-width':sw, 'marker-end':`url(#arrow${cls||'data'})`, 'data-bus':bus}, gBuses);
+  el('circle', {cx:sx, cy:sy, r:2.4, class:'src '+cls}, gBuses);
+  const hit = el('path', {d, class:'bus-hit', 'data-bus':bus}, gBuses);
+  hit.addEventListener('mouseenter', () => hover({type:'bus', name:bus}));
+  hit.addEventListener('mouseleave', () => hover(null));
+  hit.addEventListener('click', ev => { ev.stopPropagation(); select({type:'bus', name:bus}); });
+}
+el('text', {x:CLKX, y:BOT0 - 2 - 12, class:'note'}, gBg).textContent = '';
+el('text', {x:CLKX, y: totalH - 14, class:'note'}, gBg).textContent = 'clock generator (dashed): CLK, RESET, PH_RF, PH_CE, PH_SD';
+// ---------- interaction ----------
+const panel = document.getElementById('panel');
+let selected = null;
+function setHighlight(item) {
+  for (const p of gBuses.querySelectorAll('.bus')) p.classList.remove('hi','dim');
+  for (const p of gBlocks.querySelectorAll('.pinline')) p.classList.remove('hi');
+  for (const r of gBlocks.querySelectorAll('.rail')) r.classList.remove('hi');
+  for (const c of gBlocks.querySelectorAll('.chip')) c.classList.remove('sel');
+  if (!item) return;
+  const mark = nets => { for (const p of gBuses.querySelectorAll('.bus')) p.classList.add(nets.has(p.dataset.bus) ? 'hi' : 'dim'); };
+  if (item.type === 'bus') {
+    mark(new Set([item.name]));
+    for (const p of gBlocks.querySelectorAll(`.pinline[data-bus="${item.name}"]`)) p.classList.add('hi');
+    for (const r of railEls.get(item.name) || []) r.classList.add('hi');
+  } else if (item.type === 'chip') {
+    for (const c of gBlocks.querySelectorAll(`.chip[data-chip="${item.name}"]`)) c.classList.add('sel');
+    for (const p of gBlocks.querySelectorAll(`.pinline[data-chip="${item.name}"]`)) p.classList.add('hi');
+    mark(new Set(DATA.chips.find(c=>c.name===item.name).pins.map(p=>busOf(p[1]).bus)));
+  } else if (item.type === 'block') {
+    const b = blocks.get(item.name); mark(new Set([...b.ins.keys(), ...b.outs.keys()]));
+  }
+}
+function kindLabel(c) {
+  const k = c.model.kind;
+  return k === 'gal' ? 'GAL' : k === 'ds1100' ? 'delay line' : k === 'gate' ? 'gate' : k === 'supervisor' ? 'supervisor' : k === 'rom' ? 'ROM' : k === 'uart' ? 'UART' : k === 'passive' ? 'part' : 'SRAM';
+}
+function describe(item) {
+  const parts = new Map(); for (const c of DATA.chips) parts.set(c.part, (parts.get(c.part)||0)+1);
+  const bom = [...parts].sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${n} × ${p}`).join(', ');
+  if (!item) return `<h2>${DATA.name}</h2><h3>${DATA.chips.length} parts</h3><p>${DATA.description}</p><p>${bom}.</p><p>Generated from <span class="mono">boards/${DATA.name}/netlist.json</span>.</p><p>Hover a bus, rail entry or chip to trace it. Click to pin it here. Drag to pan, scroll to zoom.</p>` + legend();
+  if (item.type === 'bus') {
+    const w = busWidth.get(item.name); const prods = producers.get(item.name) || ['clock generator']; const cons = consumers.get(item.name) || [];
+    return `<h2>Bus</h2><h3 class="mono">${item.name}${w>1 ? `[${w-1}:0]` : ''}</h3><p>${descOf(item.name)}</p><p>${w} ${w===1?'signal':'bits'}${STIM.has(item.name) ? ', driven by the clock generator' : ''}.</p><p><b>From</b> ${prods.join(', ')}</p><p><b>To</b> ${cons.join(', ') || 'nothing (output only)'}</p>` + legend();
+  }
+  if (item.type === 'chip') {
+    const c = DATA.chips.find(x=>x.name===item.name);
+    const rows = c.pins.slice().sort((a,b)=>a.pin-b.pin).map(p=>`<tr><td>${p.pin}</td><td class="mono">${p.name}</td><td class="${p.kind==='out'||p.kind==='bidir'?'out':''}" title="${descOf(busOf(p.net).bus)}">${p.net}</td><td>${p.kind}</td></tr>`).join('');
+    return `<h2>${c.part}</h2><h3 class="mono">${c.name}</h3><p>${c.block}, ${c.stage}. ${c.package}. ${c.pins.length} connected pins.</p><table><tr><th>pin</th><th></th><th>net</th><th></th></tr>${rows}</table>`;
+  }
+  const b = blocks.get(item.name);
+  const list = m => [...m].sort((a,b)=>a[0].localeCompare(b[0])).map(([bus,e])=>`<tr><td class="mono">${bus}${bitsLabel(e.bits)}</td><td>${descOf(bus)}</td></tr>`).join('');
+  return `<h2>${b.stage}</h2><h3>${b.name}</h3><p>${b.chips.length} × ${b.chips[0].part}: <span class="mono">${b.chips.map(c=>c.name).join(' ')}</span></p><h2>Reads</h2><table>${list(b.ins) || '<tr><td>nothing</td></tr>'}</table><h2 style="margin-top:12px">Drives</h2><table>${list(b.outs) || '<tr><td>nothing</td></tr>'}</table>`;
+}
+function legend() {
+  return `<div class="legend">
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--copper)" stroke-width="3"/></svg>forward data bus, width by stroke</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--back)" stroke-width="2"/></svg>back edge, over the top corridor</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--slate)" stroke-width="1"/></svg>single control signal, bottom corridor</div>
+  <div><svg viewBox="0 0 42 12"><line x1="2" y1="6" x2="40" y2="6" stroke="var(--stim)" stroke-width="1.6" stroke-dasharray="5 3"/></svg>clock-generator strobe</div>
+  <div><svg viewBox="0 0 42 12"><rect x="2" y="1" width="38" height="10" fill="var(--reg)" stroke="var(--ink)"/></svg>pipeline register bank</div>
+  <div><svg viewBox="0 0 42 12"><rect x="10" y="1" width="22" height="10" fill="var(--chip)" stroke="var(--ink)" stroke-width="1.2"/></svg>one chip; thick border, an SRAM</div>
+  </div>`;
+}
+function hover(item) { if (selected) return; setHighlight(item); panel.innerHTML = describe(item); }
+function select(item) { selected = item; setHighlight(item); panel.innerHTML = describe(item); }
+document.getElementById('clear').addEventListener('click', () => { selected = null; setHighlight(null); panel.innerHTML = describe(null); });
+svg.addEventListener('click', ev => { if (ev.target === svg) { selected = null; setHighlight(null); panel.innerHTML = describe(null); } });
+panel.innerHTML = describe(null);
+document.getElementById('meta').textContent = `${DATA.chips.length} parts · ${busWidth.size} buses · ${DATA.period_ns} ns cycle`;
+const view = document.getElementById('view');
+let vb = {x:0, y:0, w:totalW, h:totalH};
+function fit() { const r = view.getBoundingClientRect(); const s = Math.max(totalW / r.width, totalH / r.height); vb = {x:0, y:0, w: r.width*s, h: r.height*s}; apply(); }
+function apply() { svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
+document.getElementById('fit').addEventListener('click', fit);
+view.addEventListener('wheel', ev => { ev.preventDefault(); const r = view.getBoundingClientRect(); const mx = vb.x + (ev.clientX - r.left) / r.width * vb.w, my = vb.y + (ev.clientY - r.top) / r.height * vb.h; const k = Math.exp(ev.deltaY * 0.0015); vb = {x: mx - (mx - vb.x)*k, y: my - (my - vb.y)*k, w: vb.w*k, h: vb.h*k}; apply(); }, {passive:false});
+// Pan only once the pointer has moved; a plain click reaches the wire or
+// chip under it (pointer capture would steal the click).
+let drag = null, moved = false;
+view.addEventListener('pointerdown', ev => { if (ev.button !== 0) return; drag = {x:ev.clientX, y:ev.clientY, vx:vb.x, vy:vb.y}; moved = false; });
+window.addEventListener('pointermove', ev => { if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; if (!moved && Math.hypot(dx, dy) < 4) return; moved = true; view.classList.add('dragging'); const r = view.getBoundingClientRect(); vb.x = drag.vx - dx / r.width * vb.w; vb.y = drag.vy - dy / r.height * vb.h; apply(); });
+window.addEventListener('pointerup', () => { drag = null; view.classList.remove('dragging'); });
+svg.addEventListener('click', ev => { if (moved) { moved = false; ev.stopPropagation(); } }, true);
+window.addEventListener('resize', fit);
+fit();
+</script>

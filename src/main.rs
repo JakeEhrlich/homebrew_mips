@@ -5,6 +5,7 @@ use mips32::board::Board;
 fn board(name: &str) -> Board {
     match name {
         "crag" => mips32::cpu::board(&mips32::cpu::Params::board()),
+        "grit" => mips32::grit::board(),
         _ => {
             eprintln!("unknown board {name}");
             std::process::exit(2);

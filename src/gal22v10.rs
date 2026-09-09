@@ -402,6 +402,13 @@ pub struct Gal22v10 {
     /// definite edge, the X window for an uncertain one.
     last_edge: Option<Time>,
     edge_start: Time,
+    /// Array inputs that are synchronous to this chip's clock: driven
+    /// (through any combinational depth, memories included) only by
+    /// registers clocked by the same net.  A change on one of them at or
+    /// after a clock window's start was caused by the same physical edge
+    /// and therefore happened after it: it is not a setup or hold event
+    /// for that edge, and the register captures the value from before it.
+    sync_input: [bool; ARRAY_INPUTS],
     ar: Level,
     ar_since: Time,
     /// AR term as the array sees it (undelayed) and when it last went H.
@@ -489,6 +496,7 @@ impl Gal22v10 {
             olmc,
             clk: Level::X,
             clk_since: 0,
+            sync_input: [false; ARRAY_INPUTS],
             clk_x_since: 0,
             clk_before_x: Level::X,
             fb_spec: None,
@@ -535,6 +543,17 @@ impl Gal22v10 {
         g
     }
 
+    /// Mark array inputs as synchronous to this chip's clock (see
+    /// `sync_input`).
+    pub fn set_sync_inputs(&mut self, inputs: &[usize]) {
+        for &i in inputs {
+            self.sync_input[i] = true;
+        }
+    }
+    /// Is this pin's array input marked synchronous?
+    pub fn is_sync_input(&self, i: usize) -> bool {
+        self.sync_input[i]
+    }
     pub fn config(&self) -> &Config {
         &self.cfg
     }
@@ -776,6 +795,13 @@ impl Gal22v10 {
         self.arr_since[i] = self.now;
         let t = self.now;
         let tm = self.tm;
+        // A synchronous input changing at or after the current (or just
+        // closed) clock window's start is a consequence of that edge.
+        let win_start = if self.clk == Level::X { self.clk_x_since } else { self.edge_start };
+        let post_edge = self.sync_input[i]
+            && t >= win_start
+            && (self.clk == Level::X || self.last_edge.is_some_and(|e| t <= e + tm.th));
+        let quiet = quiet || post_edge;
         for &k in &self.sop_users[i].clone() {
             if self.hazard_free(&self.cfg.olmc[k].terms) {
                 continue; // D / output provably unaffected
@@ -1044,10 +1070,21 @@ impl Gal22v10 {
                     }
                     self.fb_spec = Some(pre);
                     for k in 0..OLMCS {
-                        if self.cfg.olmc[k].registered {
-                            self.schedule(t + tm.tco_min, Ev::RegPin(k, Level::X));
-                            self.schedule(t + tm.tcf_min, Ev::RegFb(k, Level::X));
+                        if !self.cfg.olmc[k].registered {
+                            continue;
                         }
+                        // A register whose D equals its Q on definite
+                        // inputs cannot change whenever the edge falls in
+                        // the window: its output does not blink.  (An input
+                        // that changes later in the window is either a
+                        // consequence of the same edge, which the capture
+                        // ignores, or a setup violation, which it reports.)
+                        let d = if self.cfg.sp.is_some() { Level::X } else { self.eval_sop(&self.cfg.olmc[k].terms) };
+                        if d != Level::X && d == self.olmc[k].q {
+                            continue;
+                        }
+                        self.schedule(t + tm.tco_min, Ev::RegPin(k, Level::X));
+                        self.schedule(t + tm.tcf_min, Ev::RegFb(k, Level::X));
                     }
                 }
             }
@@ -1076,6 +1113,12 @@ impl Gal22v10 {
                 if self.clk_before_x == Level::X && new == Level::H {
                     self.unknown_all_regs();
                 }
+            }
+            (Level::Z, Level::L) => {
+                // Power-up: the clock settles low before its first edge
+                // (an oscillator that has not started, or a divider still
+                // in its power-up state).  Nothing has clocked; the
+                // registers keep their power-up zeros.
             }
             (_, Level::X) | (_, Level::Z) | (Level::Z, _) => {
                 self.warn(WarningKind::ClockUnknown);
@@ -1109,7 +1152,16 @@ impl Gal22v10 {
                 }
             }
         }
+        // Likewise synchronous inputs that changed at or after the window
+        // opened: the edge saw them as they were before.
+        let saved_arr = self.arr;
+        for i in 0..ARRAY_INPUTS {
+            if self.sync_input[i] && self.arr_since[i] >= start && self.arr_since[i] > 0 {
+                self.arr[i] = self.arr_prev[i];
+            }
+        }
         self.rising_edge_inner(start, end);
+        self.arr = saved_arr;
         if spec.is_some() {
             for k in 0..OLMCS {
                 self.arr[fb_array_input(k)] = saved[k];

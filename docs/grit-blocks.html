@@ -37,7 +37,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 </style>
 <main>
 <h1>Grit Block Diagram</h1>
-<p class="lede">A microprogrammed machine: a small instruction set in the program flash, a microcode ROM in the other flash pair, a step counter, and a pipeline register that latches one microword per clock. 13 GALs, 23 chips. Blue is the data bus D, gold the address bus Addr, purple the microcode ROM's private wires, green point-to-point. Every control line is a pin of the pipeline register and changes only at a clock edge.</p>
+<p class="lede">A microprogrammed machine: a small instruction set in the program flash, a microcode ROM in the other flash pair, a step counter, and a pipeline register that latches one microword per clock. 13 GALs, 23 chips, simulated on the netlist with no timing complaint from any chip. Blue is the data bus D, gold the address bus Addr, purple the microcode ROM's private wires, green point-to-point. Every control line is a pin of the pipeline register and changes only at a clock edge.</p>
 
 <figure class="scroll">
 <svg viewBox="0 0 1100 860" role="img" aria-label="Grit block diagram: IR and step counter, microcode ROM and pipeline register form the control path across the top; PC, A, B, ALU, program flash, SRAM and UART hang off the data bus in the middle; the address bus runs under the memories">
@@ -51,16 +51,16 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <!-- control path, top -->
 <rect x="60" y="40" width="200" height="120" rx="3" class="blk"/>
 <text x="72" y="62" class="t">IR + step counter</text><text x="250" y="62" text-anchor="end" class="s">1 GAL</text>
-<text x="72" y="82" class="m">in  D11..D15, IRLD, CLK, RESET</text>
-<text x="72" y="98" class="m">out IR0..IR4, STEP0..STEP3</text>
-<text x="72" y="122" class="s">IRLD: IR := D[15:11], step := 0;</text>
-<text x="72" y="136" class="s">otherwise step := step + 1</text>
+<text x="72" y="82" class="m">in  D11..D15, IRLD, ADRV, NE, CLK, RESET</text>
+<text x="72" y="98" class="m">out IR0..IR4, STEP0..STEP3, NEL</text>
+<text x="72" y="122" class="s">IRLD: IR := D[15:11], step := 0; else step + 1.</text>
+<text x="72" y="136" class="s">NEL := NE at the end of ADRV words, held otherwise</text>
 <line x1="262" y1="100" x2="328" y2="100" class="ucl" stroke-width="1.5" marker-end="url(#au)"/>
 <text x="295" y="92" text-anchor="middle" class="uc s">address</text>
 
 <rect x="330" y="40" width="230" height="120" rx="3" class="blk"/>
 <text x="342" y="62" class="t">Microcode ROM</text><text x="550" y="62" text-anchor="end" class="s">2 x SST39SF040</text>
-<text x="342" y="82" class="m">A0..3 STEP, A4 NE, A5..9 IR,</text>
+<text x="342" y="82" class="m">A0..3 STEP, A4 NEL, A5..9 IR,</text>
 <text x="342" y="98" class="m">A10..18 jumpers; CE# OE# GND</text>
 <text x="342" y="122" class="s">1024 words of 16 bits; the word for</text>
 <text x="342" y="136" class="s">this opcode, condition and step</text>
@@ -70,7 +70,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="630" y="40" width="240" height="120" rx="3" class="blk"/>
 <text x="642" y="62" class="t">Pipeline register</text><text x="860" y="62" text-anchor="end" class="s">2 GALs</text>
 <text x="642" y="82" class="m">in  M0..M15, CLK, RESET</text>
-<text x="642" y="98" class="m">out PCDRV MEMRD_n ALUOE WE_n</text>
+<text x="642" y="98" class="m">out PCDRV ADRV MEMRD_n ALUOE WE_n</text>
 <text x="642" y="114" class="m">    ALD BLD PCLD PCINC IRLD F1 F0</text>
 <text x="642" y="138" class="s">Q := M at every edge; nothing else</text>
 <text x="642" y="152" class="s">is gated with the clock, anywhere</text>
@@ -96,7 +96,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="565" y="424" text-anchor="middle" class="bus t">D[15:0]  data bus: one driver per clock, MEMRD (the memory Addr selects) or ALUOE</text>
 <!-- address bus -->
 <rect x="30" y="760" width="1040" height="12" rx="3" fill="var(--abus)"/>
-<text x="565" y="792" text-anchor="middle" class="ab t">Addr[15:1]: the PC when PCDRV, A otherwise. Flash CE# = Addr15; SRAM CE2 = Addr15, CE1# = Addr14; UART CS0 = Addr14, CS1 = Addr15</text>
+<text x="565" y="792" text-anchor="middle" class="ab t">Addr[15:1]: the PC on PCDRV, A on ADRV, nobody in the word between. Flash CE# = Addr15; SRAM CE2 = Addr15, CE1# = Addr14; UART CS0 = Addr14, CS1 = Addr15</text>
 
 <!-- PC -->
 <rect x="60" y="260" width="200" height="130" rx="3" class="blk"/>
@@ -121,15 +121,15 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <!-- A -->
 <rect x="300" y="260" width="180" height="130" rx="3" class="blk"/>
 <text x="312" y="282" class="t">A = address register</text><text x="470" y="282" text-anchor="end" class="s">2 GALs</text>
-<text x="312" y="302" class="m">in  D0..D15, ALD, PCDRV, CLK</text>
+<text x="312" y="302" class="m">in  D0..D15, ALD, ADRV, CLK</text>
 <text x="312" y="318" class="m">out A0..A15</text>
 <text x="312" y="342" class="s">A := ALD ? D : A; outputs feed</text>
 <text x="312" y="356" class="s">the ALU and drive Addr while</text>
-<text x="312" y="370" class="s">PCDRV is low</text>
+<text x="312" y="370" class="s">ADRV is high</text>
 <line x1="390" y1="430" x2="390" y2="392" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="397" y="415" class="bus s">load on ALD</text>
 <line x1="330" y1="392" x2="330" y2="758" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
-<text x="336" y="600" class="ab s">drive Addr unless PCDRV</text>
+<text x="336" y="600" class="ab s">drive Addr on ADRV</text>
 
 <!-- B -->
 <rect x="520" y="260" width="170" height="130" rx="3" class="blk"/>
@@ -162,7 +162,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <line x1="960" y1="300" x2="960" y2="180" class="ucl" stroke-width="1.5"/>
 <line x1="960" y1="180" x2="445" y2="180" class="ucl" stroke-width="1.5"/>
 <line x1="445" y1="180" x2="445" y2="162" class="ucl" stroke-width="1.5" marker-end="url(#au)"/>
-<text x="700" y="176" class="uc s">NE, an address bit of the microcode ROM</text>
+<text x="700" y="176" class="uc s">NE, latched as NEL: an address bit of the microcode ROM</text>
 
 <!-- memories row -->
 <rect x="360" y="520" width="200" height="120" rx="3" class="blk"/>
@@ -202,7 +202,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <h2>The microword: one bit per control line</h2>
 <div class="scroll"><table>
 <tr><th>Bit</th><th>Line</th><th>For the whole clock</th></tr>
-<tr><td class="m">0</td><td class="m">PCDRV</td><td>the PC drives Addr; otherwise A drives Addr</td></tr>
+<tr><td class="m">0</td><td class="m">PCDRV</td><td>the PC drives Addr</td></tr>
+<tr><td class="m">11</td><td class="m">ADRV</td><td>A drives Addr, and so the ALU sees A. Never in the word next to a PCDRV word</td></tr>
 <tr><td class="m">1</td><td class="m">MEMRD</td><td>the memory selected by Addr drives D: flash, SRAM or UART, by Addr's top bits</td></tr>
 <tr><td class="m">2</td><td class="m">ALUOE</td><td>the ALU drives D</td></tr>
 <tr><td class="m">3</td><td class="m">WE</td><td>the memory selected by Addr takes D</td></tr>
@@ -211,8 +212,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">6</td><td class="m">PCLD</td><td>the PC copies D at the ending edge</td></tr>
 <tr><td class="m">7</td><td class="m">PCINC</td><td>PC += 2 at the ending edge</td></tr>
 <tr><td class="m">8</td><td class="m">IRLD</td><td>IR copies D[15:11] and the step counter clears at the ending edge: the fetch</td></tr>
-<tr><td class="m">9, 10</td><td class="m">F1 F0</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
-<tr><td class="m">11..15</td><td></td><td>spare: debug outputs, a halt flag</td></tr>
+<tr><td class="m">9, 10</td><td class="m">F0 F1</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
+<tr><td class="m">12..15</td><td></td><td>spare: debug outputs, a halt flag</td></tr>
 </table></div>
 
 <h2>The instruction set</h2>
@@ -221,19 +222,19 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">0</td><td class="m">RESET</td><td>fetch from PC</td><td class="m">PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">1</td><td class="m">LDA imm</td><td>A = next word</td><td class="m">PCINC; PCDRV MEMRD ALD; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">2</td><td class="m">LDB imm</td><td>B = next word</td><td class="m">PCINC; PCDRV MEMRD BLD; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A]</td><td class="m">MEMRD ALD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A]</td><td class="m">MEMRD BLD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] = B</td><td class="m">ALUOE passB WE; ALUOE passB; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">6, 7</td><td class="m">ADDA, ADDB</td><td>A or B = A + B</td><td class="m">ALUOE add ALD|BLD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A]</td><td class="m">ADRV; ADRV MEMRD ALD; ADRV; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A]</td><td class="m">ADRV; ADRV MEMRD BLD; ADRV; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] = B</td><td class="m">ADRV; ADRV ALUOE passB WE; ADRV ALUOE passB; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">6, 7</td><td class="m">ADDA, ADDB</td><td>A or B = A + B</td><td class="m">ADRV; ADRV ALUOE add ALD|BLD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">8, 9</td><td class="m">ANDA, ANDB</td><td>A or B = A and B</td><td class="m">as ADD with F = and</td></tr>
 <tr><td class="m">10, 11</td><td class="m">NORA, NORB</td><td>A or B = not (A or B)</td><td class="m">as ADD with F = nor</td></tr>
-<tr><td class="m">12</td><td class="m">MOVAB</td><td>A = B</td><td class="m">ALUOE passB ALD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">12</td><td class="m">MOVAB</td><td>A = B</td><td class="m">ADRV; ADRV ALUOE passB ALD; nop; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">13</td><td class="m">JMP imm</td><td>PC = next word</td><td class="m">PCINC; PCDRV MEMRD PCLD; nop; PCDRV MEMRD IRLD; nop</td></tr>
-<tr><td class="m">14</td><td class="m">JEQ imm</td><td>if A == B: PC = next word, else skip it</td><td class="m">NE=0: as JMP. NE=1: PCINC; PCINC; PCDRV MEMRD IRLD; nop</td></tr>
+<tr><td class="m">14</td><td class="m">JEQ imm</td><td>if A == B: PC = next word, else skip it</td><td class="m">ADRV; PCINC; then NEL=0: PCDRV MEMRD PCLD; nop, or NEL=1: PCINC; nop; then PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">15</td><td class="m">NOP</td><td></td><td class="m">PCINC; PCDRV MEMRD IRLD; nop</td></tr>
 <tr><td class="m">16</td><td class="m">HALT</td><td>loops in microcode</td><td class="m">nop x 16</td></tr>
 </table></div>
-<p>Two rules shape every sequence: the driver of D never changes between consecutive words (an idle word in between lets the old driver float for a whole clock), and a MEMRD or WE word is followed by a word with the same Addr driver, with ALUOE kept after WE, so every hold time is a clock long. The word after a fetch is always a nop because the ROM's word for the next step is already in flight when the IR changes.</p>
+<p>Four rules shape every sequence, and the microcode generator checks them: the driver of D, and the driver of Addr, never change between consecutive words (an idle word lets the old driver float for a whole clock); an access at A is preceded by a word with only ADRV, so the address is valid a clock before anything strobes it; a MEMRD or WE word at A is followed by a word with ADRV still set, and ALUOE still set after WE, so every hold time is a clock long; and JEQ's two variants differ only at the step whose ROM read sees a fresh NEL. The word after a fetch is always a nop because the ROM's word for the next step is already in flight when the IR changes.</p>
 
 <h2>Loading an immediate: LDA 0x1234</h2>
 <pre>program:   0x0800   LDA imm (opcode 1 in bits 15:11)

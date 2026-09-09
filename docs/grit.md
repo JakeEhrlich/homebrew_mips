@@ -8,8 +8,10 @@ a socketed flash, SRAM strobes from GAL logic, the serial link, a board
 through JLCPCB, and above all to be debuggable: one thing per clock,
 every control line on a pin, every table in a socket.
 
-Status: proposal, reviewed component by component.  Nothing is modelled
-yet.
+Status: modelled and simulated (`src/grit.rs`, `tests/grit.rs`,
+`boards/grit/netlist.json`).  Every GAL fits, and programs run on the
+netlist with no timing complaint from any chip, through reset from any
+clock phase, the reset button, and the UART both ways.
 
 ## 1. The idea in one paragraph
 
@@ -43,20 +45,24 @@ the following word.
 | 0 | RESET | fetch from the PC (what runs out of reset, PC = 0) | 2 |
 | 1 | LDA imm | A = next word | 5 |
 | 2 | LDB imm | B = next word | 5 |
-| 3 | LDA (A) | A = mem[A] | 5 |
-| 4 | LDB (A) | B = mem[A] | 5 |
-| 5 | STB (A) | mem[A] = B | 6 |
-| 6 | ADDA | A = A + B | 5 |
-| 7 | ADDB | B = A + B | 5 |
-| 8 | ANDA | A = A and B | 5 |
-| 9 | ANDB | B = A and B | 5 |
-| 10 | NORA | A = not (A or B) | 5 |
-| 11 | NORB | B = not (A or B) | 5 |
-| 12 | MOVAB | A = B | 5 |
+| 3 | LDA (A) | A = mem[A] | 6 |
+| 4 | LDB (A) | B = mem[A] | 6 |
+| 5 | STB (A) | mem[A] = B | 7 |
+| 6 | ADDA | A = A + B | 6 |
+| 7 | ADDB | B = A + B | 6 |
+| 8 | ANDA | A = A and B | 6 |
+| 9 | ANDB | B = A and B | 6 |
+| 10 | NORA | A = not (A or B) | 6 |
+| 11 | NORB | B = not (A or B) | 6 |
+| 12 | MOVAB | A = B | 6 |
 | 13 | JMP imm | PC = next word | 5 |
-| 14 | JEQ imm | if A == B then PC = next word, else skip it | 5 or 4 |
+| 14 | JEQ imm | if A == B then PC = next word, else skip it | 6 |
 | 15 | NOP | | 3 |
 | 16 | HALT | never fetches; the step counter shows it | |
+
+Reading the UART: use `LDB (A)`.  `LDA (A)` changes the address at the
+edge that ends the read strobe, and the 16550 wants it held 20 ns
+longer; the model reports it.
 
 Registers r0..r31 of the MIPS-like macro layer are SRAM words at
 0x8000 + 2n.  `lw rt, (rs)` is `LDA &rs; LDA (A); LDB (A); LDA &rt;
@@ -81,17 +87,19 @@ opcode 0's microcode fetches from address 0.
 
 ## 3. The microcode
 
-**Address**, 10 bits: {opcode[4:0], NE, step[3:0]}.  NE is the ALU's
-"A differs from B", so a conditional instruction is two microcode
-sequences and the hardware chooses between them with an address bit.
-The ROM's other address pins are jumpers: microcode variants without
-touching the program.
+**Address**, 10 bits: {opcode[4:0], NEL, step[3:0]}.  NEL is the ALU's
+"A differs from B", latched at the end of every word in which A is on
+the bus (the ALU only sees A then) and held otherwise; a conditional
+instruction is two microcode sequences and the hardware chooses between
+them with that address bit.  The ROM's other address pins are jumpers:
+microcode variants without touching the program.
 
 **Word**, 16 bits, one per control line, eleven used:
 
 | Bit | Line | For the whole clock |
 |---|---|---|
-| 0 | PCDRV | the PC drives Addr; otherwise A drives Addr |
+| 0 | PCDRV | the PC drives Addr |
+| 11 | ADRV | A drives Addr (and so the ALU sees A) |
 | 1 | MEMRD | the memory selected by Addr drives D (flash, SRAM or UART, by Addr's top bits) |
 | 2 | ALUOE | the ALU drives D |
 | 3 | WE | the memory selected by Addr takes D |
@@ -100,22 +108,32 @@ touching the program.
 | 6 | PCLD | the PC copies D at the ending edge |
 | 7 | PCINC | PC += 2 at the ending edge |
 | 8 | IRLD | IR copies D[15:11] and the step counter clears at the ending edge: the fetch |
-| 9, 10 | F1, F0 | ALU function: 00 add, 01 and, 10 nor, 11 pass B |
-| 11 .. 15 | spare | debug outputs, a halt flag |
+| 9, 10 | F0, F1 | ALU function: 00 add, 01 and, 10 nor, 11 pass B |
+| 12 .. 15 | spare | debug outputs, a halt flag |
 
 **Pipeline.**  In clock k the ROM presents the word for step k while the
 pipeline register executes the word for step k-1.  So the word after a
 fetch is always executed before the new instruction's step 0, and every
 sequence ends `... PCDRV MEMRD IRLD; nop`.
 
-**Two ordering rules**, which replace all clock-phase logic:
+**The ordering rules**, which replace all clock-phase logic (the
+microcode generator checks them):
 
-1. The driver of D never changes between consecutive words: an idle
-   word sits between a MEMRD word and an ALUOE word, or between either
-   and a fetch.  The outgoing chip gets a whole clock to float.
-2. After a MEMRD or WE word comes a word with the same Addr driver (not
-   PCDRV) and, after WE, ALUOE still set: the address and data outlive
-   the strobe by a clock, which is every hold time on the board.
+1. The driver of D never changes between consecutive words, and neither
+   does the driver of Addr: an idle word sits between a MEMRD word and
+   an ALUOE word, and between a PCDRV word and an ADRV word.  The
+   outgoing chip gets a whole clock to float.  Nobody drives Addr in
+   the idle word; pull-downs on Addr15 and Addr14 keep the selects
+   defined (the flash, with its OE# high).
+2. An access at A (MEMRD, WE or ALUOE with ADRV) is preceded by a word
+   with only ADRV: the address, and the ALU's operand, are valid a clock
+   before anything strobes or samples them.
+3. After a MEMRD or WE word at A comes a word with ADRV still set and,
+   after WE, ALUOE still set: the address and data outlive the strobe by
+   a clock, which is every hold time on the board.
+4. A conditional instruction's two variants differ only at a step whose
+   ROM read happens while NEL is fresh: word 0 has ADRV (NEL latches at
+   its end), word 1 has not, the variants differ at step 2.
 
 **The sequences.**  Each line is one clock.
 
@@ -123,22 +141,25 @@ sequence ends `... PCDRV MEMRD IRLD; nop`.
 RESET     PCDRV MEMRD IRLD ; nop
 LDA imm   PCINC ; PCDRV MEMRD ALD ; PCINC ; PCDRV MEMRD IRLD ; nop
 LDB imm   PCINC ; PCDRV MEMRD BLD ; PCINC ; PCDRV MEMRD IRLD ; nop
-LDA (A)   MEMRD ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-LDB (A)   MEMRD BLD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-STB (A)   ALUOE F=passB WE ; ALUOE F=passB ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-ADDA      ALUOE F=add ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-ADDB      ALUOE F=add BLD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
-MOVAB     ALUOE F=passB ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
+LDA (A)   ADRV ; ADRV MEMRD ALD ; ADRV ; PCINC ; PCDRV MEMRD IRLD ; nop
+LDB (A)   ADRV ; ADRV MEMRD BLD ; ADRV ; PCINC ; PCDRV MEMRD IRLD ; nop
+STB (A)   ADRV ; ADRV ALUOE passB WE ; ADRV ALUOE passB ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
+ADDA      ADRV ; ADRV ALUOE add ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
+ADDB      ADRV ; ADRV ALUOE add BLD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
+MOVAB     ADRV ; ADRV ALUOE passB ALD ; nop ; PCINC ; PCDRV MEMRD IRLD ; nop
 JMP imm   PCINC ; PCDRV MEMRD PCLD ; nop ; PCDRV MEMRD IRLD ; nop
-JEQ imm   NE=0: as JMP.   NE=1: PCINC ; PCINC ; PCDRV MEMRD IRLD ; nop
+JEQ imm   ADRV ; PCINC ; then NEL=0: PCDRV MEMRD PCLD ; nop      NEL=1: PCINC ; nop
+          then both: PCDRV MEMRD IRLD ; nop
 NOP       PCINC ; PCDRV MEMRD IRLD ; nop
 HALT      nop x 16 (the counter wraps and it repeats)
 ```
 
-The nop after MEMRD ALD in `LDA (A)` is rule 1 (the SRAM lets go
-before the flash drives) and rule 2 at once.  ANDA/ANDB/NORA/NORB are
-ADDA/ADDB with F changed.  The second word of STB holds the address in
-A and the data on D for a clock after the write pulse.
+ANDA/ANDB/NORA/NORB are ADDA/ADDB with F changed.  The word after
+`ADRV MEMRD ALD` in `LDA (A)` is rules 1 and 3 at once; the leading
+`ADRV` word is rule 2, and it was found by the model, not by thought:
+the first version turned A onto the bus and started the write strobe in
+the same word, and the SRAM saw its address change 8 ns into the
+write.
 
 ## 4. The chips
 
@@ -149,11 +170,11 @@ private wires from the IR/step chip and to the pipeline register.
 
 | Chip | Clock | Reset | Inputs | Outputs |
 |---|---|---|---|---|
-| IR/step | CLK | RESET | D11..D15, IRLD | IR0..IR4 (opcode), STEP0..STEP3 |
-| MIR-low, MIR-high | CLK | RESET | M0..M7, M8..M15 (the ROM's data) | the control lines, one per bit |
-| PC-low | CLK | RESET | D1..D8, PCLD, PCINC, PCDRV | PC1..PC8 (enabled by PCDRV), CO |
-| PC-high | CLK | RESET | D9..D15, CO, PCLD, PCDRV | PC9..PC15 (enabled by PCDRV) |
-| A-low, A-high | CLK | none | D0..D7 / D8..D15, ALD, PCDRV | A0..A7 / A8..A15; A1..A15 enabled by not PCDRV, A0 always |
+| IR/step | CLK | sync | D11..D15, IRLD, ADRV, NE | IR0..IR4 (opcode), STEP0..STEP3, NEL |
+| MIR-low, MIR-high | CLK | sync | M0..M7, M8..M15 (the ROM's data) | the control lines, one per bit |
+| PC-low | CLK | sync | D1..D8, PCLD, PCINC, PCDRV | PC1..PC8 (enabled by PCDRV), CO |
+| PC-high | CLK | sync | D9..D15, CO, PCLD, PCDRV | PC9..PC15 (enabled by PCDRV) |
+| A-low, A-high | CLK | none | D0..D7 / D8..D15, ALD, ADRV | A0..A7 / A8..A15; A1..A15 enabled by ADRV, A0 always |
 | B-low | CLK | none | D0..D7, BLD, RST_n | B0..B7, RS1, RESET |
 | B-high | CLK | none | D8..D15, BLD | B8..B15 |
 | ALU 0 | CLK2X | none | A0..3, B0..3, F1, F0, ALUOE | S0..3 (enabled by ALUOE), carry out, NE out, CLK (the divide by two) |
@@ -163,7 +184,12 @@ Thirteen GALs.  The latches are `Q := LD & D + !LD & Q` per bit; the PC
 is a 15-bit counter (PCINC) with a load (PCLD wins); the step counter
 clears on IRLD and counts otherwise; the pipeline register is `Q := M`;
 the ALU slices are 4-bit ripple adders with the function folded into
-each sum term and a not-equal chain beside the carry chain.
+each sum term and a not-equal chain beside the carry chain.  "sync"
+reset: RESET is a factor of every product term rather than the 22V10's
+asynchronous reset, so the register clears at the next edge and RESET
+is an ordinary input with an ordinary setup time (the asynchronous
+reset would race the very clock edge RESET itself comes from).  RESET
+is high at power-up (a zero register behind an active-low pin).
 
 | Net | Driven by | Read by | Meaning |
 |---|---|---|---|
@@ -181,7 +207,7 @@ each sum term and a not-equal chain beside the carry chain.
 | Chip | Address pins | Data | Selects | Strobes |
 |---|---|---|---|---|
 | program flash, 2 x SST39SF040 | A0..A13 from Addr1..Addr14; A14, A15 to GND; A16..A18 jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = Addr15 | OE# = MEMRD_n, WE# = VCC |
-| microcode ROM, 2 x SST39SF040 | A0..A3 = STEP0..3, A4 = NE, A5..A9 = IR0..4, A10..A18 jumpers or GND | chip 0 M0..7, chip 1 M8..15 | CE# = GND | OE# = GND, WE# = VCC |
+| microcode ROM, 2 x SST39SF040 | A0..A3 = STEP0..3, A4 = NEL, A5..A9 = IR0..4, A10..A12 jumpers, the rest GND | chip 0 M0..7, chip 1 M8..15 | CE# = GND | OE# = GND, WE# = VCC |
 | 2 x AS7C164A | A0..A12 from Addr1..Addr13 | as the program flash | CE2 = Addr15, CE1# = Addr14 | OE# = MEMRD_n, WE# = WE_n |
 | TL16C550 | A0..A2 from Addr1..Addr3 | D0..7 | CS0 = Addr14, CS1 = Addr15, CS2# = GND, ADS# = GND | RD1# = MEMRD_n, WR1# = WE_n, RD2 = WR2 = GND; MR = RESET |
 
@@ -251,3 +277,40 @@ four is one more term if the scope says so.
 9. Cheap to add later: `or`, `sltu`, byte access for the UART,
    in-socket flash programming (WE# from a spare word bit), a register-
    index field in the instruction word.
+
+## 8. What the simulation found and taught
+
+Building it in the netlist changed three things, none of them in the
+block diagram.
+
+- **The store strobe came a word too early.**  The first microcode
+  turned A onto the address bus and asserted WE in the same word; the
+  SRAM model reported its address changing 8 ns into the write, because
+  a GAL's output enable takes up to 10 ns to turn on.  Hence rule 2.
+- **The condition had to be latched.**  NE is only meaningful while A
+  drives the bus (the ALU's A inputs are the address bus), so the ROM's
+  condition bit is NEL, latched at the end of ADRV words, and JEQ is
+  laid out so that its decision is read while NEL is fresh (rule 4).
+- **Reset is synchronous.**  See section 4.
+
+And two things changed in the model, because a clock that comes out of
+a GAL is not the ideal clock crag's tests use:
+
+- **Same-clock inputs.**  A GAL output has a 2 to 5.5 ns window after
+  the edge in which it is unknown; when the clock itself has that
+  window, every flop-to-flop path on the board looked like a setup or
+  hold violation, since the model treated each chip's edge as
+  independently uncertain.  The simulator now works out which nets are
+  synchronous to which clock (registered outputs, and anything
+  combinational or memory-like that depends only on them) and tells
+  each GAL; a change on such an input inside its clock window is taken
+  as a consequence of the same physical edge, after it, and the capture
+  uses the value from before.
+- **Unchanged flops do not blink.**  A register whose D equals its Q on
+  definite inputs cannot change whichever instant in the window the
+  edge falls on, so its pin no longer goes unknown for the window.
+  Before this, WE_n blinked at every edge and the SRAM reported a
+  possible runt write on each.
+
+Both are refinements of what the model already assumed about the
+chip's own feedbacks, applied across chips.

@@ -1245,6 +1245,7 @@ impl Netlist {
             pin_queue: pin_counts.iter().map(|&n| vec![Vec::new(); n + 1]).collect(),
         };
         sim.settle();
+        sim.tag_sync_inputs();
         sim
     }
 }
@@ -1292,6 +1293,158 @@ fn resolve(drivers: impl Iterator<Item = Level>, pull: Level) -> Level {
 }
 
 impl Sim {
+    /// Same-clock analysis: which nets change only as a consequence of a
+    /// given clock net's edges.  A GAL's registered outputs are
+    /// synchronous to its clock; a combinational output, a memory's data
+    /// or a UART's bus data is synchronous to a clock if every input it
+    /// depends on is (tied nets count as any clock).  Each GAL is then
+    /// told which of its inputs are synchronous to its own clock, so that
+    /// a change on one of them inside a clock edge's window is taken as
+    /// the same edge's consequence rather than a setup or hold violation
+    /// (see `Gal22v10::set_sync_inputs`).
+    fn tag_sync_inputs(&mut self) {
+        use crate::gal22v10::{Gal22v10, fb_array_input, olmc_pin, pin_array_input};
+        let nchips = self.chips.len();
+        let nnets = self.nets.len();
+        // Tag per net: None (asynchronous or undetermined), Some(clock net).
+        let tied: Vec<bool> = self.nets.iter().map(|n| n.tie != Level::Z).collect();
+        let mut net_tag: Vec<Option<NetId>> = vec![None; nnets];
+        // Per chip: (clock net, registered output pins, other output pins, input pins).
+        struct Info {
+            clk: Option<NetId>,
+            reg_out: Vec<usize>,
+            comb_out: Vec<usize>,
+            inputs: Vec<usize>,
+        }
+        let mut infos: Vec<Option<Info>> = Vec::new();
+        for c in 0..nchips {
+            let chip = &self.chips[c].1;
+            let pins = |kinds: &[PinKind]| -> Vec<usize> { (1..=chip.pin_count()).filter(|&p| self.pin_net[c][p].is_some() && kinds.contains(&chip.pin_kind(p))).collect() };
+            let any = chip.as_any();
+            let info = if let Some(g) = any.downcast_ref::<Gal22v10>() {
+                let cfg = g.config();
+                let has_reg = cfg.olmc.iter().any(|o| o.registered);
+                let clk = if has_reg { self.pin_net[c][1] } else { None };
+                let mut reg_out = Vec::new();
+                let mut comb_out = Vec::new();
+                for k in 0..10 {
+                    if !g.is_output(k) {
+                        continue;
+                    }
+                    let p = olmc_pin(k) as usize;
+                    if cfg.olmc[k].registered { reg_out.push(p) } else { comb_out.push(p) }
+                }
+                let outs: Vec<usize> = reg_out.iter().chain(&comb_out).copied().collect();
+                let inputs: Vec<usize> = (1..=23).filter(|&p| p != 12 && self.pin_net[c][p].is_some() && !outs.contains(&p) && !(has_reg && p == 1)).collect();
+                Some(Info { clk, reg_out, comb_out, inputs })
+            } else if any.is::<Rom>() || any.is::<As7c164a>() || any.is::<Sram16>() {
+                Some(Info { clk: None, reg_out: Vec::new(), comb_out: pins(&[PinKind::Out, PinKind::Bidir]), inputs: pins(&[PinKind::In]) })
+            } else if any.is::<crate::uart16550::Uart16550>() {
+                use crate::uart16550::{UartPin, uart_pin};
+                let bus_in: Vec<usize> = (1..=48).filter(|&p| self.pin_net[c][p].is_some() && matches!(uart_pin(p), UartPin::A(_) | UartPin::Cs0 | UartPin::Cs1 | UartPin::Cs2N | UartPin::AdsN | UartPin::Rd1N | UartPin::Rd2 | UartPin::Wr1N | UartPin::Wr2 | UartPin::Mr)).collect();
+                let data: Vec<usize> = (1..=48).filter(|&p| matches!(uart_pin(p), UartPin::D(_))).collect();
+                Some(Info { clk: None, reg_out: Vec::new(), comb_out: data, inputs: bus_in })
+            } else {
+                None
+            };
+            infos.push(info);
+        }
+        // Fixed point.
+        let mut pin_tag: Vec<Vec<Option<NetId>>> = (0..nchips).map(|c| vec![None; self.chips[c].1.pin_count() + 1]).collect();
+        for _ in 0..32 {
+            let mut changed = false;
+            for c in 0..nchips {
+                let Some(info) = &infos[c] else { continue };
+                for &p in &info.reg_out {
+                    if pin_tag[c][p] != info.clk {
+                        pin_tag[c][p] = info.clk;
+                        changed = true;
+                    }
+                }
+                if info.comb_out.is_empty() {
+                    continue;
+                }
+                // All inputs on one clock (tied inputs are fine).
+                let mut clk: Option<NetId> = None;
+                let mut ok = true;
+                for &p in &info.inputs {
+                    let n = self.pin_net[c][p].unwrap();
+                    if tied[n] {
+                        continue;
+                    }
+                    match (net_tag[n], clk) {
+                        (None, _) => ok = false,
+                        (Some(t), None) => clk = Some(t),
+                        (Some(t), Some(k)) if t != k => ok = false,
+                        _ => {}
+                    }
+                }
+                let tag = if ok { clk } else { None };
+                for &p in &info.comb_out {
+                    if pin_tag[c][p] != tag {
+                        pin_tag[c][p] = tag;
+                        changed = true;
+                    }
+                }
+            }
+            // A net is synchronous to a clock if every driver pin on it is.
+            for n in 0..nnets {
+                let mut tag: Option<NetId> = None;
+                let mut ok = !tied[n];
+                let mut any_driver = false;
+                for &(c, p) in &self.nets[n].pins {
+                    let kind = self.chips[c].1.pin_kind(p);
+                    if !matches!(kind, PinKind::Out | PinKind::Bidir) {
+                        continue;
+                    }
+                    if infos[c].as_ref().is_none_or(|i| !i.reg_out.contains(&p) && !i.comb_out.contains(&p)) {
+                        // A driver this analysis knows nothing about.
+                        if kind == PinKind::Out || infos[c].is_none() {
+                            ok = false;
+                        }
+                        continue;
+                    }
+                    any_driver = true;
+                    match (pin_tag[c][p], tag) {
+                        (None, _) => ok = false,
+                        (Some(t), None) => tag = Some(t),
+                        (Some(t), Some(k)) if t != k => ok = false,
+                        _ => {}
+                    }
+                }
+                let new = if ok && any_driver { tag } else { None };
+                if net_tag[n] != new {
+                    net_tag[n] = new;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        // Tell each GAL.
+        for c in 0..nchips {
+            let Some(info) = &infos[c] else { continue };
+            let Some(clk) = info.clk else { continue };
+            let mut arr_inputs = Vec::new();
+            for &p in &info.inputs {
+                let n = self.pin_net[c][p].unwrap();
+                if tied[n] || net_tag[n] == Some(clk) {
+                    let ai = if (1..=11).contains(&p) || p == 13 {
+                        pin_array_input(p as u8)
+                    } else {
+                        let k = (14..=23).position(|q| q == p).unwrap();
+                        fb_array_input(9 - k)
+                    };
+                    arr_inputs.push(ai);
+                }
+            }
+            if let Some(g) = self.chips[c].1.as_any_mut().downcast_mut::<Gal22v10>() {
+                g.set_sync_inputs(&arr_inputs);
+            }
+        }
+    }
+
     pub fn now(&self) -> Time {
         self.now
     }
