@@ -34,7 +34,7 @@ joined by the data bus D.
 
 | Bit | Signal | In the execute clock |
 |---|---|---|
-| 15 | LIT | the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word |
+| 15 | PCDRV | the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word |
 | 14 | MEMRD | memory at A drives D |
 | 13 | ALUOE | the ALU drives D |
 | 12 | WR | memory at A takes D (a quarter-clock write pulse) |
@@ -45,7 +45,7 @@ joined by the data bus D.
 | 7:6 | F1, F0 | ALU function: 00 add, 01 and, 10 nor, 11 pass B |
 | 5:0 | | unused |
 
-Rules the assembler enforces: at most one of LIT, MEMRD, ALUOE (one
+Rules the assembler enforces: at most one of PCDRV, MEMRD, ALUOE (one
 driver on D); MEMRD and WR never together.
 
 **Memory map.**
@@ -57,7 +57,7 @@ driver on D); MEMRD and WR never together.
 | 0x8040 .. 0xBFFF | SRAM, 16 KB |
 | 0xC000 + 2n | TL16C550 register n on the low byte; the high byte of a read is garbage, mask it |
 
-**Immediates.**  A microop with LIT is followed by a data word; in its
+**Immediates.**  A microop with PCDRV set is followed by a data word; in its
 execute clock the flash presents that word on D and whatever LD bits are
 set load it.  `B = 0x1234` is `0x8400, 0x1234`: two words, two clocks.
 A register's address is an immediate like any other: `A = &r5` is
@@ -99,13 +99,13 @@ asynchronous-reset term.
 
 | Chip | Clock | Reset | Inputs | Outputs |
 |---|---|---|---|---|
-| glue | CLK2X | none | WR, PCDRV#, PCLD, PCEQ, NE | CLK (divide by two), WE#, PCDRIVE, LOAD |
-| MIR | CLK | RESET | D6 to D15, EXEC | the ten control flops: loaded from the word at a fetch edge, cleared at an execute edge; PCDRV# is also active in every fetch clock |
+| glue | CLK2X | none | WR, PCDRV_n, PCLD, PCEQ, NE | CLK (divide by two), WE_n, PCDRIVE, LOAD |
+| MIR | CLK | RESET | D6 to D15, EXEC | PCDRV_n, MEMRD_n, ALUOE, WR, ALD, BLD, PCLD, PCEQ, F1, F0: loaded from the word at a fetch edge, cleared at an execute edge; PCDRV_n is also active in every fetch clock |
 | PC-low | CLK | RESET | D1 to D8, LOAD, PCDRIVE | PC1 to PC8 (enabled by PCDRIVE), CO |
 | PC-high | CLK | RESET | D9 to D15, CO, LOAD, PCDRIVE | PC9 to PC15 (enabled by PCDRIVE) |
 | A-low | CLK | none | D0 to D7, ALD, PCDRIVE | A0 (always on), A1 to A7 (enabled by not PCDRIVE) |
 | A-high | CLK | none | D8 to D15, ALD, PCDRIVE | A8 to A15 (enabled by not PCDRIVE) |
-| B-low | CLK | none | D0 to D7, BLD, RST# | B0 to B7, RS1, RESET |
+| B-low | CLK | none | D0 to D7, BLD, RST_n | B0 to B7, RS1, RESET |
 | B-high | CLK | RESET | D8 to D15, BLD | B8 to B15, EXEC |
 | ALU 0 | none | none | A0..3, B0..3, F1, F0, ALUOE | S0..3 (enabled by ALUOE), C1, C2, C3, COUT0, NE0 |
 | ALU 1, 2 | none | none | the next four bits of A and B, the carry and NE from below, F1, F0, ALUOE | four sums, C1, C2, C3, carry out, NE out |
@@ -115,13 +115,13 @@ asynchronous-reset term.
 |---|---|---|
 | CLK2X | oscillator | 9.216 MHz; also the UART's XIN |
 | CLK | glue | 4.608 MHz, every other GAL's clock |
-| RST# | MAX811L | active low |
+| RST_n | MAX811L | active low |
 | RS1, RESET | B-low | two-stage synchroniser; RESET is the async reset of PC, MIR, B-high and the UART's MR |
 | EXEC | B-high | 1 in an execute clock, 0 in a fetch clock; toggles every edge, reset to 0 |
-| PCDRV# | MIR | low in every fetch clock and in a literal read; the flash's OE# |
-| MEMRD# | MIR | low in an execute clock with MEMRD; the SRAM's and UART's OE# |
+| PCDRV_n | MIR | low in every fetch clock and in an execute clock whose word set bit 15 (a literal); the flash's OE# |
+| MEMRD_n | MIR | low in an execute clock with MEMRD; the SRAM's and UART's OE# |
 | PCDRIVE | glue | PCDRV and CLK low: the PC has the address bus, and the PC counts at the edge |
-| WE# | glue | low while WR, CLK high and CLK2X low: quarter two of a writing execute clock |
+| WE_n | glue | low while WR, CLK high and CLK2X low: quarter two of a writing execute clock |
 | LOAD | glue | PCLD, or PCEQ and not NE |
 | NE | ALU 3 | A differs from B |
 
@@ -131,15 +131,15 @@ edge and loads D when LOAD is high (LOAD wins).  The ALU slices are
 4-bit ripple adders with the function select folded into each sum
 term, a carry between slices and a not-equal chain beside it.  The
 microinstruction register's flops are `Q := !EXEC & Dk`, except PCDRV
-which is `!EXEC & LIT + EXEC`.
+which is `!EXEC & D15 + EXEC`.
 
 **The memories.**
 
 | Chip | Address pins | Data | Selects | Strobes |
 |---|---|---|---|---|
-| 2 x SST39SF040, DIP-32 | A0..A13 from bus A1..A14; A14, A15 to GND; A16..A18 to jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = A15 | OE# = PCDRV#, WE# = VCC |
-| 2 x AS7C164A, DIP-28 | A0..A12 from bus A1..A13 | as above | CE2 = A15, CE1# = A14 | OE# = MEMRD#, WE# = WE# |
-| TL16C550, LQFP-48 | A0..A2 from bus A1..A3 | D0..7 | CS0 = A14, CS1 = A15, CS2# = GND, ADS# = GND | RD1# = MEMRD#, WR1# = WE#, RD2 = WR2 = GND; MR = RESET |
+| 2 x SST39SF040, DIP-32 | A0..A13 from bus A1..A14; A14, A15 to GND; A16..A18 to jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = A15 | OE# = PCDRV_n, WE# = VCC |
+| 2 x AS7C164A, DIP-28 | A0..A12 from bus A1..A13 | as above | CE2 = A15, CE1# = A14 | OE# = MEMRD_n, WE# = WE_n |
+| TL16C550, LQFP-48 | A0..A2 from bus A1..A3 | D0..7 | CS0 = A14, CS1 = A15, CS2# = GND, ADS# = GND | RD1# = MEMRD_n, WR1# = WE_n, RD2 = WR2 = GND; MR = RESET |
 
 UART: XIN from the oscillator, XOUT open, BAUDOUT# to RCLK, DTR# looped
 to DSR# and DCD#, RI# high, SOUT/SIN and RTS#/CTS# through the SP3232's
@@ -151,7 +151,7 @@ One clock is 217 ns, in quarters of 54.  Every flop in the machine is on
 the rising edge of CLK.  Two things happen inside a clock, both derived
 from CLK2X transitions so that neither can glitch:
 
-- **WE#** is quarter two.  It starts when CLK2X falls with WR and CLK
+- **WE_n** is quarter two.  It starts when CLK2X falls with WR and CLK
   already high, ends when CLK2X rises before CLK has moved.  The ALU
   has driven the data since the edge (setup 45 ns against 8), the
   address has been on the bus since an earlier edge, and it changes
@@ -223,4 +223,4 @@ nanoseconds.
    into spare corners of the PC, ALU and B chips.
 10. **What is cheap to add later:** the register-address field, `or`,
     `sltu`, byte access for the UART, in-socket flash programming
-    (WE# from a spare word bit and the 39SF040 command sequence).
+    (WE_n from a spare word bit and the 39SF040 command sequence).

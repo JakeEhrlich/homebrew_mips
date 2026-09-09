@@ -72,22 +72,22 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="300" y="60" width="300" height="150" rx="3" class="blk"/>
 <text x="312" y="82" class="t">Microinstruction register</text><text x="590" y="82" text-anchor="end" class="s">1 GAL</text>
 <text x="312" y="102" class="m">in  D6..D15, EXEC, CLK, RESET</text>
-<text x="312" y="118" class="m">out LIT MEMRD# ALUOE WR</text>
+<text x="312" y="118" class="m">out PCDRV_n MEMRD_n ALUOE WR</text>
 <text x="312" y="134" class="m">    ALD BLD PCLD PCEQ F1 F0</text>
 <text x="312" y="162" class="s">ten flops: the word's bits 15..6,</text>
 <text x="312" y="176" class="s">loaded at a fetch edge, cleared at an</text>
-<text x="312" y="190" class="s">execute edge. The LIT flop is also set</text>
-<text x="312" y="204" class="s">at every execute edge: it is PCDRV#</text>
+<text x="312" y="190" class="s">execute edge. PCDRV_n is also active</text>
+<text x="312" y="204" class="s">in every fetch clock</text>
 <line x1="450" y1="212" x2="450" y2="378" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="457" y="300" class="bus s">load (fetch)</text>
 
 <!-- glue -->
 <rect x="640" y="60" width="200" height="150" rx="3" class="blk"/>
 <text x="652" y="82" class="t">Glue</text><text x="830" y="82" text-anchor="end" class="s">1 GAL, on CLK2X</text>
-<text x="652" y="102" class="m">in  CLK2X, WR, PCDRV#,</text>
+<text x="652" y="102" class="m">in  CLK2X, WR, PCDRV_n,</text>
 <text x="652" y="118" class="m">    PCLD, PCEQ, NE</text>
 <text x="652" y="134" class="m">out CLK      = CLK2X / 2</text>
-<text x="652" y="150" class="m">    WE#      = quarter two if WR</text>
+<text x="652" y="150" class="m">    WE_n      = quarter two if WR</text>
 <text x="652" y="166" class="m">    PCDRIVE  = PCDRV and CLK low</text>
 <text x="652" y="182" class="m">    LOAD     = PCLD or PCEQ and EQ</text>
 <line x1="602" y1="120" x2="638" y2="120" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#ak)"/>
@@ -98,7 +98,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="892" y="102" class="m">9.216 MHz oscillator</text>
 <text x="892" y="118" class="m"> -> CLK2X: glue, UART XIN</text>
 <text x="892" y="134" class="m">CLK 4.608 MHz to all others</text>
-<text x="892" y="158" class="m">MAX811L -> RST#</text>
+<text x="892" y="158" class="m">MAX811L -> RST_n</text>
 <text x="892" y="174" class="m"> -> RS1, RESET in B-low</text>
 <text x="892" y="196" class="s">every flop is on CLK's rising edge</text>
 
@@ -120,7 +120,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="280" y="460" width="170" height="130" rx="3" class="blk"/>
 <text x="292" y="482" class="t">B latch</text><text x="440" y="482" text-anchor="end" class="s">2 GALs</text>
 <text x="292" y="502" class="m">in  D0..D15, BLD, CLK,</text>
-<text x="292" y="518" class="m">    RST#</text>
+<text x="292" y="518" class="m">    RST_n</text>
 <text x="292" y="534" class="m">out B0..B15, RS1, RESET,</text>
 <text x="292" y="550" class="m">    EXEC</text>
 <text x="292" y="572" class="s">B := BLD ? D : B; the reset</text>
@@ -155,7 +155,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="700" y="460" width="120" height="130" rx="3" class="blk"/>
 <text x="712" y="482" class="t">Flash</text><text x="810" y="482" text-anchor="end" class="s">2 chips</text>
 <text x="712" y="502" class="m">CE#  A15</text>
-<text x="712" y="518" class="m">OE#  PCDRV#</text>
+<text x="712" y="518" class="m">OE#  PCDRV_n</text>
 <text x="712" y="534" class="m">WE#  VCC</text>
 <text x="712" y="558" class="s">0x0000..0x7FFF</text>
 <text x="712" y="572" class="s">A16-18 bank jumpers</text>
@@ -167,8 +167,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="850" y="460" width="120" height="130" rx="3" class="blk"/>
 <text x="862" y="482" class="t">SRAM</text><text x="960" y="482" text-anchor="end" class="s">2 chips</text>
 <text x="862" y="502" class="m">CE2 A15 CE1# A14</text>
-<text x="862" y="518" class="m">OE# MEMRD#</text>
-<text x="862" y="534" class="m">WE# WE#</text>
+<text x="862" y="518" class="m">OE# MEMRD_n</text>
+<text x="862" y="534" class="m">WE# WE_n</text>
 <text x="862" y="558" class="s">0x8000..0xBFFF;</text>
 <text x="862" y="572" class="s">r0..r31 at 0x8000+2n</text>
 <line x1="910" y1="398" x2="910" y2="458" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
@@ -181,8 +181,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="1000" y="482" class="t">UART</text>
 <text x="1000" y="502" class="m">CS A14,</text>
 <text x="1000" y="518" class="m">   A15</text>
-<text x="1000" y="534" class="m">RD# MEMRD#</text>
-<text x="1000" y="550" class="m">WR# WE#</text>
+<text x="1000" y="534" class="m">RD# MEMRD_n</text>
+<text x="1000" y="550" class="m">WR# WE_n</text>
 <text x="1000" y="572" class="s">0xC000+2n</text>
 <text x="1000" y="586" class="s">+ SP3232</text>
 <line x1="1030" y1="398" x2="1030" y2="458" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
@@ -194,7 +194,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <h2>The microword: one bit per control line</h2>
 <div class="scroll"><table>
 <tr><th>Bit</th><th>Signal</th><th>In the execute clock</th></tr>
-<tr><td class="m">15</td><td class="m">LIT</td><td>the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word</td></tr>
+<tr><td class="m">15</td><td class="m">PCDRV</td><td>the next word is data: the PC keeps the address bus, the flash drives D, the PC steps past the word</td></tr>
 <tr><td class="m">14</td><td class="m">MEMRD</td><td>memory at A drives D</td></tr>
 <tr><td class="m">13</td><td class="m">ALUOE</td><td>the ALU drives D</td></tr>
 <tr><td class="m">12</td><td class="m">WR</td><td>memory at A takes D, a quarter-clock pulse</td></tr>
@@ -205,19 +205,19 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">7:6</td><td class="m">F1 F0</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
 <tr><td class="m">5:0</td><td></td><td>unused</td></tr>
 </table></div>
-<p>The assembler refuses a word with more than one of LIT, MEMRD, ALUOE, or with MEMRD and WR together.</p>
+<p>The assembler refuses a word with more than one of PCDRV, MEMRD, ALUOE, or with MEMRD and WR together.</p>
 
 <h2>The two clocks of a microop</h2>
 <pre>fetch    A drives the address bus for the first half, the PC for the second; the flash drives D;
          at the edge: MIR := word[15:6], PC += 2, EXEC := 1
-execute  A drives the address bus (the PC, if LIT); MEMRD, ALUOE or LIT picks the driver of D;
-         WE# pulses in quarter two if WR; at the edge: ALD/BLD/PCLD/PCEQ load, PC += 2 if LIT,
+execute  A drives the address bus (the PC, if PCDRV); MEMRD, ALUOE or PCDRV picks the driver of D;
+         WE_n pulses in quarter two if WR; at the edge: ALD/BLD/PCLD/PCEQ load, PC += 2 if PCDRV,
          MIR clears, EXEC := 0</pre>
 
 <h2>Loading an immediate</h2>
-<pre>0x8400   LIT BLD                 ; execute: flash[PC] -> D -> B
+<pre>0x8400   PCDRV BLD                 ; execute: flash[PC] -> D -> B
 0x1234                           ; the literal, skipped by the PC
-0x8800   LIT ALD                 ; the same aimed at A: A = &amp;r5
+0x8800   PCDRV ALD                 ; the same aimed at A: A = &amp;r5
 0x800A</pre>
 
 <h2>MIPS-like macros</h2>
