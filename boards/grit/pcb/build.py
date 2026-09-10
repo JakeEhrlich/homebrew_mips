@@ -379,7 +379,7 @@ STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
 PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (X_UC, ROW_A, 0), "uc1": (X_UC, ROW_B, 0), "mir0": (X_MIR, ROW_A, 0), "mir1": (X_MIR, ROW_B, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
 # stage 6: clock and reset in the left strip, the transceiver under the UART
-PLACE.update({"osc0": (8.0, 132.0, 90), "umux0": (17.0, 124.0, 0), "uinv0": (8.0, 117.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
+PLACE.update({"osc0": (8.0, 132.0, 90), "umux0": (17.0, 124.0, 0), "uinv0": (8.0, 117.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (BUS_X1 + 4.0, ROW_A, 0)})   # the transceiver right of the UART, clear of its escapes
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -850,12 +850,14 @@ def draw_header_stubs(chips):
         for p in c["pins"]:
             net = p.get("net") or ""
             b = bus_of(net)
-            if b is None or b[0] == "CTRL":
+            if b is None:
                 continue
             k = p["pin"] - 1
             col, row = k // 2, k % 2          # footprint: odd pins row 0, even pins row 1
             x, y = x0 + col * 2.54, y0 + row * 2.54
             yb = bus_y(*b)
+            if b[0] == "CTRL" and abs(yb - y) > 25:
+                continue   # a control pin on the far header: the router's
             toward_band = yb > y
             near_row = (row == 1) == toward_band
             xt = x if near_row else x + 1.27

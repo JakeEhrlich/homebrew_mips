@@ -18588,8 +18588,8 @@
         },
         {
           "pin": 17,
-          "name": "CLK",
-          "net": "CLK",
+          "name": "GND",
+          "net": "GND",
           "kind": "passive"
         },
         {

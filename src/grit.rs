@@ -1226,7 +1226,7 @@ fn physical(nl: &mut Netlist) {
     addr.extend(["CLK", "RESET", "GND", "GND"].map(String::from));
     header(nl, "ja0", addr.iter().map(String::as_str).collect());
     let mut data: Vec<String> = (0..16).map(|i| n("D", i)).collect();
-    data.extend(["CLK", "MEMRD_n", "WE_n", "GND"].map(String::from));
+    data.extend(["GND", "MEMRD_n", "WE_n", "GND"].map(String::from));   // the clock is on the address header, next to the control band
     header(nl, "jd0", data.iter().map(String::as_str).collect());
     header(nl, "jc0", vec!["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "TLD", "TDRV", "CLK", "RESET", "NEL", "AUX0", "AUX1", "GND"]);
     header(nl, "js0", vec!["IR0", "IR1", "IR2", "IR3", "IR4", "STEP0", "STEP1", "STEP2", "STEP3", "NEL", "CLK", "RESET", "RST_n", "STEPMODE", "OSC", "AUX0", "AUX1", "GND", "GND", "GND"]);
