@@ -150,7 +150,47 @@ part as crag, in stock as a 3225) with two 18 pF loads; divisor 8 is
    bank switches, RUN / STEP on the slide switch, centre-positive at
    the jack.
 
-## 9. Bill of materials
+## 9. The PCB project (flatland)
+
+`boards/grit/pcb/` is a flatland project generated from the board file:
+
+```
+cargo run --release -- export grit > boards/grit/netlist.json
+python3 boards/grit/pcb/build.py            # library, netlist, floorplan, check
+python3 boards/grit/pcb/build.py --route    # + freerouting, check, gerbers, BOM, pick-and-place
+```
+
+`build.py` writes `lib/` (an index of the packages the flatland libraries
+did not have: the three DIP sockets, LQFP-48, TSSOP-16, SOIC-20W, SC-88,
+SOT-23-5, SOT-143, the 3225 crystal, the 7050 oscillator, the three
+switches, the headers and the DB9), then drives `pcb` to add every chip
+of the board file as an instance, join every net, and place the parts.
+Passives, the LED, the jack and the SOT-23 come from
+`~/flatland/library-jlcpcb`.  Re-running regenerates `pcb.json` from
+scratch, so the floorplan lives in the script, not in the project file.
+
+**Floorplan**, 230 x 175 mm, two layers, y up:
+
+| Where | What |
+|---|---|
+| top edge | 30 LEDs and their resistors in the buffer order of section 5, the four 74HC541 under them |
+| row at y = 129 | seq0, seq1, mir0, mir1, alu0..alu3 (DIP-24, long axis vertical, 12.5 mm pitch) |
+| row at y = 93 | pc0, pc1, a0, a1, b0, b1, t0, t1 |
+| row at y = 46 | uc0, uc1, rom0, rom1, ram0, ram1 (DIP-32 / DIP-28, 20 mm pitch) |
+| left edge | the clock: oscillator, multiplexer, inverter, step button, slide switch; the clock header at the top-left |
+| right of the rows | reset (MAX811L, button), the two bank DIP switches with their pull-ups, the UART with its crystal, the SP3232, the DB9 at the bottom-right corner |
+| bottom-left | jack, polyfuse, MOSFET, 100 uF, power LED |
+| bottom edge | the four 2 x 10 analyzer headers |
+
+A 100 nF sits just above every socket and beside every SMD chip; the
+four 10 uF are spread over the rows.  Ground pour on the bottom, 5 V
+pour on the top.  Design check: 0 errors before routing.  The unverified
+footprints (section 9's "verify" and the ones marked VERIFY in
+`lib/footprints/*.json`: SOT-143, the switches, the oscillator, the
+DB9's pin order) are the things to hold the datasheets against before
+ordering.
+
+## 10. Bill of materials
 
 From the board file.  "Verify" marks a number believed to be a JLCPCB
 basic part but not confirmed this session.
