@@ -469,18 +469,46 @@ def _place_debug():
     LED banks sit right of the bands' ends: a buffer, a column of
     resistors, a column of LEDs per byte."""
     PLACE.update({"jd0": (HDR_X0, DBUS_Y0 + 16 * BUS_PITCH + 3.7, 90), "ja0": (HDR_X0, 3.2, 90)})
-    # a resistor and an LED per line, in two columns of eight per bus,
-    # right of the band's end; the resistor's bus pad reaches the line's
-    # end tap through the router
-    for b, yc in enumerate((DBUS_Y0 - 2.0, DBUS_Y0 + 17.0, ABUS_Y0 - 4.5, ABUS_Y0 - 23.5)):
-        x = BUS_X1 + 7.0
-        for i in range(8):
-            sig = (["D", "ADDR"][b // 2] + str((b % 2) * 8 + i)).lower()
-            PLACE[f"rb_{sig}"] = (x, yc - 7.7 + i * 2.2, 0)
-            PLACE[f"lb_{sig}"] = (x + 5.0, yc - 7.7 + i * 2.2, 0)
+    # a resistor and an LED per line in one column of sixteen per bus,
+    # right of the band's end, centred on the band; the resistor's bus pad
+    # is wired to the line's end by draw_led_links
+    for name in ("D", "ADDR"):
+        for i in range(16):
+            sig = f"{name}{i}".lower()
+            y = led_y(name, i)
+            PLACE[f"rb_{sig}"] = (LED_X, y, 0)
+            PLACE[f"lb_{sig}"] = (LED_X + 4.5, y, 0)
+
+
+def led_y(name, i):
+    """Row of the LED of bit i: 2.2 mm pitch, the column centred on the
+    band, in the same order as the lines (upward for D, downward for ADDR)."""
+    centre = bus_y(name, 0) + (7.5 if name == "D" else -7.5)
+    return centre - 16.5 + 2.2 * i if name == "D" else centre + 16.5 - 2.2 * i
+
+
+def draw_led_links():
+    """Each bus resistor's bus-side pad to its line's end on the top layer:
+    along the line to a vertical of its own, up or down to the resistor's
+    row, then across.  The lines whose LED row is below them take the
+    verticals in one order and those above in the other, and the two sets
+    reuse the same x positions since their spans never overlap, so
+    nothing crosses."""
+    for name in ("D", "ADDR"):
+        items = [{"i": i, "yl": bus_y(name, i), "yr": led_y(name, i)} for i in range(16)]
+        down = sorted([it for it in items if it["yr"] < it["yl"]], key=lambda it: it["yl"])    # x grows with the line's y
+        up = sorted([it for it in items if it["yr"] >= it["yl"]], key=lambda it: -it["yl"])   # x shrinks with the line's y
+        for group in (down, up):
+            for k, it in enumerate(group):
+                net = f"{name}{it['i']}"
+                x_end = BUS_X1 + (1.6 if it["i"] % 2 else 0.0)
+                xv = BUS_X1 + 3.0 + STUB_PITCH * k
+                x_pad = LED_X - 0.875
+                run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", STUB_WIDTH, f"{x_end},{it['yl']}", f"{xv:.3f},{it['yl']}", f"{xv:.3f},{it['yr']:.3f}", f"{x_pad:.3f},{it['yr']:.3f}", quiet=True)
 
 
 HDR_X0 = 46.0   # left end of the bus headers (2x10, turned along the bands)
+LED_X = BUS_X1 + 10.0
 
 
 def finish_floorplan():
@@ -1119,6 +1147,8 @@ def main():
             draw_stubs(chips)
             draw_minibuses(chips)
         draw_header_stubs(chips)
+        if STAGE >= 7:
+            draw_led_links()
         draw_smd_stubs(chips, nets)
         draw_power_vias([c for c in chips if not c["package"].startswith(("DIP", "LQFP"))], pinmaps, comps, extras)
         draw_buses(nets)
