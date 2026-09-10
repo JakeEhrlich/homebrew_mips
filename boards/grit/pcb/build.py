@@ -4,6 +4,8 @@
     python3 boards/grit/pcb/build.py            # library + netlist + placement
     python3 boards/grit/pcb/build.py --route    # ... then autoroute, check, outputs
 
+Four layers (ground and 5 V on the inner planes) unless --2layer.
+
 Reads ../netlist.json (the board file exported by `mips32 export grit`),
 writes the component library in lib/ (footprints for the packages the
 flatland libraries do not have yet), and drives `pcb` to create pcb.json:
@@ -18,7 +20,13 @@ PCB = os.environ.get("PCB", os.path.expanduser("~/flatland/target/release/pcb"))
 JLC = os.path.expanduser("~/flatland/library-jlcpcb")
 LIB = os.path.join(HERE, "lib")
 ROUTE = "--route" in sys.argv
-FOUR = "--4layer" in sys.argv
+CORE_PREFIXES = ("seq", "mir", "pc", "a", "b", "t", "alu", "rom", "uc", "ram", "uart", "xcvr", "osc", "umux", "uinv", "rst")
+
+
+def is_core(name):
+    prefix = "".join(ch for ch in name if ch.isalpha())
+    return prefix in CORE_PREFIXES
+FOUR = "--2layer" not in sys.argv   # four layers is the design; --2layer only for comparison
 LAYERS = "F.Cu,In1.Cu,In2.Cu,B.Cu" if FOUR else "F.Cu,B.Cu"
 
 
@@ -280,80 +288,373 @@ def component_for(chip):
 
 
 # ----------------------------------------------------------------- floorplan
+# Built up in stages (--stage N), looking at the ratsnest and the routed
+# result at each: 1 memories and UART on explicit bus wires; 2 + the
+# address drivers a0/a1; 3 + pc, b, t; 4 + the ALU; 5 + the sequencer,
+# microcode ROM and pipeline register; 6 + clock and reset; 7 everything.
+STAGE = int(next((a.split("=")[1] for a in sys.argv if a.startswith("--stage=")), "1"))
 W, H = 230.0, 175.0
-GAL_ROW_A = 129.0   # control + ALU
-GAL_ROW_B = 93.0    # datapath
-MEM_ROW = 46.0
-GAL_X0, GAL_DX = 22.0, 12.5
-MEM_X0, MEM_DX = 26.0, 20.0
+HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
+
+# The buses are literal horizontal wires on the top layer: the data bus
+# above the chip row, the address bus below it.  The DIPs sit rotated
+# 180 degrees so their data pins face the data bus and their address
+# pins the address bus.
+ROW_Y = 60.0
+BUS_X0, BUS_X1 = 20.0, 150.0
+DBUS_Y0, ABUS_Y0, BUS_PITCH = 86.0, 34.0, 1.0
+BUS_WIDTH = 0.3
+STUB_WIDTH = 0.25
+VIA_DRILL, VIA_DIA = 0.3, 0.6
+
+
+def bus_y(name, i):
+    return DBUS_Y0 + i * BUS_PITCH if name == "D" else ABUS_Y0 - i * BUS_PITCH
+
 
 PLACE = {}
-for i, n in enumerate(["seq0", "seq1", "mir0", "mir1", "alu0", "alu1", "alu2", "alu3"]):
-    PLACE[n] = (GAL_X0 + i * GAL_DX, GAL_ROW_A, 0)
-for i, n in enumerate(["pc0", "pc1", "a0", "a1", "b0", "b1", "t0", "t1"]):
-    PLACE[n] = (GAL_X0 + i * GAL_DX, GAL_ROW_B, 0)
-for i, n in enumerate(["uc0", "uc1", "rom0", "rom1", "ram0", "ram1"]):
-    PLACE[n] = (MEM_X0 + i * MEM_DX, MEM_ROW, 0)
-# decoupling caps: just above each socket, rotated to lie along x
-for n in list(PLACE):
-    x, y, _ = PLACE[n]
-    top = 16.0 if n[:2] in ("uc", "ro", "ra") and not n.startswith("t") else 17.0
-    if n.startswith(("uc", "rom", "ram")):
-        PLACE["cd_" + n] = (x + 5.0, y + 23.5, 0)
-    else:
-        PLACE["cd_" + n] = (x, y + 18.0, 0)
-# clock corner, left of the GAL rows
-PLACE.update({
-    "osc0": (8.0, 118.0, 90), "cd_osc0": (8.0, 124.5, 0),
-    "umux0": (8.0, 110.0, 0), "cd_umux0": (8.0, 106.5, 0),
-    "uinv0": (8.0, 100.0, 0), "cd_uinv0": (8.0, 96.0, 0),
-    "rstep0": (8.0, 92.0, 0), "cst0": (8.0, 89.0, 0),
-    "swstep0": (9.0, 80.0, 0), "swm0": (9.0, 70.0, 0), "jclk0": (6.0, 148.0, 0),
-})
-# UART corner, right of the memory row
-PLACE.update({
-    "uart0": (160.0, 60.0, 0), "cd_uart0": (160.0, 70.0, 0),
-    "x1": (150.0, 50.0, 0), "xc1": (146.0, 45.0, 90), "xc2": (154.0, 45.0, 90),
-    "xcvr0": (185.0, 60.0, 0), "cd_xcvr0": (185.0, 67.0, 0),
-    "c1": (178.0, 52.0, 90), "c2": (181.5, 52.0, 90), "c3": (188.5, 52.0, 90), "c4": (192.0, 52.0, 90),
-    "j1": (205.0, 9.0, 0),
-})
-# reset, right of the datapath row
-PLACE.update({"rst0": (140.0, 93.0, 0), "cd_rst0": (140.0, 97.5, 0), "swr0": (140.0, 83.0, 0)})
-# bank switches
-PLACE.update({"swb0": (160.0, 96.0, 0), "swb1": (175.0, 96.0, 0)})
-for i in range(4):
-    PLACE[f"rp_pbank{i}"] = (153.0 + i * 3.5, 105.0, 90)
-for i in range(3):
-    PLACE[f"rp_ubank{i}"] = (169.0 + i * 3.5, 105.0, 90)
-PLACE.update({"rd0": (150.0, 128.0, 0), "rd1": (150.0, 131.0, 0)})
-# power entry, bottom-left
-PLACE.update({
-    "jpwr0": (14.0, 14.0, 90), "f0": (26.0, 10.0, 0), "q0": (33.0, 10.0, 0), "cb0": (42.0, 12.0, 0),
-    "rlp0": (26.0, 5.0, 0), "ledp0": (31.0, 5.0, 0),
-    "cb1": (60.0, 74.0, 0), "cb2": (128.0, 74.0, 0), "cb3": (128.0, 111.0, 0), "cb4": (128.0, 140.0, 0),
-})
-# LED row along the top edge, buffers under it
-LED_Y, R_Y, BUF_Y = 169.5, 165.5, 157.0
-LED_ORDER = [
-    ["CLK", "RESET", "PCDRV", "ADRV", "MEMRD_n", "WE_n", "ALUOE", "TDRV"],
-    ["ALD", "BLD", "TLD", "PCLD", "PCINC", "IRLD", "NEL", "AUX0"],
-    ["IR0", "IR1", "IR2", "IR3", "IR4", "STEP0", "STEP1", "STEP2"],
-    ["STEP3", "F0", "F1", "AUX1", "RST_n"],
-]
-x = 20.0
-for b, group in enumerate(LED_ORDER):
-    PLACE[f"ubuf{b}"] = (x + 17.0, BUF_Y, 0)
-    PLACE[f"cd_ubuf{b}"] = (x + 17.0 + 8.5, BUF_Y, 90)
-    for sig in group:
-        s = sig.lower()
-        PLACE[f"led_{s}"] = (x, LED_Y, 90)
-        PLACE[f"rl_{s}"] = (x, R_Y, 90)
-        x += 5.0
-    x += 6.0
-# analyzer headers along the bottom edge
-PLACE.update({"ja0": (50.0, 6.0, 90), "jd0": (82.0, 6.0, 90), "jc0": (114.0, 6.0, 90), "js0": (146.0, 6.0, 90)})
-HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
+STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
+# stage 1: memories and UART
+for i, n in enumerate(["rom0", "rom1", "ram0", "ram1"]):
+    PLACE[n] = (40.0 + i * 20.0, ROW_Y, 180)
+PLACE["uart0"] = (125.0, ROW_Y, 0)
+STAGE_CHIPS[1] = ["rom0", "rom1", "ram0", "ram1", "uart0"]
+# stage 2: the address drivers, on the row too
+PLACE["a0"] = (140.0, ROW_Y, 0)
+PLACE["a1"] = (152.5, ROW_Y, 0)
+STAGE_CHIPS[2] = ["a0", "a1"]
+# stage 3: the other latches
+for i, n in enumerate(["pc0", "pc1", "b0", "b1", "t0", "t1"]):
+    PLACE[n] = (165.0 + i * 12.5, ROW_Y, 0)
+STAGE_CHIPS[3] = ["pc0", "pc1", "b0", "b1", "t0", "t1"]
+# stage 4: the ALU, above the data bus
+for i, n in enumerate(["alu0", "alu1", "alu2", "alu3"]):
+    PLACE[n] = (140.0 + i * 12.5, 112.0, 0)
+STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
+# stage 5: sequencer at the end of the bus, microcode ROM and pipeline register beside it
+PLACE.update({"seq0": (30.0, 112.0, 0), "seq1": (42.5, 112.0, 0), "uc0": (60.0, 112.0, 0), "uc1": (80.0, 112.0, 0), "mir0": (97.5, 112.0, 0), "mir1": (110.0, 112.0, 0)})
+STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
+# stage 6: clock and reset
+PLACE.update({"osc0": (8.0, 118.0, 90), "umux0": (8.0, 110.0, 0), "uinv0": (8.0, 100.0, 0), "rst0": (8.0, 90.0, 0), "xcvr0": (185.0, 112.0, 0)})
+STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
+
+
+def stage_names():
+    names = []
+    for s in range(1, STAGE + 1):
+        names += STAGE_CHIPS[s]
+    return names
+
+
+def dip_pads(chip):
+    """Board coordinates of a placed DIP's pads: {pin: (x, y, column)} with
+    column -1 for the left column, +1 for the right, after rotation."""
+    n = int(chip["package"].split("-")[1].split(" ")[0])
+    row = 7.62 if n == 24 else 15.24
+    x0, y0, rot = PLACE[chip["name"]]
+    half = n // 2
+    out = {}
+    for i in range(half):
+        y = (half - 1) / 2 * 2.54 - i * 2.54
+        for pin, x in ((i + 1, -row / 2), (n - i, row / 2)):
+            if rot == 180:
+                px, py = -x, -y
+            else:
+                px, py = x, y
+            out[pin] = (x0 + px, y0 + py, -1 if px < 0 else 1)
+    return out
+
+
+VIA_XS = {}   # net -> [x of every via on its bus line]
+
+
+def draw_stubs(chips):
+    """Every DIP pin on a bus net gets a bottom-layer track beside its
+    column, up to the data bus or down to the address bus, ending in a
+    via on the bus line.  Tracks in a column are staggered; the order is
+    chosen so that no pin's jog to its track crosses a track that started
+    at another pin (a track may only pass a pin whose own track is further
+    out).  DIP-24 columns use the outside on the left and the inside on
+    the right; wider DIPs use the inside for both."""
+    for c in chips:
+        if not c["package"].startswith("DIP"):
+            continue
+        n = int(c["package"].split("-")[1].split(" ")[0])
+        pads = dip_pads(c)
+        cols = {}
+        for p in c["pins"]:
+            net = p.get("net") or ""
+            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            if bus is None:
+                continue
+            i = int(net[len(bus):])
+            x, y, col = pads[p["pin"]]
+            cols.setdefault(col, []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, i)})
+        for col, items in cols.items():
+            inside = n > 24 or col == 1
+            sign = 1 if (col == -1) == inside else -1   # +x from a left pad going inside, etc.
+            order = []
+            rest = list(items)
+            while rest:
+                # a track may take the next slot if it spans no other remaining pin
+                pick = None
+                for it in rest:
+                    lo, hi = sorted((it["y"], it["yb"]))
+                    if not any(lo < o["y"] < hi for o in rest if o is not it):
+                        pick = it
+                        break
+                if pick is None:
+                    pick = min(rest, key=lambda it: abs(it["y"] - it["yb"]))
+                order.append(pick)
+                rest.remove(pick)
+            # slots: a track takes the innermost slot whose occupants it does
+            # not overlap in y (with margin), and which is not further out
+            # than an already placed track it would cross
+            slots = []   # per slot: list of (lo, hi)
+            placed = []  # (slot, y)
+            for it in order:
+                lo, hi = sorted((it["y"], it["yb"]))
+                lo, hi = lo - 0.6, hi + 0.6
+                s = 0
+                while True:
+                    if s < len(slots) and any(not (hi < a or lo > b) for (a, b) in slots[s]):
+                        s += 1
+                        continue
+                    if any(ps > s and lo < py < hi for (ps, py) in placed):
+                        s += 1
+                        continue
+                    break
+                while s >= len(slots):
+                    slots.append([])
+                slots[s].append((lo, hi))
+                placed.append((s, it["y"]))
+                it["slot"] = s
+            for it in order:
+                xt = it["x"] + sign * (1.2 + 0.7 * it["slot"])
+                run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
+                run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
+
+
+def quad_pads(chip):
+    """Board coordinates of a placed LQFP-48's pads: {pin: (x, y, side)},
+    side in L B R T; rotation 0 only."""
+    x0, y0, rot = PLACE[chip["name"]]
+    assert rot == 0
+    n_side, pitch, center = 12, 0.5, 4.35
+    span = (n_side - 1) / 2 * pitch
+    out = {}
+    k = 1
+    for i in range(n_side):
+        out[k] = (x0 - center, y0 + span - i * pitch, "L"); k += 1
+    for i in range(n_side):
+        out[k] = (x0 - span + i * pitch, y0 - center, "B"); k += 1
+    for i in range(n_side):
+        out[k] = (x0 + center, y0 - span + i * pitch, "R"); k += 1
+    for i in range(n_side):
+        out[k] = (x0 + span - i * pitch, y0 + center, "T"); k += 1
+    return out
+
+
+ESCAPED = set()   # "chip-pin" of SMD pads that reach the router only through their escape via
+ESC_VIAS = {}     # net -> [(x, y)] of those vias: one-pin parts in the router's DSN
+
+
+def draw_smd_stubs(chips, nets):
+    """Every netted pad of the LQFP escapes straight out on the top layer
+    (the centre pad of a side furthest, the outer ones least, so a jog
+    outward to the pad's own column crosses only escapes that have
+    ended) to a small plated hole in a row at 1.0 mm pitch.  The hole is
+    the pad as far as the router is concerned.  Bus pads continue on the
+    bottom layer to a via on their bus line; power pads are reached by
+    the planes; the rest the router picks up at the hole."""
+    ESC, STEP, VPITCH = 1.3, 0.6, 1.0
+    for c in chips:
+        if not c["package"].startswith("LQFP"):
+            continue
+        pads = quad_pads(c)
+        groups = {}
+        inward = {}     # side -> the inward strip's coordinate (y for T/B, x for L/R)
+        side_vias = {}  # net -> {side: [(x, y)]}
+        for p in c["pins"]:
+            net = p.get("net") or ""
+            if not net or len(nets.get(net, [])) < 2:
+                continue   # no such net in this stage
+            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            x, y, side = pads[p["pin"]]
+            groups.setdefault(side, []).append({"net": net, "pin": p["pin"], "x": x, "y": y, "yb": bus_y(bus, int(net[len(bus):])) if bus else None})
+        for side, items in groups.items():
+            if side == "T": to_xy = lambda u, v: (u, v)
+            elif side == "B": to_xy = lambda u, v: (u, -v)
+            elif side == "L": to_xy = lambda u, v: (-v, u)
+            else: to_xy = lambda u, v: (v, u)
+            def uv(x, y):
+                return {"T": (x, y), "B": (x, -y), "L": (y, -x), "R": (y, x)}[side]
+            items.sort(key=lambda it: uv(it["x"], it["y"])[0])
+            mid = (len(items) - 1) / 2
+            v0 = uv(items[0]["x"], items[0]["y"])[1]
+            v_top = v0 + ESC + (mid + 0.5) * STEP + 0.7
+            inward[side] = to_xy(0, v_top - 0.8)[1] if side in "TB" else to_xy(0, v_top - 0.8)[0]
+            for k, it in enumerate(items):
+                u, v = uv(it["x"], it["y"])
+                v_turn = v + ESC + (mid - abs(k - mid)) * STEP
+                u_via = u + (k - mid) * (VPITCH - 0.5)
+                pts = [to_xy(u, v), to_xy(u, v_turn), to_xy(u_via, v_turn), to_xy(u_via, v_top)]
+                run("trace", "add", "--layer", "F.Cu", "--net", it["net"], "--width", STUB_WIDTH, *[f"{x:.3f},{y:.3f}" for x, y in pts], quiet=True)
+                xv, yv = to_xy(u_via, v_top)
+                run("via", "add", f"{xv:.3f},{yv:.3f}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                ESCAPED.add(f"{c['name']}-{it['pin']}")
+                ESC_VIAS.setdefault(it["net"], []).append((xv, yv))
+                side_vias.setdefault(it["net"], {}).setdefault(side, []).append((xv, yv))
+                it["via"] = (xv, yv)
+            # a net with several pads on this side (the DTR# loop, the baud
+            # clock): join its escape vias on the bottom layer, inward of the
+            # via row where nothing else runs
+            by_net = {}
+            for it in items:
+                by_net.setdefault(it["net"], []).append(it)
+            strip = 0
+            for net, its in by_net.items():
+                if len(its) < 2 or net in ("VCC", "GND"):
+                    continue   # the planes join power pads
+                its.sort(key=lambda it: uv(*it["via"])[0])
+                v_in = v_top - 0.8 - 0.6 * strip   # one strip per loop on this side
+                strip += 1
+                pts = [to_xy(uv(*its[0]["via"])[0], v_top), to_xy(uv(*its[0]["via"])[0], v_in), to_xy(uv(*its[-1]["via"])[0], v_in), to_xy(uv(*its[-1]["via"])[0], v_top)]
+                run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *[f"{x:.3f},{y:.3f}" for x, y in pts], quiet=True)
+                for it in its[1:-1]:
+                    u_it = uv(*it["via"])[0]
+                    run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *[f"{x:.3f},{y:.3f}" for x, y in (to_xy(u_it, v_top), to_xy(u_it, v_in))], quiet=True)
+            bus_items = [it for it in items if it["yb"] is not None]
+            if side in "TB":
+                for it in bus_items:
+                    xv, yv = it["via"]
+                    run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xv:.3f},{yv:.3f}", f"{xv:.3f},{it['yb']}", quiet=True)
+                    run("via", "add", f"{xv:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                    VIA_XS.setdefault(it["net"], []).append(round(xv, 3))
+            else:
+                dx = -1 if side == "L" else 1
+                ups = sorted([it for it in bus_items if it["yb"] > it["y"]], key=lambda it: -it["y"])
+                downs = sorted([it for it in bus_items if it["yb"] < it["y"]], key=lambda it: it["y"])
+                for group in (ups, downs):
+                    for j, it in enumerate(group):
+                        xv, yv = it["via"]
+                        xt = xv + dx * VPITCH * (j + 1)
+                        run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xv:.3f},{yv:.3f}", f"{xt:.3f},{yv:.3f}", f"{xt:.3f},{it['yb']}", quiet=True)
+                        run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                        VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
+        draw_corner_loops(side_vias, inward)
+
+
+def draw_corner_loops(side_vias, inward):
+    """A net with escape vias on two adjacent sides of the LQFP: join one
+    via of each side on the bottom layer along the inward strips, round
+    the corner between them."""
+    for net, sides in side_vias.items():
+        if net in ("VCC", "GND"):
+            continue
+        names = list(sides)
+        for a in range(len(names)):
+            for b in range(a + 1, len(names)):
+                s1, s2 = names[a], names[b]
+                if {s1, s2} in ({"T", "B"}, {"L", "R"}):
+                    continue   # opposite sides: left to the router
+                tb, lr = (s1, s2) if s1 in "TB" else (s2, s1)
+                (xt, yt) = sides[tb][-1] if lr == "R" else sides[tb][0]
+                (xl, yl) = sides[lr][-1] if tb == "T" else sides[lr][0]
+                y_in, x_in = inward[tb], inward[lr]
+                pts = [(xt, yt), (xt, y_in), (x_in, y_in), (x_in, yl), (xl, yl)]
+                run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *[f"{x:.3f},{y:.3f}" for x, y in pts], quiet=True)
+
+
+def draw_buses(nets):
+    """The explicit bus wires: one protected trace per bit, only for bits
+    that have pins in this stage."""
+    for name, count in (("D", 16), ("ADDR", 16)):
+        for i in range(count):
+            net = f"{name}{i}"
+            if net not in nets or len(nets[net]) < 2:
+                continue
+            y = bus_y(name, i)
+            # a vertex at every via, so the router's connectivity sees the junctions
+            xs = [BUS_X0] + sorted(x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1) + [BUS_X1]
+            run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", BUS_WIDTH, *[f"{x},{y}" for x in xs], quiet=True)
+
+
+def hide_hand_wiring(dsn):
+    """Rewrite the DSN so freerouting never sees the hand-wired bus nets:
+    their nets are dropped from the network (their pins become plain
+    obstacles) and every protected wire and via becomes a keepout.
+    Freerouting otherwise treats protected wiring it cannot 'complete' as
+    unrouted work, and either hangs or stops placing vias."""
+    import re, math
+    s = open(dsn).read()
+    done = set(VIA_XS) | {"VCC", "GND"}
+    # the escape vias of nets the router still has to finish become
+    # one-pin parts ESC<n>, the way flatland exports netted holes
+    esc_parts = {}   # net -> [part names]
+    comps, images = [], []
+    n = 0
+    for net, pts in ESC_VIAS.items():
+        if net in done:
+            continue
+        for (x, y) in pts:
+            name = f"ESC{n}"
+            n += 1
+            esc_parts.setdefault(net, []).append(name)
+            comps.append(f"    (component {name}\n      (place {name} {x * 1000:.0f} {y * 1000:.0f} front 0 (lock_type position))\n    )")
+            images.append(f"    (image {name}\n      (pin Round[A]Pad_600_um 1 0 0)\n    )")
+    if comps:
+        i = s.index("  (placement\n") + len("  (placement\n")
+        s = s[:i] + "\n".join(comps) + "\n" + s[i:]
+        i = s.index("  (library\n") + len("  (library\n")
+        pad = "    (padstack Round[A]Pad_600_um\n" + "".join(f"      (shape (circle {l} 600))\n" for l in ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")) + "      (attach off)\n    )\n"
+        s = s[:i] + "\n".join(images) + "\n" + pad + s[i:]
+    # drop the completed nets from the network section; in the others,
+    # a pad that escapes to a via is represented by the ESC part instead
+    def net_line(m):
+        name = m.group(1).strip('"')
+        if name in done:
+            return ""
+        pins = [t for t in m.group(2).split() if t.strip('"') not in ESCAPED]
+        pins += [f"{e}-1" for e in esc_parts.get(name, [])]
+        return f"\n    (net {m.group(1)} (pins {' '.join(pins)}))"
+    s = re.sub(r'\n\s*\(net (\S+) \(pins([^)]*)\)\)', net_line, s)
+    # and from the classes
+    def strip_class(m):
+        names = [n for n in m.group(2).split() if n.strip('"') not in done]
+        return m.group(1) + " ".join(names) + m.group(3)
+    s = re.sub(r'(\(class \S+ )([^()\n]*)(\n)', strip_class, s)
+    # protected wiring -> keepouts
+    clearance = 0.15 * 1000
+    keepouts = []
+    wiring = re.search(r'\n  \(wiring\n(.*?)\n  \)\n', s, re.S)
+    if wiring:
+        for layer, w, pts in re.findall(r'\(wire \(path (\S+) (\d+)((?: -?[\d.]+)+)\)', wiring.group(1)):
+            nums = [float(v) for v in pts.split()]
+            h = float(w) / 2 + clearance
+            for (x1, y1, x2, y2) in zip(nums[0::2], nums[1::2], nums[2::2], nums[3::2]):
+                dx, dy = x2 - x1, y2 - y1
+                L = math.hypot(dx, dy) or 1.0
+                ux, uy = dx / L, dy / L
+                px, py = -uy * h, ux * h
+                ex, ey = ux * h, uy * h
+                corners = [(x1 - ex + px, y1 - ey + py), (x2 + ex + px, y2 + ey + py), (x2 + ex - px, y2 + ey - py), (x1 - ex - px, y1 - ey - py)]
+                keepouts.append(f'    (keepout "" (polygon {layer} 0 ' + " ".join(f"{x:.1f} {y:.1f}" for x, y in corners) + "))")
+        esc_pts = {(round(x * 1000), round(y * 1000)) for net, pts in ESC_VIAS.items() if net not in done for (x, y) in pts}
+        for x, y in re.findall(r'\(via \S+ (-?[\d.]+) (-?[\d.]+)', wiring.group(1)):
+            if (round(float(x)), round(float(y))) in esc_pts:
+                continue
+            r = 300 + clearance
+            for layer in ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu"):
+                pts = " ".join(f"{float(x) + r * math.cos(a):.1f} {float(y) + r * math.sin(a):.1f}" for a in [i * math.pi / 6 for i in range(12)])
+                keepouts.append(f'    (keepout "" (polygon {layer} 0 {pts}))')
+        s = s[:wiring.start()] + "\n" + s[wiring.end():]
+    # keepouts go into the structure section, after the boundary
+    i = s.index("(boundary")
+    j = s.index("\n", i)
+    s = s[:j + 1] + "\n".join(keepouts) + "\n" + s[j + 1:]
+    open(dsn, "w").write(s)
 
 
 # --------------------------------------------------------------------- main
@@ -369,12 +670,20 @@ def main():
     run("index", "update", LIB, quiet=True)
     run("index", "add", LIB, quiet=True)
     run("drc", "add", "jlcpcb-fr4-4layer" if FOUR else "jlcpcb-fr4-2layer", quiet=True)
-    run("rules", "set", "trace_width=0.25", "clearance=0.2", "via_drill=0.4", "via_diameter=0.8", "pour_clearance=0.3", "edge_clearance=0.5", quiet=True)
+    run("rules", "set", "trace_width=0.25", "clearance=0.15", f"via_drill={VIA_DRILL}", f"via_diameter={VIA_DIA}", "pour_clearance=0.3", "edge_clearance=0.5", quiet=True)
     run("rules", "class", "power", "--width", "0.6", "--clearance", "0.25", quiet=True)
-    run("drc", "waive", "pth-annular-ring", "jpwr0", "j1", "--reason", "non-plated locating pegs of the jack and mounting holes of the DB9 carry no copper by design", quiet=True)
-    run("drc", "waive", "pth-annular-ring-recommended", "jpwr0", "j1", "--reason", "same: non-plated holes", quiet=True)
+    wanted = set(stage_names())
+    if "jpwr0" in wanted:
+        run("drc", "waive", "pth-annular-ring", "jpwr0", "j1", "--reason", "non-plated locating pegs of the jack and mounting holes of the DB9 carry no copper by design", quiet=True)
+        run("drc", "waive", "pth-annular-ring-recommended", "jpwr0", "j1", "--reason", "same: non-plated holes", quiet=True, check=False)
 
-    chips = BOARD["chips"]
+    wanted = set(stage_names())
+    if "--no-uart" in sys.argv:
+        wanted.discard("uart0")
+    only = next((a.split("=")[1] for a in sys.argv if a.startswith("--only=")), None)
+    if only:
+        wanted = set(only.split(","))
+    chips = [c for c in BOARD["chips"] if c["name"] in wanted]
     pinmaps = {}
     for c in chips:
         comp_name, params, pinmap = component_for(c)
@@ -394,14 +703,18 @@ def main():
                 continue
             nets.setdefault(p["net"], []).append(f"{c['name']}.{cp}")
     # extras the board file does not carry: crystal case pads, jack switch contact to the sleeve
-    nets["GND"] += ["x1.2", "x1.4", "jpwr0.SW"]
+    if "x1" in wanted:
+        nets["GND"] += ["x1.2", "x1.4"]
+    if "jpwr0" in wanted:
+        nets["GND"] += ["jpwr0.SW"]
     for net, pins in nets.items():
         if len(pins) < 2:
             print("single-pin net", net, pins)
             continue
         run("connect", *pins, "--net", net, quiet=True)
     for net in ("VCC", "GND", "VIN", "VF"):
-        run("net", "class", net, "power", quiet=True)
+        if net in nets and len(nets[net]) >= 2:
+            run("net", "class", net, "power", quiet=True)
     # board
     run("outline", "rect", W, H, "--radius", 3, quiet=True)
     for (x, y) in HOLES:
@@ -412,25 +725,50 @@ def main():
             raise SystemExit(f"unplaced: {n}")
         x, y, r = PLACE[n]
         run("place", n, f"{x},{y}", "--rotation", r, quiet=True)
+    if "--no-stubs" not in sys.argv:
+        draw_stubs(chips)
+        draw_smd_stubs(chips, nets)
+        draw_buses(nets)
     if FOUR:
         run("pour", "new", "gnd", "--layer", "In1.Cu", "--net", "GND", "--follow-outline", quiet=True)
         run("pour", "new", "vcc", "--layer", "In2.Cu", "--net", "VCC", "--follow-outline", quiet=True)
     else:
         run("pour", "new", "gnd", "--layer", "B.Cu", "--net", "GND", "--follow-outline", quiet=True)
         run("pour", "new", "vcc", "--layer", "F.Cu", "--net", "VCC", "--follow-outline", quiet=True)
-    run("status")
+    run("status", quiet=True)
     if ROUTE:
         # freerouting writes build/grit.ses; import it with the redundancy pass
         # skipped (that pass takes hours on a board of this size)
+        run("visualize", "pcb", "-o", os.path.join(HERE, "build", f"stage{STAGE}-placed.png"), quiet=True)
         run("route", "--dsn-only", quiet=True)
-        r = subprocess.run(["/Applications/freerouting.app/Contents/MacOS/freerouting", "-de", os.path.join(HERE, "build", "grit.dsn"), "-do", os.path.join(HERE, "build", "grit.ses"), "-mp", "14", "-dct", "0", "-da", "-dl", "--gui.enabled=false"], capture_output=True, text=True, env={**os.environ, "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true"})
-        open(os.path.join(HERE, "build", "freerouting.log"), "w").write(r.stdout + r.stderr)
+        dsn = os.path.join(HERE, "build", "grit.dsn")
+        # the LQFP's 0.5 mm pads sit exactly at the 0.2 mm clearance; give
+        # the router's pad-to-pad and trace-to-pad classes some slack so it
+        # is willing to leave those pads at all (the design check still
+        # holds every trace to the project's 0.2 mm)
+        s = open(dsn).read()
+        s = s.replace("(clearance 200 (type default_smd))", "(clearance 150 (type default_smd))").replace("(clearance 200 (type smd_smd))", "(clearance 100 (type smd_smd))")
+        open(dsn, "w").write(s)
+        hide_hand_wiring(dsn)
+        if FOUR:
+            # the inner layers are planes: keep the router off them
+            s = open(dsn).read()
+            for layer in ("In1.Cu", "In2.Cu"):
+                s = s.replace(f"(layer {layer} (type signal)", f"(layer {layer} (type power)")
+            open(dsn, "w").write(s)
+        passes = next((a.split("=")[1] for a in sys.argv if a.startswith("--passes=")), "6")
+        ses = os.path.join(HERE, "build", "grit.ses")
+        if os.path.exists(ses):
+            os.remove(ses)
+        with open(os.path.join(HERE, "build", "freerouting.log"), "w") as log:
+            subprocess.run(["timeout", next((a.split("=")[1] for a in sys.argv if a.startswith("--timeout=")), "600"), "/Applications/freerouting.app/Contents/MacOS/freerouting", "-de", dsn, "-do", ses, "-mp", passes, "-dct", "0", "-da", "-dl", "--gui.enabled=false"], stdout=log, stderr=subprocess.STDOUT, text=True, env={**os.environ, "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true"})
         run("route", "--import", os.path.join(HERE, "build", "grit.ses"), "--keep-redundant")
         run("check", check=False)
-        run("visualize", "pcb")
-        run("gerbers", check=False)
-        run("bom", "--all", check=False)
-        run("pnp", check=False)
+        run("visualize", "pcb", "-o", os.path.join(HERE, "build", f"stage{STAGE}-routed.png"), quiet=True)
+        if STAGE >= 7:
+            run("gerbers", check=False)
+            run("bom", "--all", check=False)
+            run("pnp", check=False)
 
 
 if __name__ == "__main__":
