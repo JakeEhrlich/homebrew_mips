@@ -1,0 +1,143 @@
+<title>Grit Board Layer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root { --bg: #F4F3EE; --panel: #FFFFFF; --ink: #1F2A33; --ink-2: #5F6C76; --rule: #D8D4CB; --hi: #2A6F97; --gold: #B07A1E; --ok: #5E8C4A; --ok-soft: #E1EBD8; --warn: #C9972B; --warn-soft: #FBF0D2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --hi: #6FB1DC; --gold: #D9A24A; --ok: #8DBB74; --ok-soft: #26361F; --warn: #E2B44E; --warn-soft: #3B3320; } }
+:root[data-theme="dark"] { --bg: #161A1E; --panel: #1E242A; --ink: #E6E9EC; --ink-2: #9AA6B0; --rule: #37414A; --hi: #6FB1DC; --gold: #D9A24A; --ok: #8DBB74; --ok-soft: #26361F; --warn: #E2B44E; --warn-soft: #3B3320; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
+main { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-size: 17px; font-weight: 600; margin: 34px 0 8px; }
+p { max-width: 70ch; margin: 8px 0; }
+.lede { color: var(--ink-2); max-width: 72ch; }
+code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.93em; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 8px; }
+th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--ink-2); font-weight: 500; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.todo { background: var(--warn-soft); color: var(--warn); }
+.ok { background: var(--ok-soft); color: var(--ok); }
+.rules { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 16px; max-width: 74ch; }
+.rules li { margin: 6px 0; }
+figure { margin: 16px 0; }
+figcaption { color: var(--ink-2); font-size: 13px; max-width: 72ch; }
+svg { max-width: 100%; height: auto; }
+.blk { fill: var(--panel); stroke: currentColor; stroke-width: 1.2; }
+.t { font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 12px; fill: currentColor; }
+.m { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; fill: currentColor; }
+.s { font-size: 11px; fill: var(--ink-2); font-family: "IBM Plex Sans", system-ui, sans-serif; }
+.w { stroke: currentColor; stroke-width: 1.2; fill: none; }
+.clk { stroke: var(--gold); stroke-width: 2; fill: none; }
+</style>
+<main>
+<h1>Grit Board Layer</h1>
+<p class="lede">What sits around the 26-chip machine on the PCB: power entry, the run/single-step clock, the reset button, bank switches, thirty debug LEDs behind buffers, and logic-analyzer headers. All of it is in the board file <code>boards/grit/netlist.json</code> with pins, packages and LCSC numbers where settled; the simulator sees every part here as passive and drives CLK at the multiplexer's output. Full text in <code>docs/grit-pcb.md</code>.</p>
+
+<h2>1. Ground rules</h2>
+<ol class="rules">
+<li><b>Assembly.</b> JLCPCB places everything SMD, and its through-hole service places the DIP sockets, the 0.1&Prime; headers and the DB9. If the DB9 is refused it is the one hand-soldered part. Jake supplies and programs the GALs, flash and SRAM; the board carries only their sockets.</li>
+<li><b>Sockets.</b> GALs in DIP-24 <em>300 mil</em> sockets (the ATF22V10C is the narrow DIP); flash DIP-32 600 mil; SRAM DIP-28 600 mil.</li>
+<li><b>Power.</b> 5 V wall adapter on a 5.5/2.1 mm centre-positive barrel jack, 1.1 A polyfuse, P-MOSFET against reverse polarity, 100 &micro;F at the jack, four 10 &micro;F across the board, 100 nF at every chip, a power LED. No regulator. The MAX811L resets the machine below 4.63 V rather than letting it wander.</li>
+<li><b>One name per net</b>; pins are <code>chip.function</code>; active-low nets end in <code>_n</code>.</li>
+</ol>
+
+<h2>2. The clock, and single step</h2>
+<figure>
+<svg viewBox="0 0 900 250" role="img" aria-label="The clock path: the oscillator and the debounced step button enter a 2-to-1 multiplexer selected by a slide switch; its output is CLK to every GAL">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker><marker id="arrowg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker></defs>
+<rect x="20" y="30" width="150" height="50" rx="3" class="blk"/>
+<text x="95" y="50" text-anchor="middle" class="t">osc0</text><text x="95" y="68" text-anchor="middle" class="m">4 MHz, 5 V CMOS</text>
+<line x1="170" y1="55" x2="470" y2="55" class="w" marker-end="url(#arrow)"/>
+<text x="320" y="48" text-anchor="middle" class="m">OSC</text>
+<rect x="20" y="150" width="150" height="50" rx="3" class="blk"/>
+<text x="95" y="170" text-anchor="middle" class="t">swstep0 button</text><text x="95" y="188" text-anchor="middle" class="m">10k up, 100 nF, to GND</text>
+<line x1="170" y1="175" x2="240" y2="175" class="w" marker-end="url(#arrow)"/>
+<text x="205" y="168" text-anchor="middle" class="m">STEPBTN_n</text>
+<rect x="240" y="150" width="130" height="50" rx="3" class="blk"/>
+<text x="305" y="170" text-anchor="middle" class="t">uinv0</text><text x="305" y="188" text-anchor="middle" class="m">74LVC1G14 Schmitt</text>
+<line x1="370" y1="175" x2="470" y2="175" class="w" marker-end="url(#arrow)"/>
+<text x="420" y="168" text-anchor="middle" class="m">STEPCLK</text>
+<rect x="470" y="30" width="150" height="195" rx="3" class="blk"/>
+<text x="545" y="52" text-anchor="middle" class="t">umux0</text><text x="545" y="70" text-anchor="middle" class="m">74LVC1G157</text>
+<text x="482" y="60" class="m">I0</text><text x="482" y="180" class="m">I1</text><text x="540" y="212" text-anchor="middle" class="m">S</text>
+<line x1="545" y1="250" x2="545" y2="228" class="w" marker-end="url(#arrow)"/>
+<text x="600" y="246" class="m">STEPMODE: swm0 slide, GND = RUN, VCC = STEP</text>
+<line x1="620" y1="115" x2="760" y2="115" class="clk" marker-end="url(#arrowg)"/>
+<text x="690" y="106" text-anchor="middle" class="m" fill="var(--gold)">CLK</text>
+<rect x="760" y="90" width="120" height="50" rx="3" class="blk"/>
+<text x="820" y="110" text-anchor="middle" class="t">every GAL</text><text x="820" y="128" text-anchor="middle" class="m">pin 1, 16 chips</text>
+<text x="690" y="145" text-anchor="middle" class="s">and jclk0, and an LED</text>
+</svg>
+<figcaption>RUN: CLK is the oscillator. STEP: one press of the button is one rising edge of CLK, so one clock of the machine; the LEDs and headers then show it standing still. The multiplexer is not glitch-free at the instant of switching, so hold reset while flipping the slide switch.</figcaption>
+</figure>
+
+<h2>3. Debug LEDs</h2>
+<p>Thirty 0603 LEDs with 1k, behind four 74HC541 buffers, so no logic net carries more than one CMOS input. Each LED shows its pin's level; the three active-low nets have their LEDs hung from VCC so they light when the strobe or reset is <em>active</em>.</p>
+<div class="scroll"><table>
+<tr><th>Buffer</th><th>Signals</th></tr>
+<tr><td class="mono">ubuf0</td><td class="mono">CLK, RESET, PCDRV, ADRV, MEMRD_n, WE_n, ALUOE, TDRV</td></tr>
+<tr><td class="mono">ubuf1</td><td class="mono">ALD, BLD, TLD, PCLD, PCINC, IRLD, NEL, AUX0</td></tr>
+<tr><td class="mono">ubuf2</td><td class="mono">IR0..IR4, STEP0..STEP2</td></tr>
+<tr><td class="mono">ubuf3</td><td class="mono">STEP3, F0, F1, AUX1, RST_n</td></tr>
+</table></div>
+<p>The IR and STEP LEDs read the opcode and the step in binary; the control-line LEDs read the microword as the pipeline register holds it.</p>
+
+<h2>4. Analyzer headers</h2>
+<div class="scroll"><table>
+<tr><th>Header</th><th>Pins 1..20</th></tr>
+<tr><td class="mono">ja0 address</td><td class="mono">ADDR0..15, CLK, RESET, GND, GND</td></tr>
+<tr><td class="mono">jd0 data</td><td class="mono">D0..15, CLK, MEMRD_n, WE_n, GND</td></tr>
+<tr><td class="mono">jc0 control</td><td class="mono">PCDRV, MEMRD_n, ALUOE, WE_n, ALD, BLD, PCLD, PCINC, IRLD, F0, F1, ADRV, TLD, TDRV, CLK, RESET, NEL, AUX0, AUX1, GND</td></tr>
+<tr><td class="mono">js0 sequencer</td><td class="mono">IR0..4, STEP0..3, NEL, CLK, RESET, RST_n, STEPMODE, OSC, AUX0, AUX1, GND &times; 3</td></tr>
+<tr><td class="mono">jclk0</td><td class="mono">CLK, OSC, GND</td></tr>
+</table></div>
+
+<h2>5. Bank switches, reset, serial</h2>
+<p>Two 4-position DIP switches with 10k pull-ups; ON pulls a line low. <code>swb0</code> is the program flash bank (A15..A18, 16 banks of 32 K words); <code>swb1</code> the microcode bank (A10..A12, 8 images, one position spare). All ON is bank 0, which is what the simulation assumes. 10k pull-downs hold Addr14 and Addr15 at &ldquo;flash&rdquo; while nothing drives the bus.</p>
+<p>The reset button sits on the MAX811L's MR#, which the part pulls up and debounces. The DB9 is female and wired as a DCE, so a straight cable reaches a PC or USB-serial adapter; the UART runs on the stocked 14.7456 MHz crystal, divisor 8 for 115200.</p>
+
+<h2>6. Layout rules</h2>
+<ol class="rules">
+<li><b>CLK skew under 2 ns between any two GALs.</b> The GAL's minimum clock-to-output is 2 ns; more skew than that is a hold violation on the PC's self-addressed load (the one timing rule the model found). About 300 mm of FR4, so: one CLK net from <code>umux0</code>, no chip more than about 150 mm further from it than any other, never daisy-chained across the board and back.</li>
+<li><b>Nothing else is length-sensitive</b>: every other margin is 100 ns or more at 250 ns a clock.</li>
+<li><b>100 nF within a few millimetres of each VCC pin</b>; the 10 &micro;F parts one per region.</li>
+<li><b>Sockets, headers and LEDs on top</b>; single-sided SMD if it fits, since the debug side is the side you look at.</li>
+<li><b>Silk</b>: LED names, the active-low marks on the three VCC-hung LEDs, pin 1 and pin names on the headers, ON = 0 on the bank switches, RUN / STEP on the slide switch, centre-positive at the jack.</li>
+</ol>
+
+<h2>7. Bill of materials</h2>
+<div class="scroll"><table>
+<tr><th>Qty</th><th>Part</th><th>Package</th><th>LCSC</th><th>Refs</th></tr>
+<tr><td class="n">16</td><td>ATF22V10C-7PX (Jake) in DS1009-24AT1NX-0A2 socket</td><td>DIP-24 300 mil</td><td><span class="pill todo">socket to source</span></td><td class="mono">seq, mir, pc, a, b, t, alu</td></tr>
+<tr><td class="n">4</td><td>SST39SF040-70 (Jake) in DS1009-32AT1WX-0A2 socket</td><td>DIP-32 600 mil</td><td class="mono">C72122</td><td class="mono">rom0..1, uc0..1</td></tr>
+<tr><td class="n">2</td><td>AS7C164A-15PCN (Jake) in DS1009-28AT1WX-0A2 socket</td><td>DIP-28 600 mil</td><td class="mono">C72121</td><td class="mono">ram0..1</td></tr>
+<tr><td class="n">1</td><td>TL16C550DPTR</td><td>LQFP-48</td><td><span class="pill todo">confirm stock</span></td><td class="mono">uart0</td></tr>
+<tr><td class="n">1</td><td>SP3232EEY-L/TR</td><td>TSSOP-16</td><td class="mono">C13482</td><td class="mono">xcvr0</td></tr>
+<tr><td class="n">1</td><td>Crystal 14.7456 MHz 12 pF</td><td>3225</td><td class="mono">C2885591</td><td class="mono">x1</td></tr>
+<tr><td class="n">1</td><td>MAX811LEUS+T</td><td>SOT-143</td><td><span class="pill todo">confirm stock</span></td><td class="mono">rst0</td></tr>
+<tr><td class="n">1</td><td>Oscillator 4.000 MHz, 5 V CMOS</td><td>7050</td><td><span class="pill todo">to pick</span></td><td class="mono">osc0</td></tr>
+<tr><td class="n">1</td><td>74LVC1G157GW,125 multiplexer</td><td>SC-88</td><td class="mono">C135822</td><td class="mono">umux0</td></tr>
+<tr><td class="n">1</td><td>SN74LVC1G14DBVR Schmitt inverter</td><td>SOT-23-5</td><td class="mono">C7835</td><td class="mono">uinv0</td></tr>
+<tr><td class="n">4</td><td>74HC541D,653 octal buffer</td><td>SOIC-20</td><td class="mono">C126008</td><td class="mono">ubuf0..3</td></tr>
+<tr><td class="n">1</td><td>AO3401A P-MOSFET</td><td>SOT-23</td><td class="mono">C15127</td><td class="mono">q0</td></tr>
+<tr><td class="n">1</td><td>Polyfuse 1.1 A SMD1206P110TF/16</td><td>1206</td><td class="mono">C523825</td><td class="mono">f0</td></tr>
+<tr><td class="n">1</td><td>DC-005-5A-2.0-SMT barrel jack</td><td>SMT</td><td class="mono">C319134</td><td class="mono">jpwr0</td></tr>
+<tr><td class="n">1</td><td>DB9 female, right angle</td><td>THT</td><td class="mono">C9900026339</td><td class="mono">j1</td></tr>
+<tr><td class="n">2</td><td>TS-1187A-B-A-B tactile switch</td><td>SMD</td><td class="mono">C318884</td><td class="mono">swstep0, swr0</td></tr>
+<tr><td class="n">1</td><td>MSK12C02 slide switch</td><td>SMD</td><td class="mono">C431540</td><td class="mono">swm0</td></tr>
+<tr><td class="n">2</td><td>EM-04-Q DIP switch, 4 positions</td><td>SMD</td><td class="mono">C501635</td><td class="mono">swb0, swb1</td></tr>
+<tr><td class="n">4</td><td>Header 2 &times; 10, 2.54 mm</td><td>THT</td><td><span class="pill todo">to pick</span></td><td class="mono">ja0, jd0, jc0, js0</td></tr>
+<tr><td class="n">1</td><td>Header 1 &times; 3, 2.54 mm</td><td>THT</td><td><span class="pill todo">to pick</span></td><td class="mono">jclk0</td></tr>
+<tr><td class="n">1</td><td>100 &micro;F 16 V electrolytic RVT1C101M0605</td><td>6.3 &times; 5.4</td><td class="mono">C970684</td><td class="mono">cb0</td></tr>
+<tr><td class="n">4</td><td>10 &micro;F 0805 X5R 25 V</td><td>0805</td><td class="mono">C15850</td><td class="mono">cb1..4</td></tr>
+<tr><td class="n">37</td><td>100 nF 0603 X7R</td><td>0603</td><td class="mono">C14663</td><td class="mono">c1..4, cd_*, cst0</td></tr>
+<tr><td class="n">2</td><td>18 pF 0603 C0G</td><td>0603</td><td class="mono">C1653 <span class="pill todo">verify</span></td><td class="mono">xc1, xc2</td></tr>
+<tr><td class="n">30</td><td>LED red 0603</td><td>0603</td><td class="mono">C2286 <span class="pill todo">verify</span></td><td class="mono">ledp0, led_*</td></tr>
+<tr><td class="n">30</td><td>1k 0603</td><td>0603</td><td class="mono">C21190</td><td class="mono">rlp0, rl_*</td></tr>
+<tr><td class="n">10</td><td>10k 0603</td><td>0603</td><td class="mono">C25804</td><td class="mono">rstep0, rp_*, rd0, rd1</td></tr>
+</table></div>
+<p>161 parts. Still to source: the 300 mil DIP-24 socket's number, the 5 V oscillator (the Epson SG-8018 family is 3.3 V only), the headers, and stock checks on the UART and the supervisor.</p>
+</main>
