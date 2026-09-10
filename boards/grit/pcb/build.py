@@ -18,6 +18,8 @@ PCB = os.environ.get("PCB", os.path.expanduser("~/flatland/target/release/pcb"))
 JLC = os.path.expanduser("~/flatland/library-jlcpcb")
 LIB = os.path.join(HERE, "lib")
 ROUTE = "--route" in sys.argv
+FOUR = "--4layer" in sys.argv
+LAYERS = "F.Cu,In1.Cu,In2.Cu,B.Cu" if FOUR else "F.Cu,B.Cu"
 
 
 def run(*args, check=True, quiet=False):
@@ -359,14 +361,14 @@ def main():
     names = write_library()
     if os.path.exists(os.path.join(HERE, "pcb.json")):
         os.remove(os.path.join(HERE, "pcb.json"))
-    r = subprocess.run([PCB, "init", "grit", "--dir", HERE, "--layers", "F.Cu,B.Cu", "--index", os.path.join(JLC, "index.json"), "--force"], capture_output=True, text=True)
+    r = subprocess.run([PCB, "init", "grit", "--dir", HERE, "--layers", LAYERS, "--index", os.path.join(JLC, "index.json"), "--force"], capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stdout, r.stderr); sys.exit(1)
     for n in names:
         run("index", "register", LIB, os.path.join(LIB, "components", n + ".json"), quiet=True)
     run("index", "update", LIB, quiet=True)
     run("index", "add", LIB, quiet=True)
-    run("drc", "add", "jlcpcb-fr4-2layer", quiet=True)
+    run("drc", "add", "jlcpcb-fr4-4layer" if FOUR else "jlcpcb-fr4-2layer", quiet=True)
     run("rules", "set", "trace_width=0.25", "clearance=0.2", "via_drill=0.4", "via_diameter=0.8", "pour_clearance=0.3", "edge_clearance=0.5", quiet=True)
     run("rules", "class", "power", "--width", "0.6", "--clearance", "0.25", quiet=True)
     run("drc", "waive", "pth-annular-ring", "jpwr0", "j1", "--reason", "non-plated locating pegs of the jack and mounting holes of the DB9 carry no copper by design", quiet=True)
@@ -410,12 +412,20 @@ def main():
             raise SystemExit(f"unplaced: {n}")
         x, y, r = PLACE[n]
         run("place", n, f"{x},{y}", "--rotation", r, quiet=True)
-    run("pour", "new", "gnd", "--layer", "B.Cu", "--net", "GND", "--follow-outline", quiet=True)
-    run("pour", "new", "vcc", "--layer", "F.Cu", "--net", "VCC", "--follow-outline", quiet=True)
+    if FOUR:
+        run("pour", "new", "gnd", "--layer", "In1.Cu", "--net", "GND", "--follow-outline", quiet=True)
+        run("pour", "new", "vcc", "--layer", "In2.Cu", "--net", "VCC", "--follow-outline", quiet=True)
+    else:
+        run("pour", "new", "gnd", "--layer", "B.Cu", "--net", "GND", "--follow-outline", quiet=True)
+        run("pour", "new", "vcc", "--layer", "F.Cu", "--net", "VCC", "--follow-outline", quiet=True)
     run("status")
-    run("visualize", "pcb", "--grid")
     if ROUTE:
-        run("route", "--passes", "12", "--timeout", "3000")
+        # freerouting writes build/grit.ses; import it with the redundancy pass
+        # skipped (that pass takes hours on a board of this size)
+        run("route", "--dsn-only", quiet=True)
+        r = subprocess.run(["/Applications/freerouting.app/Contents/MacOS/freerouting", "-de", os.path.join(HERE, "build", "grit.dsn"), "-do", os.path.join(HERE, "build", "grit.ses"), "-mp", "14", "-dct", "0", "-da", "-dl", "--gui.enabled=false"], capture_output=True, text=True, env={**os.environ, "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true"})
+        open(os.path.join(HERE, "build", "freerouting.log"), "w").write(r.stdout + r.stderr)
+        run("route", "--import", os.path.join(HERE, "build", "grit.ses"), "--keep-redundant")
         run("check", check=False)
         run("visualize", "pcb")
         run("gerbers", check=False)
