@@ -1,0 +1,113 @@
+{
+  "schema": "pcb-component/1",
+  "name": "socket-dip32-600",
+  "description": "DIP-32 600 mil socket for an SST39SF040 (CONNFLY DS1009-32AT1WX-0A2, LCSC C72122)",
+  "footprint": {
+    "url": "../footprints/DIP-32_W15.24mm_Socket.json",
+    "blake3": "c004d3401ee4ccc79bc03152107f2c62286773f90cc56f6f4ebd94ca6ff493cd"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "18"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "20"
+    },
+    {
+      "name": "21"
+    },
+    {
+      "name": "22"
+    },
+    {
+      "name": "23"
+    },
+    {
+      "name": "24"
+    },
+    {
+      "name": "25"
+    },
+    {
+      "name": "26"
+    },
+    {
+      "name": "27"
+    },
+    {
+      "name": "28"
+    },
+    {
+      "name": "29"
+    },
+    {
+      "name": "30"
+    },
+    {
+      "name": "31"
+    },
+    {
+      "name": "32"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C72122",
+    "mpn": "DS1009-32AT1WX-0A2",
+    "manufacturer": "CONNFLY"
+  }
+}

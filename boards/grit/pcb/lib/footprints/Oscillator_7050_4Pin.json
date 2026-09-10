@@ -1,0 +1,103 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "Oscillator_7050_4Pin",
+ "description": "7.0 x 5.0 mm four-pad oscillator: 1 enable (bottom-left), 2 GND, 3 output, 4 VCC. VERIFY the pad drawing of the part chosen",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.5,
+    -2.0
+   ],
+   "size": [
+    2.2,
+    1.4
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.5,
+    -2.0
+   ],
+   "size": [
+    2.2,
+    1.4
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.5,
+    2.0
+   ],
+   "size": [
+    2.2,
+    1.4
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.5,
+    2.0
+   ],
+   "size": [
+    2.2,
+    1.4
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -4.0,
+     -2.0
+    ],
+    "diameter": 0.5,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -4.2,
+      -3.1
+     ],
+     [
+      4.2,
+      -3.1
+     ],
+     [
+      4.2,
+      3.1
+     ],
+     [
+      -4.2,
+      3.1
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  3.7
+ ]
+}

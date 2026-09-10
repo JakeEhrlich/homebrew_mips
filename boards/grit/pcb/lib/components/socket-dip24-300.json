@@ -1,0 +1,88 @@
+{
+  "schema": "pcb-component/1",
+  "name": "socket-dip24-300",
+  "description": "DIP-24 300 mil socket for an ATF22V10C (CONNFLY DS1009-24AT1NX-0A2 or equivalent; LCSC number to source); the GAL is supplied and programmed separately",
+  "footprint": {
+    "url": "../footprints/DIP-24_W7.62mm_Socket.json",
+    "blake3": "56066d85a4bdc2493eaec2c082a174d4ecf0aabdd50f4735aee504b742f66a3d"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "18"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "20"
+    },
+    {
+      "name": "21"
+    },
+    {
+      "name": "22"
+    },
+    {
+      "name": "23"
+    },
+    {
+      "name": "24"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "mpn": "DS1009-24AT1NX-0A2",
+    "manufacturer": "CONNFLY"
+  }
+}

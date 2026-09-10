@@ -170,7 +170,7 @@ basic part but not confirmed this session.
 | 4 | 74HC541D,653 octal buffer | SOIC-20 | C126008 | ubuf0..3 |
 | 1 | AO3401A P-MOSFET | SOT-23 | C15127 | q0 |
 | 1 | Polyfuse 1.1 A SMD1206P110TF/16 | 1206 | C523825 | f0 |
-| 1 | DC-005-5A-2.0-SMT barrel jack | SMT | C319134 | jpwr0 |
+| 1 | CUI PJ-002AH-SMT barrel jack 5.5/2.0 mm | SMT | C22434687 | jpwr0 |
 | 1 | DB9 female right angle | THT | C9900026339 (JLC assembly library) | j1 |
 | 2 | TS-1187A-B-A-B tactile switch | SMD | C318884 | swstep0, swr0 |
 | 1 | MSK12C02 slide switch | SMD | C431540 | swm0 |

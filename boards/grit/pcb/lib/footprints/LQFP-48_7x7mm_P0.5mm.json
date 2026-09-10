@@ -1,0 +1,719 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "LQFP-48_7x7mm_P0.5mm",
+ "description": "LQFP-48, 7 x 7 mm body, 0.5 mm pitch, IPC nominal pads; pin 1 top-left",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    2.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    2.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    1.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    1.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "5",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    0.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "6",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    0.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "7",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -0.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "8",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -0.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "9",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -1.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "10",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -1.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "11",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -2.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "12",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.35,
+    -2.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "13",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "14",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "15",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "16",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "17",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "18",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "19",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "20",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "21",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "22",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "23",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.25,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "24",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.75,
+    -4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "25",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -2.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "26",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -2.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "27",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -1.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "28",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -1.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "29",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -0.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "30",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    -0.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "31",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    0.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "32",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    0.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "33",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    1.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "34",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    1.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "35",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    2.25
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "36",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.35,
+    2.75
+   ],
+   "size": [
+    1.5,
+    0.3
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "37",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "38",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "39",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "40",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "41",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "42",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "43",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "44",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "45",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "46",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "47",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.25,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "48",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.75,
+    4.35
+   ],
+   "size": [
+    0.3,
+    1.5
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -4.75,
+     4.75
+    ],
+    "diameter": 0.5,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -5.6,
+      -5.6
+     ],
+     [
+      5.6,
+      -5.6
+     ],
+     [
+      5.6,
+      5.6
+     ],
+     [
+      -5.6,
+      5.6
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  6.3999999999999995
+ ]
+}

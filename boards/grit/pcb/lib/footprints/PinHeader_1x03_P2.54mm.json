@@ -1,0 +1,78 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "PinHeader_1x03_P2.54mm",
+ "description": "1x3 pin header, 2.54 mm; pin 1 square at the origin",
+ "pads": [
+  {
+   "name": "1",
+   "type": "through_hole",
+   "shape": "rect",
+   "at": [
+    0.0,
+    0.0
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "2",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -2.54
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "3",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -5.08
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  }
+ ],
+ "silkscreen": [],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -1.27,
+      1.27
+     ],
+     [
+      1.27,
+      1.27
+     ],
+     [
+      1.27,
+      -6.35
+     ],
+     [
+      -1.27,
+      -6.35
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0.0,
+  2.4
+ ]
+}

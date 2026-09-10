@@ -1,0 +1,316 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "PinHeader_2x10_P2.54mm",
+ "description": "2x10 pin header, 2.54 mm; pin 1 square at the origin, odd pins in the first row",
+ "pads": [
+  {
+   "name": "1",
+   "type": "through_hole",
+   "shape": "rect",
+   "at": [
+    0.0,
+    0.0
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "2",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    0.0
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "3",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -2.54
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "4",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -2.54
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "5",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -5.08
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "6",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -5.08
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "7",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -7.62
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "8",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -7.62
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "9",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -10.16
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "10",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -10.16
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "11",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -12.7
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "12",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -12.7
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "13",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -15.24
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "14",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -15.24
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "15",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -17.78
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "16",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -17.78
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "17",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -20.32
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "18",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -20.32
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "19",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    -22.86
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "20",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.54,
+    -22.86
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  }
+ ],
+ "silkscreen": [],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -1.27,
+      1.27
+     ],
+     [
+      3.81,
+      1.27
+     ],
+     [
+      3.81,
+      -24.13
+     ],
+     [
+      -1.27,
+      -24.13
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  1.27,
+  2.4
+ ]
+}

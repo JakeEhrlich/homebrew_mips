@@ -1,0 +1,102 @@
+{
+  "schema": "pcb-component-index/1",
+  "name": "grit",
+  "description": "Parts for the grit board that the flatland libraries do not have",
+  "components": {
+    "socket-dip24-300": {
+      "url": "components/socket-dip24-300.json",
+      "blake3": "8fc23fbeeedf56c9a4cbd875e52fe27ba40b9f9e59d703668cf1e7a90a575fe0",
+      "description": "DIP-24 300 mil socket for an ATF22V10C (CONNFLY DS1009-24AT1NX-0A2 or equivalent; LCSC number to source); the GAL is supplied and programmed separately"
+    },
+    "socket-dip28-600": {
+      "url": "components/socket-dip28-600.json",
+      "blake3": "e3fe9d625236d013cade00e7095e3590b9291457b7543688c1ea2e817309d605",
+      "description": "DIP-28 600 mil socket for an AS7C164A (CONNFLY DS1009-28AT1WX-0A2, LCSC C72121)"
+    },
+    "socket-dip32-600": {
+      "url": "components/socket-dip32-600.json",
+      "blake3": "4b3d47a4e15e8025a0a88b3ab968b3da3b2a41394cb8f247a232fb18cb4bd5b8",
+      "description": "DIP-32 600 mil socket for an SST39SF040 (CONNFLY DS1009-32AT1WX-0A2, LCSC C72122)"
+    },
+    "tl16c550d-lqfp48": {
+      "url": "components/tl16c550d-lqfp48.json",
+      "blake3": "3cfa6df26085959c210662aef3dfa1173a52423fb2059ac3ea84dc421eb081ef",
+      "description": "TI TL16C550DPTR UART, LQFP-48 (PT); pins by package number. LCSC number to confirm"
+    },
+    "sp3232-tssop16": {
+      "url": "components/sp3232-tssop16.json",
+      "blake3": "bba1fb626cc73eecda02d2ac42bd0bb448b2af2a970aa9e808f58f38f115d709",
+      "description": "MaxLinear SP3232EEY-L/TR RS-232 transceiver, TSSOP-16 (LCSC C13482)"
+    },
+    "74hc541-soic20w": {
+      "url": "components/74hc541-soic20w.json",
+      "blake3": "5df21b900c3b44a4a0ea66ccf01a05cee8596c1704a74c909d288a646aaced10",
+      "description": "Nexperia 74HC541D,653 octal buffer, SOIC-20 wide (LCSC C126008)"
+    },
+    "74lvc1g157-sc88": {
+      "url": "components/74lvc1g157-sc88.json",
+      "blake3": "f169f19867b5f6f9c16d7ba8387fd536d8ace53c11fb92ded072019b9f2585cb",
+      "description": "Nexperia 74LVC1G157GW,125 single 2:1 multiplexer, SC-88: 1 I0, 2 I1, 3 S, 4 Y, 5 GND, 6 VCC (LCSC C135822)"
+    },
+    "74lvc1g14-sot23-5": {
+      "url": "components/74lvc1g14-sot23-5.json",
+      "blake3": "87f8199bc93f99201d55d4c3cfaafe5419425494d05ff98dff4e0f49324bd6ba",
+      "description": "TI SN74LVC1G14DBVR Schmitt inverter, SOT-23-5: 1 NC, 2 A, 3 GND, 4 Y, 5 VCC (LCSC C7835)"
+    },
+    "max811-sot143": {
+      "url": "components/max811-sot143.json",
+      "blake3": "7a419212ac4ff336c0dc74408321cd017a86b2f4a5f958e57940ff39d516e995",
+      "description": "Analog Devices MAX811LEUS+T reset supervisor 4.63 V, SOT-143: 1 GND, 2 RESET#, 3 MR#, 4 VCC. LCSC number to confirm"
+    },
+    "crystal-14.7456-3225": {
+      "url": "components/crystal-14.7456-3225.json",
+      "blake3": "57691804b2914e1699d8c4dc53a26caeebede471df59e826eca0075cccc34597",
+      "description": "14.7456 MHz crystal, 3225 four-pad, 12 pF (LCSC C2885591): pins 1 and 3 crystal, 2 and 4 case"
+    },
+    "osc-4mhz-5v-7050": {
+      "url": "components/osc-4mhz-5v-7050.json",
+      "blake3": "c744e121df039d3d4bb7281bc8e87359ac49c1e856a2117f57ee5b93d5d58ad5",
+      "description": "4.000 MHz 5 V CMOS oscillator, 7050 four-pad: 1 EN, 2 GND, 3 OUT, 4 VCC. Part and LCSC number to pick"
+    },
+    "tact-5.1": {
+      "url": "components/tact-5.1.json",
+      "blake3": "8164ee7564e1ba9f0ea3e26a6f0ab34f1b4499e2af14e5678485c65417852055",
+      "description": "XKB TS-1187A-B-A-B tactile switch, 5.1 x 5.1 mm SMD (LCSC C318884); pads 1 and 3 are diagonal"
+    },
+    "slide-msk12c02": {
+      "url": "components/slide-msk12c02.json",
+      "blake3": "ab1c30f053462c86601033a0ca5f533ba5faf8ecced4c550a59f2127eea95d8a",
+      "description": "SHOU HAN MSK12C02 SPDT slide switch, SMD (LCSC C431540); pin 2 common"
+    },
+    "dipsw-em04q": {
+      "url": "components/dipsw-em04q.json",
+      "blake3": "ae9ec84ca4f32a51d1fba42601931423946326defb8bd2a8549a78762cbfb8a3",
+      "description": "Diptronics EM-04-Q 4-position SMD DIP switch (LCSC C501635); position k joins pins k and 9-k"
+    },
+    "header-2x10": {
+      "url": "components/header-2x10.json",
+      "blake3": "3bd694ae366a9f57e304e90b6c8ee33159f3766cd6dd5519b3846a8fbf486757",
+      "description": "2x10 pin header, 2.54 mm, through hole; LCSC number to pick"
+    },
+    "header-1x03": {
+      "url": "components/header-1x03.json",
+      "blake3": "36e8112356e9d3b5a23600017d6094e53475546edf9d752bb3e140b6ecf680d4",
+      "description": "1x3 pin header, 2.54 mm, through hole; LCSC number to pick"
+    },
+    "db9-female-ra": {
+      "url": "components/db9-female-ra.json",
+      "blake3": "05208217cc42bcd89334112752d544d2e0d131b501cfa7995fc50ecccf3b41ab",
+      "description": "DE-9 female, right angle, through hole (JLCPCB assembly library C9900026339); may need hand soldering"
+    },
+    "ao3401a-sot23": {
+      "url": "components/ao3401a-sot23.json",
+      "blake3": "bbd02d50f0b08ae8ac16f81f0d9a81491e5b971b42262b06b52acc2d93e7468e",
+      "description": "AOS AO3401A P-channel MOSFET, SOT-23: 1 G, 2 S, 3 D (LCSC C15127, JLCPCB basic)"
+    },
+    "fuse-1206": {
+      "url": "components/fuse-1206.json",
+      "blake3": "a9dcc94a302147bbdba8c82e4364fefa3911ddd82e679faaa5d79a65b1da8b61",
+      "description": "PTC resettable fuse, 1206 (SMD1206P110TF/16, 1.1 A hold, LCSC C523825)"
+    }
+  }
+}

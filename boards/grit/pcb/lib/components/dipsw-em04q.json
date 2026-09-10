@@ -1,0 +1,41 @@
+{
+  "schema": "pcb-component/1",
+  "name": "dipsw-em04q",
+  "description": "Diptronics EM-04-Q 4-position SMD DIP switch (LCSC C501635); position k joins pins k and 9-k",
+  "footprint": {
+    "url": "../footprints/SW_DIP_4_SMD_EM-04-Q.json",
+    "blake3": "e62823efca49926defbe617aa920892433fbe68fd3bef0e86d6fbf28845512ce"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C501635",
+    "mpn": "EM-04-Q",
+    "manufacturer": "Diptronics"
+  }
+}

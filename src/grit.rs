@@ -1034,10 +1034,12 @@ fn physical(nl: &mut Netlist) {
     // the channel carries it), bulk capacitors, a power LED.
     let vin = nl.net("VIN");
     let vf = nl.net("VF");
-    let jack = nl.add_chip("jpwr0", Passive::new(vec![(1, "+".into()), (2, "SLEEVE".into()), (3, "SWITCH".into())]));
-    nl.set_meta(jack, lcsc(meta("DC-005-5A-2.0-SMT barrel jack 5.5/2.1 mm", "DC-005 SMT", "jpwr0", None, Model::Passive), "C319134"));
+    // The jack is the one already in the flatland library (5.5 / 2.0 mm;
+    // a 2.1 mm plug fits).  Pin 1 centre, 3 sleeve, 2 the switch contact.
+    let jack = nl.add_chip("jpwr0", Passive::new(vec![(1, "PIN".into()), (2, "SW".into()), (3, "SLEEVE".into())]));
+    nl.set_meta(jack, lcsc(meta("CUI PJ-002AH-SMT barrel jack 5.5/2.0 mm", "SMT", "jpwr0", None, Model::Passive), "C22434687"));
     nl.connect(vin, jack, 1);
-    nl.connect(gnd, jack, 2);
+    nl.connect(gnd, jack, 3);
     let fuse = two_pin(nl, "f0", "Polyfuse 1.1 A SMD1206P110TF/16", "1206", Some("C523825"));
     nl.connect(vin, fuse, 1);
     nl.connect(vf, fuse, 2);
@@ -1086,10 +1088,10 @@ fn physical(nl: &mut Netlist) {
     nl.connect(vcc, swm, 3);
     let sw = nl.add_chip("swstep0", Passive::new(vec![(1, "1".into()), (2, "2".into()), (3, "3".into()), (4, "4".into())]));
     nl.set_meta(sw, lcsc(meta("TS-1187A-B-A-B tactile switch", "SMD 5.1x5.1", "swstep0", None, Model::Passive), "C318884"));
+    // Net on pad 1 and ground on the diagonal pad 3: right whichever
+    // pair of pads the part shorts internally.
     nl.connect(step_n, sw, 1);
-    nl.connect(step_n, sw, 2);
     nl.connect(gnd, sw, 3);
-    nl.connect(gnd, sw, 4);
     let rp = two_pin(nl, "rstep0", "10k 0603", "0603", Some("C25804"));
     nl.connect(vcc, rp, 1);
     nl.connect(step_n, rp, 2);
@@ -1121,9 +1123,7 @@ fn physical(nl: &mut Netlist) {
     let sw = nl.add_chip("swr0", Passive::new(vec![(1, "1".into()), (2, "2".into()), (3, "3".into()), (4, "4".into())]));
     nl.set_meta(sw, lcsc(meta("TS-1187A-B-A-B tactile switch", "SMD 5.1x5.1", "swr0", None, Model::Passive), "C318884"));
     nl.connect(mr_n, sw, 1);
-    nl.connect(mr_n, sw, 2);
     nl.connect(gnd, sw, 3);
-    nl.connect(gnd, sw, 4);
 
     // Bank switches: 4-position DIP switches with 10k pull-ups; a
     // position ON pulls its bank bit low.  The simulation ties the bank

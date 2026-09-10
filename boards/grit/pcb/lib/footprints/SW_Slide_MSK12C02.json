@@ -1,0 +1,106 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SW_Slide_MSK12C02",
+ "description": "MSK12C02 SPDT slide switch: three 2.0 mm pitch pads (2 is the common) and two mounting tabs. VERIFY against the datasheet before ordering",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.0,
+    -1.2
+   ],
+   "size": [
+    0.9,
+    1.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0,
+    -1.2
+   ],
+   "size": [
+    0.9,
+    1.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.0,
+    -1.2
+   ],
+   "size": [
+    0.9,
+    1.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "T1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.0,
+    0.9
+   ],
+   "size": [
+    1.2,
+    1.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "T2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.0,
+    0.9
+   ],
+   "size": [
+    1.2,
+    1.6
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -5.0,
+      -2.3
+     ],
+     [
+      5.0,
+      -2.3
+     ],
+     [
+      5.0,
+      2.3
+     ],
+     [
+      -5.0,
+      2.3
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  2.9
+ ]
+}

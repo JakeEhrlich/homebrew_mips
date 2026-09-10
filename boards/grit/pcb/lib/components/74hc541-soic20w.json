@@ -1,0 +1,77 @@
+{
+  "schema": "pcb-component/1",
+  "name": "74hc541-soic20w",
+  "description": "Nexperia 74HC541D,653 octal buffer, SOIC-20 wide (LCSC C126008)",
+  "footprint": {
+    "url": "../footprints/SOIC-20W_7.5x12.8mm_P1.27mm.json",
+    "blake3": "54f8f50474576973f51e1bc01252a41e12c0caef7caf6e1335d8bde26dba1a7a"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "18"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "20"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C126008",
+    "mpn": "74HC541D,653",
+    "manufacturer": "Nexperia"
+  }
+}

@@ -1,0 +1,131 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SC-88_SOT-363",
+ "description": "SC-88 / SOT-363 six-lead, 0.65 mm pitch: pins 1-3 down the left, 4-6 up the right",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.05,
+    0.65
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.05,
+    0
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.05,
+    -0.65
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.05,
+    -0.65
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "5",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.05,
+    0
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "6",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.05,
+    0.65
+   ],
+   "size": [
+    1.0,
+    0.42
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -2.0,
+     0.65
+    ],
+    "diameter": 0.4,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -1.8,
+      -1.4
+     ],
+     [
+      1.8,
+      -1.4
+     ],
+     [
+      1.8,
+      1.4
+     ],
+     [
+      -1.8,
+      1.4
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  1.9
+ ]
+}

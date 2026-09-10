@@ -1,0 +1,206 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "DSUB-9_Female_Horizontal",
+ "description": "DE-9 female, right angle, 2.77 mm pitch, rows 2.84 mm apart, two 3.1 mm mounting holes at +-12.5 mm; the face is toward -y and overhangs the board edge by about 6 mm. Pin 1 is at +x. VERIFY the numbering against the connector before ordering",
+ "pads": [
+  {
+   "name": "1",
+   "type": "through_hole",
+   "shape": "rect",
+   "at": [
+    5.54,
+    0
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "2",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    2.77,
+    0
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "3",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    0.0,
+    0
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "4",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -2.77,
+    0
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "5",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -5.54,
+    0
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "6",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    4.155,
+    -2.84
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "7",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    1.385,
+    -2.84
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "8",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -1.385,
+    -2.84
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "9",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -4.155,
+    -2.84
+   ],
+   "size": [
+    1.6,
+    1.6
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "M1",
+   "type": "through_hole",
+   "shape": "circle",
+   "at": [
+    -12.5,
+    -1.42
+   ],
+   "size": [
+    3.1,
+    3.1
+   ],
+   "drill": 3.1,
+   "plated": false
+  },
+  {
+   "name": "M2",
+   "type": "through_hole",
+   "shape": "circle",
+   "at": [
+    12.5,
+    -1.42
+   ],
+   "size": [
+    3.1,
+    3.1
+   ],
+   "drill": 3.1,
+   "plated": false
+  }
+ ],
+ "silkscreen": [
+  {
+   "line": {
+    "from": [
+     -15.5,
+     -8.5
+    ],
+    "to": [
+     15.5,
+     -8.5
+    ],
+    "width": 0.2
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -15.75,
+      -6.0
+     ],
+     [
+      15.75,
+      -6.0
+     ],
+     [
+      15.75,
+      6.0
+     ],
+     [
+      -15.75,
+      6.0
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  4.5
+ ]
+}

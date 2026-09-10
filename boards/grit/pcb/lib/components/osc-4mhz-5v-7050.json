@@ -1,0 +1,26 @@
+{
+  "schema": "pcb-component/1",
+  "name": "osc-4mhz-5v-7050",
+  "description": "4.000 MHz 5 V CMOS oscillator, 7050 four-pad: 1 EN, 2 GND, 3 OUT, 4 VCC. Part and LCSC number to pick",
+  "footprint": {
+    "url": "../footprints/Oscillator_7050_4Pin.json",
+    "blake3": "59a8361dba2655679dae59b0763d78c5b871703c8eacf2a4b7e8ce9b6bff9a90"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    }
+  ],
+  "metadata": {
+    "assembly": true
+  }
+}

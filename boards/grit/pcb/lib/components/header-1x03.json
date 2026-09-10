@@ -1,0 +1,23 @@
+{
+  "schema": "pcb-component/1",
+  "name": "header-1x03",
+  "description": "1x3 pin header, 2.54 mm, through hole; LCSC number to pick",
+  "footprint": {
+    "url": "../footprints/PinHeader_1x03_P2.54mm.json",
+    "blake3": "5c733814295cf5a1d1ac62087c7a3c6f2cf6e9856e7187b1854b0fa6794f4e5c"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    }
+  ],
+  "metadata": {
+    "assembly": true
+  }
+}

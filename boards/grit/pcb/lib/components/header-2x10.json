@@ -1,0 +1,74 @@
+{
+  "schema": "pcb-component/1",
+  "name": "header-2x10",
+  "description": "2x10 pin header, 2.54 mm, through hole; LCSC number to pick",
+  "footprint": {
+    "url": "../footprints/PinHeader_2x10_P2.54mm.json",
+    "blake3": "40b9bb46cd4cc62d062f9ad8e6a7478c178995e84259c4ed1930d46eb79d7bfc"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "18"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "20"
+    }
+  ],
+  "metadata": {
+    "assembly": true
+  }
+}

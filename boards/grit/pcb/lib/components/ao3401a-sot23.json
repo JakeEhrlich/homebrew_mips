@@ -1,0 +1,32 @@
+{
+  "schema": "pcb-component/1",
+  "name": "ao3401a-sot23",
+  "description": "AOS AO3401A P-channel MOSFET, SOT-23: 1 G, 2 S, 3 D (LCSC C15127, JLCPCB basic)",
+  "footprint": {
+    "url": "/Users/jake/flatland/library-jlcpcb/footprints/SOT-23-3.json",
+    "blake3": "cba5c74d80337cb6c4ffadfaa6639c9e85395a114f6c7168d49bede7999d4adb"
+  },
+  "pins": [
+    {
+      "name": "G",
+      "pad": "1",
+      "description": "gate"
+    },
+    {
+      "name": "S",
+      "pad": "2",
+      "description": "source"
+    },
+    {
+      "name": "D",
+      "pad": "3",
+      "description": "drain"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C15127",
+    "mpn": "AO3401A",
+    "manufacturer": "AOS"
+  }
+}

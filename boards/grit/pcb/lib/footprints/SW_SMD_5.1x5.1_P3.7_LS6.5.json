@@ -1,0 +1,92 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SW_SMD_5.1x5.1_P3.7_LS6.5",
+ "description": "5.1 x 5.1 mm SMD tactile switch, pads at +-3.25 x, +-1.85 y (LCSC SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5). Pads 1 and 3 are diagonal, so wiring across them is right whichever pair the part shorts internally. VERIFY pad sizes against the datasheet",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -3.25,
+    1.85
+   ],
+   "size": [
+    1.4,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    3.25,
+    1.85
+   ],
+   "size": [
+    1.4,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    3.25,
+    -1.85
+   ],
+   "size": [
+    1.4,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -3.25,
+    -1.85
+   ],
+   "size": [
+    1.4,
+    1.0
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -3.8,
+      -2.8
+     ],
+     [
+      3.8,
+      -2.8
+     ],
+     [
+      3.8,
+      2.8
+     ],
+     [
+      -3.8,
+      2.8
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  3.4
+ ]
+}

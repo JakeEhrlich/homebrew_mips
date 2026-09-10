@@ -1,0 +1,65 @@
+{
+  "schema": "pcb-component/1",
+  "name": "sp3232-tssop16",
+  "description": "MaxLinear SP3232EEY-L/TR RS-232 transceiver, TSSOP-16 (LCSC C13482)",
+  "footprint": {
+    "url": "../footprints/TSSOP-16_4.4x5mm_P0.65mm.json",
+    "blake3": "4bfb419944b7ed8fbf18c4e5e85d560409b22029c3db97365c2dadfaf70d7514"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C13482",
+    "mpn": "SP3232EEY-L/TR",
+    "manufacturer": "MaxLinear"
+  }
+}

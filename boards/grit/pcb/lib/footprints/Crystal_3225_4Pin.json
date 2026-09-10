@@ -1,0 +1,103 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "Crystal_3225_4Pin",
+ "description": "3.2 x 2.5 mm four-pad crystal: pads 1 and 3 are the crystal, 2 and 4 the case (ground). Pin 1 bottom-left",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.1,
+    -0.85
+   ],
+   "size": [
+    1.4,
+    1.2
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.1,
+    -0.85
+   ],
+   "size": [
+    1.4,
+    1.2
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.1,
+    0.85
+   ],
+   "size": [
+    1.4,
+    1.2
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.1,
+    0.85
+   ],
+   "size": [
+    1.4,
+    1.2
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -2.2,
+     -0.85
+    ],
+    "diameter": 0.4,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -2.2,
+      -1.8
+     ],
+     [
+      2.2,
+      -1.8
+     ],
+     [
+      2.2,
+      1.8
+     ],
+     [
+      -2.2,
+      1.8
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  2.3
+ ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "pcb-component/1",
+  "name": "74lvc1g14-sot23-5",
+  "description": "TI SN74LVC1G14DBVR Schmitt inverter, SOT-23-5: 1 NC, 2 A, 3 GND, 4 Y, 5 VCC (LCSC C7835)",
+  "footprint": {
+    "url": "../footprints/SOT-23-5.json",
+    "blake3": "6d8eb995a29d5887f49559dc584d6bc913d44d8952580eaa88cfafd292ef1385"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C7835",
+    "mpn": "SN74LVC1G14DBVR",
+    "manufacturer": "Texas Instruments"
+  }
+}

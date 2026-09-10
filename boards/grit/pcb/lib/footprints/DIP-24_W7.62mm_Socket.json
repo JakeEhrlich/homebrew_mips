@@ -1,0 +1,383 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "DIP-24_W7.62mm_Socket",
+ "description": "DIP-24 300 mil socket (ATF22V10C is the narrow DIP); pin 1 top-left, long axis vertical",
+ "pads": [
+  {
+   "name": "1",
+   "type": "through_hole",
+   "shape": "rect",
+   "at": [
+    -3.81,
+    13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "24",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "2",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "23",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "3",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "22",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "4",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "21",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "5",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "20",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "6",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "19",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "7",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "18",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "8",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "17",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "9",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "16",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "10",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "15",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "11",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "14",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "12",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -3.81,
+    -13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "13",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    3.81,
+    -13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -5.41,
+     14.74
+    ],
+    "diameter": 0.6,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -5.11,
+      -15.84
+     ],
+     [
+      5.11,
+      -15.84
+     ],
+     [
+      5.11,
+      15.84
+     ],
+     [
+      -5.11,
+      15.84
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  16.84
+ ]
+}

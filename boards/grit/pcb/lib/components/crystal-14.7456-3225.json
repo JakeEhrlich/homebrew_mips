@@ -1,0 +1,27 @@
+{
+  "schema": "pcb-component/1",
+  "name": "crystal-14.7456-3225",
+  "description": "14.7456 MHz crystal, 3225 four-pad, 12 pF (LCSC C2885591): pins 1 and 3 crystal, 2 and 4 case",
+  "footprint": {
+    "url": "../footprints/Crystal_3225_4Pin.json",
+    "blake3": "04d82df47ba473c355fea85c634c7a9a6876813a6c713ce98ff16ab67eaf7ad2"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C2885591"
+  }
+}

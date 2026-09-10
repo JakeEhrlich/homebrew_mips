@@ -1,0 +1,327 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SOIC-20W_7.5x12.8mm_P1.27mm",
+ "description": "SOIC-20 wide (7.5 mm body), 1.27 mm pitch; pin 1 top-left",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    5.715
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    4.445
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    3.175
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    1.905
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "5",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    0.635
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "6",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    -0.635
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "7",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    -1.905
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "8",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    -3.175
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "9",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    -4.445
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "10",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -4.85,
+    -5.715
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "11",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    -5.715
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "12",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    -4.445
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "13",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    -3.175
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "14",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    -1.905
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "15",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    -0.635
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "16",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    0.635
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "17",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    1.905
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "18",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    3.175
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "19",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    4.445
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "20",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    4.85,
+    5.715
+   ],
+   "size": [
+    1.9,
+    0.6
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -6.3,
+     5.715
+    ],
+    "diameter": 0.5,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -6.3,
+      -6.515
+     ],
+     [
+      6.3,
+      -6.515
+     ],
+     [
+      6.3,
+      6.515
+     ],
+     [
+      -6.3,
+      6.515
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  7.115
+ ]
+}

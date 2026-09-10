@@ -260,6 +260,7 @@ mod tests {
                 stage: "IF".into(),
                 role: None,
                 model: Model::Gal { clk: Some("CLK".into()), ar: None, eqs: vec![Eq::sop("Q", galpack::Mode::Reg, vec![vec![("A".into(), true)]])], pins: vec![(1, "CLK".into())] },
+                lcsc: None,
                 pins: vec![PinRec { pin: 1, name: "CLK".into(), net: "CLK".into(), kind: PinKind::In }],
             }],
             nets: vec![NetRec { name: "CLK".into(), tie: None, pull: None, role: Some("clk".into()) }],

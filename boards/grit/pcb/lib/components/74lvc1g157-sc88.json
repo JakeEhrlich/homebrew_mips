@@ -1,0 +1,35 @@
+{
+  "schema": "pcb-component/1",
+  "name": "74lvc1g157-sc88",
+  "description": "Nexperia 74LVC1G157GW,125 single 2:1 multiplexer, SC-88: 1 I0, 2 I1, 3 S, 4 Y, 5 GND, 6 VCC (LCSC C135822)",
+  "footprint": {
+    "url": "../footprints/SC-88_SOT-363.json",
+    "blake3": "8fd18268165f581b794c53c65358d5819ef8bdcb2db7e33e555a3c3170bce809"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C135822",
+    "mpn": "74LVC1G157GW,125",
+    "manufacturer": "Nexperia"
+  }
+}

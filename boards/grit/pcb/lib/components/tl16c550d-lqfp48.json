@@ -1,0 +1,160 @@
+{
+  "schema": "pcb-component/1",
+  "name": "tl16c550d-lqfp48",
+  "description": "TI TL16C550DPTR UART, LQFP-48 (PT); pins by package number. LCSC number to confirm",
+  "footprint": {
+    "url": "../footprints/LQFP-48_7x7mm_P0.5mm.json",
+    "blake3": "aa7125a8bcd86d13d38c1e9d937d8cda8012db2b068925d733187941f75f14c5"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    },
+    {
+      "name": "10"
+    },
+    {
+      "name": "11"
+    },
+    {
+      "name": "12"
+    },
+    {
+      "name": "13"
+    },
+    {
+      "name": "14"
+    },
+    {
+      "name": "15"
+    },
+    {
+      "name": "16"
+    },
+    {
+      "name": "17"
+    },
+    {
+      "name": "18"
+    },
+    {
+      "name": "19"
+    },
+    {
+      "name": "20"
+    },
+    {
+      "name": "21"
+    },
+    {
+      "name": "22"
+    },
+    {
+      "name": "23"
+    },
+    {
+      "name": "24"
+    },
+    {
+      "name": "25"
+    },
+    {
+      "name": "26"
+    },
+    {
+      "name": "27"
+    },
+    {
+      "name": "28"
+    },
+    {
+      "name": "29"
+    },
+    {
+      "name": "30"
+    },
+    {
+      "name": "31"
+    },
+    {
+      "name": "32"
+    },
+    {
+      "name": "33"
+    },
+    {
+      "name": "34"
+    },
+    {
+      "name": "35"
+    },
+    {
+      "name": "36"
+    },
+    {
+      "name": "37"
+    },
+    {
+      "name": "38"
+    },
+    {
+      "name": "39"
+    },
+    {
+      "name": "40"
+    },
+    {
+      "name": "41"
+    },
+    {
+      "name": "42"
+    },
+    {
+      "name": "43"
+    },
+    {
+      "name": "44"
+    },
+    {
+      "name": "45"
+    },
+    {
+      "name": "46"
+    },
+    {
+      "name": "47"
+    },
+    {
+      "name": "48"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "mpn": "TL16C550DPTR",
+    "manufacturer": "Texas Instruments"
+  }
+}

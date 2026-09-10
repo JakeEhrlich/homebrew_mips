@@ -1,0 +1,103 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SOT-143",
+ "description": "SOT-143 four-lead: pin 1 (the wide lead) bottom-left, 2 bottom-right, 3 top-right, 4 top-left. VERIFY against the MAX811 datasheet before ordering",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.95,
+    -1.0
+   ],
+   "size": [
+    1.2,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.95,
+    -1.0
+   ],
+   "size": [
+    0.8,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    0.95,
+    1.0
+   ],
+   "size": [
+    0.8,
+    1.0
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -0.95,
+    1.0
+   ],
+   "size": [
+    0.8,
+    1.0
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -2.0,
+     -1.0
+    ],
+    "diameter": 0.4,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -2.0,
+      -1.8
+     ],
+     [
+      2.0,
+      -1.8
+     ],
+     [
+      2.0,
+      1.8
+     ],
+     [
+      -2.0,
+      1.8
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  2.3
+ ]
+}

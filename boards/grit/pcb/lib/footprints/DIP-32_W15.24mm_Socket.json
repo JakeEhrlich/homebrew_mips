@@ -1,0 +1,495 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "DIP-32_W15.24mm_Socket",
+ "description": "DIP-32 600 mil socket; pin 1 top-left, long axis vertical",
+ "pads": [
+  {
+   "name": "1",
+   "type": "through_hole",
+   "shape": "rect",
+   "at": [
+    -7.62,
+    19.05
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "32",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    19.05
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "2",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    16.51
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "31",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    16.51
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "3",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "30",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "4",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "29",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "5",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "28",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "6",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "27",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "7",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "26",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "8",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "25",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "9",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "24",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -1.27
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "10",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "23",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -3.81
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "11",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "22",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -6.35
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "12",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "21",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -8.89
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "13",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "20",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -11.43
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "14",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "19",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -13.97
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "15",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -16.51
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "18",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -16.51
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "16",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    -7.62,
+    -19.05
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  },
+  {
+   "name": "17",
+   "type": "through_hole",
+   "shape": "oval",
+   "at": [
+    7.62,
+    -19.05
+   ],
+   "size": [
+    1.7,
+    1.7
+   ],
+   "drill": 1.0
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -9.22,
+     19.82
+    ],
+    "diameter": 0.6,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -8.92,
+      -20.92
+     ],
+     [
+      8.92,
+      -20.92
+     ],
+     [
+      8.92,
+      20.92
+     ],
+     [
+      -8.92,
+      20.92
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  21.92
+ ]
+}

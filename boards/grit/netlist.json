@@ -13148,23 +13148,23 @@
     },
     {
       "name": "jpwr0",
-      "part": "DC-005-5A-2.0-SMT barrel jack 5.5/2.1 mm",
-      "package": "DC-005 SMT",
+      "part": "CUI PJ-002AH-SMT barrel jack 5.5/2.0 mm",
+      "package": "SMT",
       "block": "Power",
       "stage": "Board",
       "model": {
         "kind": "passive"
       },
-      "lcsc": "C319134",
+      "lcsc": "C22434687",
       "pins": [
         {
           "pin": 1,
-          "name": "+",
+          "name": "PIN",
           "net": "VIN",
           "kind": "passive"
         },
         {
-          "pin": 2,
+          "pin": 3,
           "name": "SLEEVE",
           "net": "GND",
           "kind": "passive"
@@ -14251,20 +14251,8 @@
           "kind": "passive"
         },
         {
-          "pin": 2,
-          "name": "2",
-          "net": "STEPBTN_n",
-          "kind": "passive"
-        },
-        {
           "pin": 3,
           "name": "3",
-          "net": "GND",
-          "kind": "passive"
-        },
-        {
-          "pin": 4,
-          "name": "4",
           "net": "GND",
           "kind": "passive"
         }
@@ -14454,20 +14442,8 @@
           "kind": "passive"
         },
         {
-          "pin": 2,
-          "name": "2",
-          "net": "MR_n",
-          "kind": "passive"
-        },
-        {
           "pin": 3,
           "name": "3",
-          "net": "GND",
-          "kind": "passive"
-        },
-        {
-          "pin": 4,
-          "name": "4",
           "net": "GND",
           "kind": "passive"
         }

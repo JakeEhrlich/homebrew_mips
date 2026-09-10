@@ -1,0 +1,271 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "TSSOP-16_4.4x5mm_P0.65mm",
+ "description": "TSSOP-16, 4.4 mm body, 0.65 mm pitch; pin 1 top-left",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    2.275
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    1.625
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    0.975
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    0.325
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "5",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    -0.325
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "6",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    -0.975
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "7",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    -1.625
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "8",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -2.95,
+    -2.275
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "9",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    -2.275
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "10",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    -1.625
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "11",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    -0.975
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "12",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    -0.325
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "13",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    0.325
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "14",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    0.975
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "15",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    1.625
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "16",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    2.95,
+    2.275
+   ],
+   "size": [
+    1.45,
+    0.45
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -4.175000000000001,
+     2.275
+    ],
+    "diameter": 0.5,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -4.175000000000001,
+      -3.0
+     ],
+     [
+      4.175000000000001,
+      -3.0
+     ],
+     [
+      4.175000000000001,
+      3.0
+     ],
+     [
+      -4.175000000000001,
+      3.0
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  3.6
+ ]
+}

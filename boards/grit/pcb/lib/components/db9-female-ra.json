@@ -1,0 +1,42 @@
+{
+  "schema": "pcb-component/1",
+  "name": "db9-female-ra",
+  "description": "DE-9 female, right angle, through hole (JLCPCB assembly library C9900026339); may need hand soldering",
+  "footprint": {
+    "url": "../footprints/DSUB-9_Female_Horizontal.json",
+    "blake3": "9f67a9a70d35f920da44f5c6a0b17e8d778dd0f6214c204e3674c0cbda06d6e2"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    },
+    {
+      "name": "5"
+    },
+    {
+      "name": "6"
+    },
+    {
+      "name": "7"
+    },
+    {
+      "name": "8"
+    },
+    {
+      "name": "9"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C9900026339"
+  }
+}

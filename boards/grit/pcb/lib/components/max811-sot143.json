@@ -1,0 +1,28 @@
+{
+  "schema": "pcb-component/1",
+  "name": "max811-sot143",
+  "description": "Analog Devices MAX811LEUS+T reset supervisor 4.63 V, SOT-143: 1 GND, 2 RESET#, 3 MR#, 4 VCC. LCSC number to confirm",
+  "footprint": {
+    "url": "../footprints/SOT-143.json",
+    "blake3": "45af161ca2ea88869a2c2e0181d2130ee0c83dd7a1bbee8994a2395a3367629a"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "mpn": "MAX811LEUS+T",
+    "manufacturer": "Analog Devices"
+  }
+}

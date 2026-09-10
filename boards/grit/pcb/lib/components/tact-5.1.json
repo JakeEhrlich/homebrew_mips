@@ -1,0 +1,29 @@
+{
+  "schema": "pcb-component/1",
+  "name": "tact-5.1",
+  "description": "XKB TS-1187A-B-A-B tactile switch, 5.1 x 5.1 mm SMD (LCSC C318884); pads 1 and 3 are diagonal",
+  "footprint": {
+    "url": "../footprints/SW_SMD_5.1x5.1_P3.7_LS6.5.json",
+    "blake3": "c821656114c328c21c02956c6133e00291b70450c416ef824949a550e609236b"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    },
+    {
+      "name": "4"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C318884",
+    "mpn": "TS-1187A-B-A-B",
+    "manufacturer": "XKB"
+  }
+}

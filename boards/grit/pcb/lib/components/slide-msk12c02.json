@@ -1,0 +1,26 @@
+{
+  "schema": "pcb-component/1",
+  "name": "slide-msk12c02",
+  "description": "SHOU HAN MSK12C02 SPDT slide switch, SMD (LCSC C431540); pin 2 common",
+  "footprint": {
+    "url": "../footprints/SW_Slide_MSK12C02.json",
+    "blake3": "d4eb262fa95079b2570474e5a046597c7d1f08dace9453775982fadc918f8893"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    },
+    {
+      "name": "3"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C431540",
+    "mpn": "MSK12C02",
+    "manufacturer": "SHOU HAN"
+  }
+}

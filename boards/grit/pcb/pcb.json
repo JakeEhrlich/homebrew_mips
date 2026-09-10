@@ -1,0 +1,4352 @@
+{
+  "schema": "pcb-project/1",
+  "name": "grit",
+  "component_indexes": [
+    {
+      "url": "../../../../flatland/library-jlcpcb/index.json"
+    },
+    {
+      "url": "lib/index.json"
+    }
+  ],
+  "stackup": {
+    "copper_layers": [
+      "F.Cu",
+      "B.Cu"
+    ],
+    "board_thickness": 1.6,
+    "copper_thickness": 0.035
+  },
+  "design_rules": {
+    "trace_width": 0.25,
+    "clearance": 0.2,
+    "via_drill": 0.4,
+    "via_diameter": 0.8,
+    "pour_clearance": 0.3,
+    "mask_expansion": 0.05,
+    "paste_shrink": 0,
+    "silk_width": 0.15,
+    "silk_text_size": 1,
+    "edge_clearance": 0.5,
+    "hole_annular_ring": 0.5,
+    "thermal_spoke_width": 0.3,
+    "net_classes": {
+      "power": {
+        "trace_width": 0.6,
+        "clearance": 0.25
+      }
+    }
+  },
+  "outline": [
+    {
+      "line": {
+        "from": [
+          3,
+          0
+        ],
+        "to": [
+          227,
+          0
+        ]
+      }
+    },
+    {
+      "arc": {
+        "from": [
+          227,
+          0
+        ],
+        "to": [
+          230,
+          3
+        ],
+        "center": [
+          227,
+          3
+        ],
+        "clockwise": false
+      }
+    },
+    {
+      "line": {
+        "from": [
+          230,
+          3
+        ],
+        "to": [
+          230,
+          172
+        ]
+      }
+    },
+    {
+      "arc": {
+        "from": [
+          230,
+          172
+        ],
+        "to": [
+          227,
+          175
+        ],
+        "center": [
+          227,
+          172
+        ],
+        "clockwise": false
+      }
+    },
+    {
+      "line": {
+        "from": [
+          227,
+          175
+        ],
+        "to": [
+          3,
+          175
+        ]
+      }
+    },
+    {
+      "arc": {
+        "from": [
+          3,
+          175
+        ],
+        "to": [
+          0,
+          172
+        ],
+        "center": [
+          3,
+          172
+        ],
+        "clockwise": false
+      }
+    },
+    {
+      "line": {
+        "from": [
+          0,
+          172
+        ],
+        "to": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "arc": {
+        "from": [
+          0,
+          3
+        ],
+        "to": [
+          3,
+          0
+        ],
+        "center": [
+          3,
+          3
+        ],
+        "clockwise": false
+      }
+    }
+  ],
+  "components": {
+    "seq0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          22,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "seq1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          34.5,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "mir0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          47,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "mir1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          59.5,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "pc0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          22,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "pc1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          34.5,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "a0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          47,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "a1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          59.5,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "b0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          72,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "b1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          84.5,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "t0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          97,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "t1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          109.5,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "alu0": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          72,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "alu1": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          84.5,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "alu2": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          97,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "alu3": {
+      "component": "socket-dip24-300",
+      "placement": {
+        "at": [
+          109.5,
+          129
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "osc0": {
+      "component": "osc-4mhz-5v-7050",
+      "placement": {
+        "at": [
+          8,
+          118
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rst0": {
+      "component": "max811-sot143",
+      "placement": {
+        "at": [
+          140,
+          93
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rom0": {
+      "component": "socket-dip32-600",
+      "placement": {
+        "at": [
+          66,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rom1": {
+      "component": "socket-dip32-600",
+      "placement": {
+        "at": [
+          86,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "uc0": {
+      "component": "socket-dip32-600",
+      "placement": {
+        "at": [
+          26,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "uc1": {
+      "component": "socket-dip32-600",
+      "placement": {
+        "at": [
+          46,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "ram0": {
+      "component": "socket-dip28-600",
+      "placement": {
+        "at": [
+          106,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "ram1": {
+      "component": "socket-dip28-600",
+      "placement": {
+        "at": [
+          126,
+          46
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "uart0": {
+      "component": "tl16c550d-lqfp48",
+      "placement": {
+        "at": [
+          160,
+          60
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "x1": {
+      "component": "crystal-14.7456-3225",
+      "placement": {
+        "at": [
+          150,
+          50
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "xc1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "18p",
+        "lcsc": "C1653"
+      },
+      "placement": {
+        "at": [
+          146,
+          45
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "xc2": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "18p",
+        "lcsc": "C1653"
+      },
+      "placement": {
+        "at": [
+          154,
+          45
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "xcvr0": {
+      "component": "sp3232-tssop16",
+      "placement": {
+        "at": [
+          185,
+          60
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "c1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          178,
+          52
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "c2": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          181.5,
+          52
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "c3": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          188.5,
+          52
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "c4": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          192,
+          52
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "j1": {
+      "component": "db9-female-ra",
+      "placement": {
+        "at": [
+          205,
+          9
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "jpwr0": {
+      "component": "dcjack-pj-002ah-smt",
+      "placement": {
+        "at": [
+          14,
+          14
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "f0": {
+      "component": "fuse-1206",
+      "placement": {
+        "at": [
+          26,
+          10
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "q0": {
+      "component": "ao3401a-sot23",
+      "placement": {
+        "at": [
+          33,
+          10
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cb0": {
+      "component": "capacitor-elec-6.3x7.7",
+      "parameters": {
+        "value": "100u",
+        "lcsc": "C970684"
+      },
+      "placement": {
+        "at": [
+          42,
+          12
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cb1": {
+      "component": "capacitor-0805",
+      "parameters": {
+        "value": "10u",
+        "lcsc": "C15850"
+      },
+      "placement": {
+        "at": [
+          60,
+          74
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cb2": {
+      "component": "capacitor-0805",
+      "parameters": {
+        "value": "10u",
+        "lcsc": "C15850"
+      },
+      "placement": {
+        "at": [
+          128,
+          74
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cb3": {
+      "component": "capacitor-0805",
+      "parameters": {
+        "value": "10u",
+        "lcsc": "C15850"
+      },
+      "placement": {
+        "at": [
+          128,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cb4": {
+      "component": "capacitor-0805",
+      "parameters": {
+        "value": "10u",
+        "lcsc": "C15850"
+      },
+      "placement": {
+        "at": [
+          128,
+          140
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rlp0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          26,
+          5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "ledp0": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          31,
+          5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_seq0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          22,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_seq1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          34.5,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_mir0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          47,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_mir1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          59.5,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_pc0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          22,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_pc1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          34.5,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_a0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          47,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_a1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          59.5,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_b0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          72,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_b1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          84.5,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_t0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          97,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_t1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          109.5,
+          111
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_alu0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          72,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_alu1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          84.5,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_alu2": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          97,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_alu3": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          109.5,
+          147
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_rom0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          71,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_rom1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          91,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_uc0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          31,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_uc1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          51,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_ram0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          111,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_ram1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          131,
+          69.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_uart0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          160,
+          70
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_xcvr0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          185,
+          67
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_osc0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          8,
+          124.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_rst0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          140,
+          97.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_umux0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          8,
+          106.5
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_uinv0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          8,
+          96
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cd_ubuf0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          45.5,
+          157
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "cd_ubuf1": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          91.5,
+          157
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "cd_ubuf2": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          137.5,
+          157
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "cd_ubuf3": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          183.5,
+          157
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "swm0": {
+      "component": "slide-msk12c02",
+      "placement": {
+        "at": [
+          9,
+          70
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "swstep0": {
+      "component": "tact-5.1",
+      "placement": {
+        "at": [
+          9,
+          80
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rstep0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          8,
+          92
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "cst0": {
+      "component": "capacitor-0603",
+      "parameters": {
+        "value": "100n",
+        "lcsc": "C14663"
+      },
+      "placement": {
+        "at": [
+          8,
+          89
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "uinv0": {
+      "component": "74lvc1g14-sot23-5",
+      "placement": {
+        "at": [
+          8,
+          100
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "umux0": {
+      "component": "74lvc1g157-sc88",
+      "placement": {
+        "at": [
+          8,
+          110
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "jclk0": {
+      "component": "header-1x03",
+      "placement": {
+        "at": [
+          6,
+          148
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "swr0": {
+      "component": "tact-5.1",
+      "placement": {
+        "at": [
+          140,
+          83
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "swb0": {
+      "component": "dipsw-em04q",
+      "placement": {
+        "at": [
+          160,
+          96
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rp_pbank0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          153,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rp_pbank1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          156.5,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rp_pbank2": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          160,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rp_pbank3": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          163.5,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "swb1": {
+      "component": "dipsw-em04q",
+      "placement": {
+        "at": [
+          175,
+          96
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rp_ubank0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          169,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rp_ubank1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          172.5,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rp_ubank2": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          176,
+          105
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rd0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          150,
+          128
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rd1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "10k",
+        "lcsc": "C25804"
+      },
+      "placement": {
+        "at": [
+          150,
+          131
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "ubuf0": {
+      "component": "74hc541-soic20w",
+      "placement": {
+        "at": [
+          37,
+          157
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rl_clk": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          20,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_clk": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          20,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_reset": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          25,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_reset": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          25,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_pcdrv": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          30,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_pcdrv": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          30,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_adrv": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          35,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_adrv": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          35,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_memrd_n": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          40,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_memrd_n": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          40,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_we_n": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          45,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_we_n": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          45,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_aluoe": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          50,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_aluoe": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          50,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_tdrv": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          55,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_tdrv": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          55,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "ubuf1": {
+      "component": "74hc541-soic20w",
+      "placement": {
+        "at": [
+          83,
+          157
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rl_ald": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          66,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ald": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          66,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_bld": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          71,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_bld": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          71,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_tld": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          76,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_tld": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          76,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_pcld": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          81,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_pcld": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          81,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_pcinc": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          86,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_pcinc": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          86,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_irld": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          91,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_irld": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          91,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_nel": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          96,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_nel": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          96,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_aux0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          101,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_aux0": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          101,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "ubuf2": {
+      "component": "74hc541-soic20w",
+      "placement": {
+        "at": [
+          129,
+          157
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rl_ir0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          112,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ir0": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          112,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_ir1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          117,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ir1": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          117,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_ir2": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          122,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ir2": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          122,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_ir3": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          127,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ir3": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          127,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_ir4": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          132,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_ir4": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          132,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_step0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          137,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_step0": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          137,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_step1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          142,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_step1": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          142,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_step2": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          147,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_step2": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          147,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "ubuf3": {
+      "component": "74hc541-soic20w",
+      "placement": {
+        "at": [
+          175,
+          157
+        ],
+        "rotation": 0.0,
+        "side": "top"
+      }
+    },
+    "rl_step3": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          158,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_step3": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          158,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_f0": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          163,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_f0": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          163,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_f1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          168,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_f1": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          168,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_aux1": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          173,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_aux1": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          173,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "rl_rst_n": {
+      "component": "resistor-0603",
+      "parameters": {
+        "value": "1k",
+        "lcsc": "C21190"
+      },
+      "placement": {
+        "at": [
+          178,
+          165.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "led_rst_n": {
+      "component": "led-0603-red",
+      "placement": {
+        "at": [
+          178,
+          169.5
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "ja0": {
+      "component": "header-2x10",
+      "placement": {
+        "at": [
+          50,
+          6
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "jd0": {
+      "component": "header-2x10",
+      "placement": {
+        "at": [
+          82,
+          6
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "jc0": {
+      "component": "header-2x10",
+      "placement": {
+        "at": [
+          114,
+          6
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    },
+    "js0": {
+      "component": "header-2x10",
+      "placement": {
+        "at": [
+          146,
+          6
+        ],
+        "rotation": 90.0,
+        "side": "top"
+      }
+    }
+  },
+  "nets": {
+    "CLK": {
+      "pins": [
+        "seq0.1",
+        "seq1.1",
+        "mir0.1",
+        "mir1.1",
+        "pc0.1",
+        "pc1.1",
+        "a0.1",
+        "a1.1",
+        "b0.1",
+        "b1.1",
+        "t0.1",
+        "t1.1",
+        "umux0.4",
+        "jclk0.1",
+        "ubuf0.2",
+        "ja0.17",
+        "jd0.17",
+        "jc0.15",
+        "js0.11"
+      ]
+    },
+    "D11": {
+      "pins": [
+        "seq0.2",
+        "pc1.4",
+        "a1.5",
+        "b1.4",
+        "t1.3",
+        "t1.17",
+        "alu2.21",
+        "rom1.17",
+        "ram1.15",
+        "jd0.12"
+      ]
+    },
+    "D12": {
+      "pins": [
+        "seq0.3",
+        "pc1.5",
+        "a1.6",
+        "b1.5",
+        "t1.4",
+        "t1.21",
+        "alu3.18",
+        "rom1.18",
+        "ram1.16",
+        "jd0.13"
+      ]
+    },
+    "D13": {
+      "pins": [
+        "seq0.4",
+        "pc1.6",
+        "a1.7",
+        "b1.6",
+        "t1.5",
+        "t1.16",
+        "alu3.20",
+        "rom1.19",
+        "ram1.17",
+        "jd0.14"
+      ]
+    },
+    "D14": {
+      "pins": [
+        "seq0.5",
+        "pc1.7",
+        "a1.8",
+        "b1.7",
+        "t1.6",
+        "t1.22",
+        "alu3.17",
+        "rom1.20",
+        "ram1.18",
+        "jd0.15"
+      ]
+    },
+    "D15": {
+      "pins": [
+        "seq0.6",
+        "pc1.8",
+        "a1.9",
+        "b1.8",
+        "t1.7",
+        "t1.15",
+        "alu3.21",
+        "rom1.21",
+        "ram1.19",
+        "jd0.16"
+      ]
+    },
+    "IRLD": {
+      "pins": [
+        "seq0.7",
+        "mir1.19",
+        "ubuf1.7",
+        "jc0.9"
+      ]
+    },
+    "RESET": {
+      "pins": [
+        "seq0.8",
+        "seq1.20",
+        "mir0.10",
+        "mir1.10",
+        "pc0.14",
+        "pc1.23",
+        "uart0.35",
+        "ubuf0.3",
+        "ja0.18",
+        "jc0.16",
+        "js0.12"
+      ]
+    },
+    "GND": {
+      "pins": [
+        "seq0.12",
+        "seq1.12",
+        "mir0.12",
+        "mir1.12",
+        "pc0.12",
+        "pc1.12",
+        "a0.12",
+        "a1.12",
+        "b0.12",
+        "b1.12",
+        "t0.12",
+        "t1.12",
+        "alu0.12",
+        "alu1.12",
+        "alu2.12",
+        "alu3.12",
+        "osc0.2",
+        "rst0.1",
+        "rom0.16",
+        "rom1.16",
+        "uc0.1",
+        "uc0.2",
+        "uc0.3",
+        "uc0.16",
+        "uc0.22",
+        "uc0.24",
+        "uc0.28",
+        "uc0.29",
+        "uc0.30",
+        "uc1.1",
+        "uc1.2",
+        "uc1.3",
+        "uc1.16",
+        "uc1.22",
+        "uc1.24",
+        "uc1.28",
+        "uc1.29",
+        "uc1.30",
+        "ram0.14",
+        "ram1.14",
+        "uart0.11",
+        "uart0.17",
+        "uart0.18",
+        "uart0.20",
+        "uart0.24",
+        "xc1.2",
+        "xc2.2",
+        "xcvr0.15",
+        "c3.2",
+        "c4.2",
+        "j1.5",
+        "jpwr0.SLEEVE",
+        "q0.G",
+        "cb0.-",
+        "cb1.2",
+        "cb2.2",
+        "cb3.2",
+        "cb4.2",
+        "ledp0.K",
+        "cd_seq0.2",
+        "cd_seq1.2",
+        "cd_mir0.2",
+        "cd_mir1.2",
+        "cd_pc0.2",
+        "cd_pc1.2",
+        "cd_a0.2",
+        "cd_a1.2",
+        "cd_b0.2",
+        "cd_b1.2",
+        "cd_t0.2",
+        "cd_t1.2",
+        "cd_alu0.2",
+        "cd_alu1.2",
+        "cd_alu2.2",
+        "cd_alu3.2",
+        "cd_rom0.2",
+        "cd_rom1.2",
+        "cd_uc0.2",
+        "cd_uc1.2",
+        "cd_ram0.2",
+        "cd_ram1.2",
+        "cd_uart0.2",
+        "cd_xcvr0.2",
+        "cd_osc0.2",
+        "cd_rst0.2",
+        "cd_umux0.2",
+        "cd_uinv0.2",
+        "cd_ubuf0.2",
+        "cd_ubuf1.2",
+        "cd_ubuf2.2",
+        "cd_ubuf3.2",
+        "swm0.1",
+        "swstep0.3",
+        "cst0.2",
+        "uinv0.3",
+        "umux0.5",
+        "jclk0.3",
+        "swr0.3",
+        "swb0.5",
+        "swb0.6",
+        "swb0.7",
+        "swb0.8",
+        "swb1.6",
+        "swb1.7",
+        "swb1.8",
+        "rd0.2",
+        "rd1.2",
+        "ubuf0.1",
+        "ubuf0.10",
+        "ubuf0.19",
+        "led_clk.K",
+        "led_reset.K",
+        "led_pcdrv.K",
+        "led_adrv.K",
+        "led_aluoe.K",
+        "led_tdrv.K",
+        "ubuf1.1",
+        "ubuf1.10",
+        "ubuf1.19",
+        "led_ald.K",
+        "led_bld.K",
+        "led_tld.K",
+        "led_pcld.K",
+        "led_pcinc.K",
+        "led_irld.K",
+        "led_nel.K",
+        "led_aux0.K",
+        "ubuf2.1",
+        "ubuf2.10",
+        "ubuf2.19",
+        "led_ir0.K",
+        "led_ir1.K",
+        "led_ir2.K",
+        "led_ir3.K",
+        "led_ir4.K",
+        "led_step0.K",
+        "led_step1.K",
+        "led_step2.K",
+        "ubuf3.1",
+        "ubuf3.7",
+        "ubuf3.8",
+        "ubuf3.9",
+        "ubuf3.10",
+        "ubuf3.19",
+        "led_step3.K",
+        "led_f0.K",
+        "led_f1.K",
+        "led_aux1.K",
+        "ja0.19",
+        "ja0.20",
+        "jd0.20",
+        "jc0.20",
+        "js0.18",
+        "js0.19",
+        "js0.20",
+        "x1.2",
+        "x1.4",
+        "jpwr0.SW"
+      ],
+      "class": "power"
+    },
+    "STEP1": {
+      "pins": [
+        "seq0.15",
+        "uc0.11",
+        "uc1.11",
+        "ubuf2.8",
+        "js0.7"
+      ]
+    },
+    "IR3": {
+      "pins": [
+        "seq0.16",
+        "uc0.27",
+        "uc1.27",
+        "ubuf2.5",
+        "js0.4"
+      ]
+    },
+    "IR1": {
+      "pins": [
+        "seq0.17",
+        "uc0.6",
+        "uc1.6",
+        "ubuf2.3",
+        "js0.2"
+      ]
+    },
+    "STEP2": {
+      "pins": [
+        "seq0.18",
+        "uc0.10",
+        "uc1.10",
+        "ubuf2.9",
+        "js0.8"
+      ]
+    },
+    "STEP3": {
+      "pins": [
+        "seq0.19",
+        "uc0.9",
+        "uc1.9",
+        "ubuf3.2",
+        "js0.9"
+      ]
+    },
+    "IR0": {
+      "pins": [
+        "seq0.20",
+        "uc0.7",
+        "uc1.7",
+        "ubuf2.2",
+        "js0.1"
+      ]
+    },
+    "IR2": {
+      "pins": [
+        "seq0.21",
+        "uc0.5",
+        "uc1.5",
+        "ubuf2.4",
+        "js0.3"
+      ]
+    },
+    "IR4": {
+      "pins": [
+        "seq0.22",
+        "uc0.26",
+        "uc1.26",
+        "ubuf2.6",
+        "js0.5"
+      ]
+    },
+    "STEP0": {
+      "pins": [
+        "seq0.23",
+        "uc0.12",
+        "uc1.12",
+        "ubuf2.7",
+        "js0.6"
+      ]
+    },
+    "VCC": {
+      "pins": [
+        "seq0.24",
+        "seq1.24",
+        "mir0.24",
+        "mir1.24",
+        "pc0.24",
+        "pc1.24",
+        "a0.24",
+        "a1.24",
+        "b0.24",
+        "b1.24",
+        "t0.24",
+        "t1.24",
+        "alu0.24",
+        "alu1.24",
+        "alu2.24",
+        "alu3.24",
+        "osc0.1",
+        "osc0.4",
+        "rst0.4",
+        "rom0.31",
+        "rom0.32",
+        "rom1.31",
+        "rom1.32",
+        "uc0.31",
+        "uc0.32",
+        "uc1.31",
+        "uc1.32",
+        "ram0.28",
+        "ram1.28",
+        "uart0.41",
+        "uart0.42",
+        "xcvr0.16",
+        "q0.S",
+        "cb0.+",
+        "cb1.1",
+        "cb2.1",
+        "cb3.1",
+        "cb4.1",
+        "rlp0.1",
+        "cd_seq0.1",
+        "cd_seq1.1",
+        "cd_mir0.1",
+        "cd_mir1.1",
+        "cd_pc0.1",
+        "cd_pc1.1",
+        "cd_a0.1",
+        "cd_a1.1",
+        "cd_b0.1",
+        "cd_b1.1",
+        "cd_t0.1",
+        "cd_t1.1",
+        "cd_alu0.1",
+        "cd_alu1.1",
+        "cd_alu2.1",
+        "cd_alu3.1",
+        "cd_rom0.1",
+        "cd_rom1.1",
+        "cd_uc0.1",
+        "cd_uc1.1",
+        "cd_ram0.1",
+        "cd_ram1.1",
+        "cd_uart0.1",
+        "cd_xcvr0.1",
+        "cd_osc0.1",
+        "cd_rst0.1",
+        "cd_umux0.1",
+        "cd_uinv0.1",
+        "cd_ubuf0.1",
+        "cd_ubuf1.1",
+        "cd_ubuf2.1",
+        "cd_ubuf3.1",
+        "swm0.3",
+        "rstep0.1",
+        "uinv0.5",
+        "umux0.6",
+        "rp_pbank0.1",
+        "rp_pbank1.1",
+        "rp_pbank2.1",
+        "rp_pbank3.1",
+        "rp_ubank0.1",
+        "rp_ubank1.1",
+        "rp_ubank2.1",
+        "ubuf0.20",
+        "led_memrd_n.A",
+        "led_we_n.A",
+        "ubuf1.20",
+        "ubuf2.20",
+        "ubuf3.20",
+        "led_rst_n.A"
+      ],
+      "class": "power"
+    },
+    "ADRV": {
+      "pins": [
+        "seq1.2",
+        "mir1.17",
+        "a0.2",
+        "a1.2",
+        "ubuf0.5",
+        "jc0.12"
+      ]
+    },
+    "NE3": {
+      "pins": [
+        "seq1.3",
+        "alu3.19"
+      ]
+    },
+    "RST_n": {
+      "pins": [
+        "seq1.4",
+        "rst0.2",
+        "ubuf3.6",
+        "js0.13"
+      ]
+    },
+    "NEL": {
+      "pins": [
+        "seq1.19",
+        "uc0.8",
+        "uc1.8",
+        "ubuf1.8",
+        "jc0.17",
+        "js0.10"
+      ]
+    },
+    "M0": {
+      "pins": [
+        "mir0.2",
+        "uc0.13"
+      ]
+    },
+    "M1": {
+      "pins": [
+        "mir0.3",
+        "uc0.14"
+      ]
+    },
+    "M2": {
+      "pins": [
+        "mir0.4",
+        "uc0.15"
+      ]
+    },
+    "M3": {
+      "pins": [
+        "mir0.5",
+        "uc0.17"
+      ]
+    },
+    "M4": {
+      "pins": [
+        "mir0.6",
+        "uc0.18"
+      ]
+    },
+    "M5": {
+      "pins": [
+        "mir0.7",
+        "uc0.19"
+      ]
+    },
+    "M6": {
+      "pins": [
+        "mir0.8",
+        "uc0.20"
+      ]
+    },
+    "M7": {
+      "pins": [
+        "mir0.9",
+        "uc0.21"
+      ]
+    },
+    "PCINC": {
+      "pins": [
+        "mir0.15",
+        "pc0.11",
+        "ubuf1.6",
+        "jc0.8"
+      ]
+    },
+    "BLD": {
+      "pins": [
+        "mir0.16",
+        "b0.2",
+        "b1.2",
+        "ubuf1.3",
+        "jc0.6"
+      ]
+    },
+    "WE_n": {
+      "pins": [
+        "mir0.17",
+        "ram0.27",
+        "ram1.27",
+        "uart0.16",
+        "ubuf0.7",
+        "jd0.19",
+        "jc0.4"
+      ]
+    },
+    "MEMRD_n": {
+      "pins": [
+        "mir0.18",
+        "rom0.24",
+        "rom1.24",
+        "ram0.22",
+        "ram1.22",
+        "uart0.19",
+        "ubuf0.6",
+        "jd0.18",
+        "jc0.2"
+      ]
+    },
+    "PCDRV": {
+      "pins": [
+        "mir0.19",
+        "pc0.10",
+        "pc1.11",
+        "ubuf0.4",
+        "jc0.1"
+      ]
+    },
+    "ALUOE": {
+      "pins": [
+        "mir0.20",
+        "alu0.5",
+        "alu1.5",
+        "alu2.5",
+        "alu3.5",
+        "ubuf0.8",
+        "jc0.3"
+      ]
+    },
+    "ALD": {
+      "pins": [
+        "mir0.21",
+        "a0.3",
+        "a1.3",
+        "ubuf1.2",
+        "jc0.5"
+      ]
+    },
+    "PCLD": {
+      "pins": [
+        "mir0.22",
+        "pc0.13",
+        "pc1.13",
+        "ubuf1.5",
+        "jc0.7"
+      ]
+    },
+    "M10": {
+      "pins": [
+        "mir1.2",
+        "uc1.15"
+      ]
+    },
+    "M11": {
+      "pins": [
+        "mir1.3",
+        "uc1.17"
+      ]
+    },
+    "M12": {
+      "pins": [
+        "mir1.4",
+        "uc1.18"
+      ]
+    },
+    "M13": {
+      "pins": [
+        "mir1.5",
+        "uc1.19"
+      ]
+    },
+    "M14": {
+      "pins": [
+        "mir1.6",
+        "uc1.20"
+      ]
+    },
+    "M15": {
+      "pins": [
+        "mir1.7",
+        "uc1.21"
+      ]
+    },
+    "M8": {
+      "pins": [
+        "mir1.8",
+        "uc1.13"
+      ]
+    },
+    "M9": {
+      "pins": [
+        "mir1.9",
+        "uc1.14"
+      ]
+    },
+    "AUX1": {
+      "pins": [
+        "mir1.15",
+        "ubuf3.5",
+        "jc0.19",
+        "js0.17"
+      ]
+    },
+    "TDRV": {
+      "pins": [
+        "mir1.16",
+        "t0.10",
+        "t1.10",
+        "ubuf0.9",
+        "jc0.14"
+      ]
+    },
+    "F0": {
+      "pins": [
+        "mir1.18",
+        "alu0.10",
+        "alu1.11",
+        "alu2.11",
+        "alu3.11",
+        "ubuf3.3",
+        "jc0.10"
+      ]
+    },
+    "F1": {
+      "pins": [
+        "mir1.20",
+        "alu0.11",
+        "alu1.13",
+        "alu2.13",
+        "alu3.13",
+        "ubuf3.4",
+        "jc0.11"
+      ]
+    },
+    "TLD": {
+      "pins": [
+        "mir1.21",
+        "t0.11",
+        "t1.11",
+        "ubuf1.4",
+        "jc0.13"
+      ]
+    },
+    "AUX0": {
+      "pins": [
+        "mir1.22",
+        "ubuf1.9",
+        "jc0.18",
+        "js0.16"
+      ]
+    },
+    "D0": {
+      "pins": [
+        "pc0.2",
+        "a0.4",
+        "b0.3",
+        "t0.2",
+        "t0.19",
+        "alu0.21",
+        "rom0.13",
+        "ram0.11",
+        "uart0.43",
+        "jd0.1"
+      ]
+    },
+    "D1": {
+      "pins": [
+        "pc0.3",
+        "a0.5",
+        "b0.4",
+        "t0.3",
+        "t0.18",
+        "alu0.18",
+        "rom0.14",
+        "ram0.12",
+        "uart0.44",
+        "jd0.2"
+      ]
+    },
+    "D2": {
+      "pins": [
+        "pc0.4",
+        "a0.6",
+        "b0.5",
+        "t0.4",
+        "t0.20",
+        "alu0.20",
+        "rom0.15",
+        "ram0.13",
+        "uart0.45",
+        "jd0.3"
+      ]
+    },
+    "D3": {
+      "pins": [
+        "pc0.5",
+        "a0.7",
+        "b0.6",
+        "t0.5",
+        "t0.17",
+        "alu0.17",
+        "rom0.17",
+        "ram0.15",
+        "uart0.46",
+        "jd0.4"
+      ]
+    },
+    "D4": {
+      "pins": [
+        "pc0.6",
+        "a0.8",
+        "b0.7",
+        "t0.6",
+        "t0.21",
+        "alu1.18",
+        "rom0.18",
+        "ram0.16",
+        "uart0.47",
+        "jd0.5"
+      ]
+    },
+    "D5": {
+      "pins": [
+        "pc0.7",
+        "a0.9",
+        "b0.8",
+        "t0.7",
+        "t0.16",
+        "alu1.20",
+        "rom0.19",
+        "ram0.17",
+        "uart0.2",
+        "jd0.6"
+      ]
+    },
+    "D6": {
+      "pins": [
+        "pc0.8",
+        "a0.10",
+        "b0.9",
+        "t0.8",
+        "t0.22",
+        "alu1.17",
+        "rom0.20",
+        "ram0.18",
+        "uart0.3",
+        "jd0.7"
+      ]
+    },
+    "D7": {
+      "pins": [
+        "pc0.9",
+        "a0.11",
+        "b0.10",
+        "t0.9",
+        "t0.15",
+        "alu1.21",
+        "rom0.21",
+        "ram0.19",
+        "uart0.4",
+        "jd0.8"
+      ]
+    },
+    "ADDR0": {
+      "pins": [
+        "pc0.15",
+        "a0.19",
+        "alu0.1",
+        "rom0.12",
+        "rom1.12",
+        "ram0.10",
+        "ram1.10",
+        "uart0.28",
+        "ja0.1"
+      ]
+    },
+    "ADDR2": {
+      "pins": [
+        "pc0.16",
+        "a0.20",
+        "alu0.3",
+        "rom0.10",
+        "rom1.10",
+        "ram0.8",
+        "ram1.8",
+        "uart0.26",
+        "ja0.3"
+      ]
+    },
+    "ADDR4": {
+      "pins": [
+        "pc0.17",
+        "a0.21",
+        "alu1.1",
+        "rom0.8",
+        "rom1.8",
+        "ram0.6",
+        "ram1.6",
+        "ja0.5"
+      ]
+    },
+    "ADDR6": {
+      "pins": [
+        "pc0.18",
+        "a0.22",
+        "alu1.3",
+        "rom0.6",
+        "rom1.6",
+        "ram0.4",
+        "ram1.4",
+        "ja0.7"
+      ]
+    },
+    "ADDR7": {
+      "pins": [
+        "pc0.19",
+        "a0.15",
+        "alu1.4",
+        "rom0.5",
+        "rom1.5",
+        "ram0.3",
+        "ram1.3",
+        "ja0.8"
+      ]
+    },
+    "ADDR5": {
+      "pins": [
+        "pc0.20",
+        "a0.16",
+        "alu1.2",
+        "rom0.7",
+        "rom1.7",
+        "ram0.5",
+        "ram1.5",
+        "ja0.6"
+      ]
+    },
+    "ADDR3": {
+      "pins": [
+        "pc0.21",
+        "a0.17",
+        "alu0.4",
+        "rom0.9",
+        "rom1.9",
+        "ram0.7",
+        "ram1.7",
+        "ja0.4"
+      ]
+    },
+    "ADDR1": {
+      "pins": [
+        "pc0.22",
+        "a0.18",
+        "alu0.2",
+        "rom0.11",
+        "rom1.11",
+        "ram0.9",
+        "ram1.9",
+        "uart0.27",
+        "ja0.2"
+      ]
+    },
+    "CO": {
+      "pins": [
+        "pc0.23",
+        "pc1.2"
+      ]
+    },
+    "D10": {
+      "pins": [
+        "pc1.3",
+        "a1.4",
+        "b1.3",
+        "t1.2",
+        "t1.20",
+        "alu2.17",
+        "rom1.15",
+        "ram1.13",
+        "jd0.11"
+      ]
+    },
+    "D8": {
+      "pins": [
+        "pc1.9",
+        "a1.10",
+        "b1.9",
+        "t1.8",
+        "t1.19",
+        "alu2.18",
+        "rom1.13",
+        "ram1.11",
+        "jd0.9"
+      ]
+    },
+    "D9": {
+      "pins": [
+        "pc1.10",
+        "a1.11",
+        "b1.10",
+        "t1.9",
+        "t1.18",
+        "alu2.20",
+        "rom1.14",
+        "ram1.12",
+        "jd0.10"
+      ]
+    },
+    "ADDR8": {
+      "pins": [
+        "pc1.15",
+        "a1.19",
+        "alu2.3",
+        "rom0.27",
+        "rom1.27",
+        "ram0.25",
+        "ram1.25",
+        "ja0.9"
+      ]
+    },
+    "ADDR10": {
+      "pins": [
+        "pc1.16",
+        "a1.20",
+        "alu2.1",
+        "rom0.23",
+        "rom1.23",
+        "ram0.21",
+        "ram1.21",
+        "ja0.11"
+      ]
+    },
+    "ADDR12": {
+      "pins": [
+        "pc1.17",
+        "a1.21",
+        "alu3.1",
+        "rom0.4",
+        "rom1.4",
+        "ram0.2",
+        "ram1.2",
+        "ja0.13"
+      ]
+    },
+    "ADDR14": {
+      "pins": [
+        "pc1.18",
+        "a1.22",
+        "alu3.3",
+        "rom0.29",
+        "rom1.29",
+        "ram0.20",
+        "ram1.20",
+        "uart0.9",
+        "rd0.1",
+        "ja0.15"
+      ]
+    },
+    "ADDR15": {
+      "pins": [
+        "pc1.19",
+        "a1.15",
+        "alu3.4",
+        "rom0.22",
+        "rom1.22",
+        "ram0.26",
+        "ram1.26",
+        "uart0.10",
+        "rd1.1",
+        "ja0.16"
+      ]
+    },
+    "ADDR13": {
+      "pins": [
+        "pc1.20",
+        "a1.16",
+        "alu3.2",
+        "rom0.28",
+        "rom1.28",
+        "ja0.14"
+      ]
+    },
+    "ADDR11": {
+      "pins": [
+        "pc1.21",
+        "a1.17",
+        "alu2.2",
+        "rom0.25",
+        "rom1.25",
+        "ram0.23",
+        "ram1.23",
+        "ja0.12"
+      ]
+    },
+    "ADDR9": {
+      "pins": [
+        "pc1.22",
+        "a1.18",
+        "alu2.4",
+        "rom0.26",
+        "rom1.26",
+        "ram0.24",
+        "ram1.24",
+        "ja0.10"
+      ]
+    },
+    "B7": {
+      "pins": [
+        "b0.15",
+        "alu1.9"
+      ]
+    },
+    "B5": {
+      "pins": [
+        "b0.16",
+        "alu1.7"
+      ]
+    },
+    "B3": {
+      "pins": [
+        "b0.17",
+        "alu0.9"
+      ]
+    },
+    "B1": {
+      "pins": [
+        "b0.18",
+        "alu0.7"
+      ]
+    },
+    "B0": {
+      "pins": [
+        "b0.19",
+        "alu0.6"
+      ]
+    },
+    "B2": {
+      "pins": [
+        "b0.20",
+        "alu0.8"
+      ]
+    },
+    "B4": {
+      "pins": [
+        "b0.21",
+        "alu1.6"
+      ]
+    },
+    "B6": {
+      "pins": [
+        "b0.22",
+        "alu1.8"
+      ]
+    },
+    "B15": {
+      "pins": [
+        "b1.15",
+        "alu3.9"
+      ]
+    },
+    "B13": {
+      "pins": [
+        "b1.16",
+        "alu3.7"
+      ]
+    },
+    "B11": {
+      "pins": [
+        "b1.17",
+        "alu2.7"
+      ]
+    },
+    "B9": {
+      "pins": [
+        "b1.18",
+        "alu2.9"
+      ]
+    },
+    "B8": {
+      "pins": [
+        "b1.19",
+        "alu2.8"
+      ]
+    },
+    "B10": {
+      "pins": [
+        "b1.20",
+        "alu2.6"
+      ]
+    },
+    "B12": {
+      "pins": [
+        "b1.21",
+        "alu3.6"
+      ]
+    },
+    "B14": {
+      "pins": [
+        "b1.22",
+        "alu3.8"
+      ]
+    },
+    "COUT0": {
+      "pins": [
+        "alu0.15",
+        "alu1.10"
+      ]
+    },
+    "NE0": {
+      "pins": [
+        "alu0.19",
+        "alu1.14"
+      ]
+    },
+    "NE1": {
+      "pins": [
+        "alu1.19",
+        "alu2.14"
+      ]
+    },
+    "COUT1": {
+      "pins": [
+        "alu1.23",
+        "alu2.10"
+      ]
+    },
+    "NE2": {
+      "pins": [
+        "alu2.19",
+        "alu3.23"
+      ]
+    },
+    "COUT2": {
+      "pins": [
+        "alu2.23",
+        "alu3.10"
+      ]
+    },
+    "OSC": {
+      "pins": [
+        "osc0.3",
+        "umux0.1",
+        "jclk0.2",
+        "js0.15"
+      ]
+    },
+    "MR_n": {
+      "pins": [
+        "rst0.3",
+        "swr0.1"
+      ]
+    },
+    "PBANK3": {
+      "pins": [
+        "rom0.1",
+        "rom1.1",
+        "swb0.4",
+        "rp_pbank3.2"
+      ]
+    },
+    "PBANK1": {
+      "pins": [
+        "rom0.2",
+        "rom1.2",
+        "swb0.2",
+        "rp_pbank1.2"
+      ]
+    },
+    "PBANK0": {
+      "pins": [
+        "rom0.3",
+        "rom1.3",
+        "swb0.1",
+        "rp_pbank0.2"
+      ]
+    },
+    "PBANK2": {
+      "pins": [
+        "rom0.30",
+        "rom1.30",
+        "swb0.3",
+        "rp_pbank2.2"
+      ]
+    },
+    "UBANK2": {
+      "pins": [
+        "uc0.4",
+        "uc1.4",
+        "swb1.3",
+        "rp_ubank2.2"
+      ]
+    },
+    "UBANK0": {
+      "pins": [
+        "uc0.23",
+        "uc1.23",
+        "swb1.1",
+        "rp_ubank0.2"
+      ]
+    },
+    "UBANK1": {
+      "pins": [
+        "uc0.25",
+        "uc1.25",
+        "swb1.2",
+        "rp_ubank1.2"
+      ]
+    },
+    "UBAUD": {
+      "pins": [
+        "uart0.5",
+        "uart0.12"
+      ]
+    },
+    "SIN": {
+      "pins": [
+        "uart0.7",
+        "xcvr0.12"
+      ]
+    },
+    "SOUT": {
+      "pins": [
+        "uart0.8",
+        "xcvr0.11"
+      ]
+    },
+    "XIN": {
+      "pins": [
+        "uart0.14",
+        "x1.1",
+        "xc1.1"
+      ]
+    },
+    "XOUT": {
+      "pins": [
+        "uart0.15",
+        "x1.3",
+        "xc2.1"
+      ]
+    },
+    "URTS_n": {
+      "pins": [
+        "uart0.32",
+        "xcvr0.10"
+      ]
+    },
+    "UDTR_n": {
+      "pins": [
+        "uart0.33",
+        "uart0.39",
+        "uart0.40"
+      ]
+    },
+    "UCTS_n": {
+      "pins": [
+        "uart0.38",
+        "xcvr0.9"
+      ]
+    },
+    "XC_c1A": {
+      "pins": [
+        "xcvr0.1",
+        "c1.1"
+      ]
+    },
+    "XC_VP": {
+      "pins": [
+        "xcvr0.2",
+        "c3.1"
+      ]
+    },
+    "XC_c1B": {
+      "pins": [
+        "xcvr0.3",
+        "c1.2"
+      ]
+    },
+    "XC_c2A": {
+      "pins": [
+        "xcvr0.4",
+        "c2.1"
+      ]
+    },
+    "XC_c2B": {
+      "pins": [
+        "xcvr0.5",
+        "c2.2"
+      ]
+    },
+    "XC_VM": {
+      "pins": [
+        "xcvr0.6",
+        "c4.1"
+      ]
+    },
+    "RS232_RTS": {
+      "pins": [
+        "xcvr0.7",
+        "j1.8"
+      ]
+    },
+    "RS232_CTS": {
+      "pins": [
+        "xcvr0.8",
+        "j1.7"
+      ]
+    },
+    "RS232_RX": {
+      "pins": [
+        "xcvr0.13",
+        "j1.3"
+      ]
+    },
+    "RS232_TX": {
+      "pins": [
+        "xcvr0.14",
+        "j1.2"
+      ]
+    },
+    "VIN": {
+      "pins": [
+        "jpwr0.PIN",
+        "f0.1"
+      ],
+      "class": "power"
+    },
+    "VF": {
+      "pins": [
+        "f0.2",
+        "q0.D"
+      ],
+      "class": "power"
+    },
+    "LEDA_POWER": {
+      "pins": [
+        "rlp0.2",
+        "ledp0.A"
+      ]
+    },
+    "STEPMODE": {
+      "pins": [
+        "swm0.2",
+        "umux0.3",
+        "js0.14"
+      ]
+    },
+    "STEPBTN_n": {
+      "pins": [
+        "swstep0.1",
+        "rstep0.2",
+        "cst0.1",
+        "uinv0.2"
+      ]
+    },
+    "STEPCLK": {
+      "pins": [
+        "uinv0.4",
+        "umux0.2"
+      ]
+    },
+    "LEDB_TDRV": {
+      "pins": [
+        "ubuf0.11",
+        "rl_tdrv.1"
+      ]
+    },
+    "LEDB_ALUOE": {
+      "pins": [
+        "ubuf0.12",
+        "rl_aluoe.1"
+      ]
+    },
+    "LEDB_WE_n": {
+      "pins": [
+        "ubuf0.13",
+        "rl_we_n.2"
+      ]
+    },
+    "LEDB_MEMRD_n": {
+      "pins": [
+        "ubuf0.14",
+        "rl_memrd_n.2"
+      ]
+    },
+    "LEDB_ADRV": {
+      "pins": [
+        "ubuf0.15",
+        "rl_adrv.1"
+      ]
+    },
+    "LEDB_PCDRV": {
+      "pins": [
+        "ubuf0.16",
+        "rl_pcdrv.1"
+      ]
+    },
+    "LEDB_RESET": {
+      "pins": [
+        "ubuf0.17",
+        "rl_reset.1"
+      ]
+    },
+    "LEDB_CLK": {
+      "pins": [
+        "ubuf0.18",
+        "rl_clk.1"
+      ]
+    },
+    "LEDA_CLK": {
+      "pins": [
+        "rl_clk.2",
+        "led_clk.A"
+      ]
+    },
+    "LEDA_RESET": {
+      "pins": [
+        "rl_reset.2",
+        "led_reset.A"
+      ]
+    },
+    "LEDA_PCDRV": {
+      "pins": [
+        "rl_pcdrv.2",
+        "led_pcdrv.A"
+      ]
+    },
+    "LEDA_ADRV": {
+      "pins": [
+        "rl_adrv.2",
+        "led_adrv.A"
+      ]
+    },
+    "LEDA_MEMRD_n": {
+      "pins": [
+        "rl_memrd_n.1",
+        "led_memrd_n.K"
+      ]
+    },
+    "LEDA_WE_n": {
+      "pins": [
+        "rl_we_n.1",
+        "led_we_n.K"
+      ]
+    },
+    "LEDA_ALUOE": {
+      "pins": [
+        "rl_aluoe.2",
+        "led_aluoe.A"
+      ]
+    },
+    "LEDA_TDRV": {
+      "pins": [
+        "rl_tdrv.2",
+        "led_tdrv.A"
+      ]
+    },
+    "LEDB_AUX0": {
+      "pins": [
+        "ubuf1.11",
+        "rl_aux0.1"
+      ]
+    },
+    "LEDB_NEL": {
+      "pins": [
+        "ubuf1.12",
+        "rl_nel.1"
+      ]
+    },
+    "LEDB_IRLD": {
+      "pins": [
+        "ubuf1.13",
+        "rl_irld.1"
+      ]
+    },
+    "LEDB_PCINC": {
+      "pins": [
+        "ubuf1.14",
+        "rl_pcinc.1"
+      ]
+    },
+    "LEDB_PCLD": {
+      "pins": [
+        "ubuf1.15",
+        "rl_pcld.1"
+      ]
+    },
+    "LEDB_TLD": {
+      "pins": [
+        "ubuf1.16",
+        "rl_tld.1"
+      ]
+    },
+    "LEDB_BLD": {
+      "pins": [
+        "ubuf1.17",
+        "rl_bld.1"
+      ]
+    },
+    "LEDB_ALD": {
+      "pins": [
+        "ubuf1.18",
+        "rl_ald.1"
+      ]
+    },
+    "LEDA_ALD": {
+      "pins": [
+        "rl_ald.2",
+        "led_ald.A"
+      ]
+    },
+    "LEDA_BLD": {
+      "pins": [
+        "rl_bld.2",
+        "led_bld.A"
+      ]
+    },
+    "LEDA_TLD": {
+      "pins": [
+        "rl_tld.2",
+        "led_tld.A"
+      ]
+    },
+    "LEDA_PCLD": {
+      "pins": [
+        "rl_pcld.2",
+        "led_pcld.A"
+      ]
+    },
+    "LEDA_PCINC": {
+      "pins": [
+        "rl_pcinc.2",
+        "led_pcinc.A"
+      ]
+    },
+    "LEDA_IRLD": {
+      "pins": [
+        "rl_irld.2",
+        "led_irld.A"
+      ]
+    },
+    "LEDA_NEL": {
+      "pins": [
+        "rl_nel.2",
+        "led_nel.A"
+      ]
+    },
+    "LEDA_AUX0": {
+      "pins": [
+        "rl_aux0.2",
+        "led_aux0.A"
+      ]
+    },
+    "LEDB_STEP2": {
+      "pins": [
+        "ubuf2.11",
+        "rl_step2.1"
+      ]
+    },
+    "LEDB_STEP1": {
+      "pins": [
+        "ubuf2.12",
+        "rl_step1.1"
+      ]
+    },
+    "LEDB_STEP0": {
+      "pins": [
+        "ubuf2.13",
+        "rl_step0.1"
+      ]
+    },
+    "LEDB_IR4": {
+      "pins": [
+        "ubuf2.14",
+        "rl_ir4.1"
+      ]
+    },
+    "LEDB_IR3": {
+      "pins": [
+        "ubuf2.15",
+        "rl_ir3.1"
+      ]
+    },
+    "LEDB_IR2": {
+      "pins": [
+        "ubuf2.16",
+        "rl_ir2.1"
+      ]
+    },
+    "LEDB_IR1": {
+      "pins": [
+        "ubuf2.17",
+        "rl_ir1.1"
+      ]
+    },
+    "LEDB_IR0": {
+      "pins": [
+        "ubuf2.18",
+        "rl_ir0.1"
+      ]
+    },
+    "LEDA_IR0": {
+      "pins": [
+        "rl_ir0.2",
+        "led_ir0.A"
+      ]
+    },
+    "LEDA_IR1": {
+      "pins": [
+        "rl_ir1.2",
+        "led_ir1.A"
+      ]
+    },
+    "LEDA_IR2": {
+      "pins": [
+        "rl_ir2.2",
+        "led_ir2.A"
+      ]
+    },
+    "LEDA_IR3": {
+      "pins": [
+        "rl_ir3.2",
+        "led_ir3.A"
+      ]
+    },
+    "LEDA_IR4": {
+      "pins": [
+        "rl_ir4.2",
+        "led_ir4.A"
+      ]
+    },
+    "LEDA_STEP0": {
+      "pins": [
+        "rl_step0.2",
+        "led_step0.A"
+      ]
+    },
+    "LEDA_STEP1": {
+      "pins": [
+        "rl_step1.2",
+        "led_step1.A"
+      ]
+    },
+    "LEDA_STEP2": {
+      "pins": [
+        "rl_step2.2",
+        "led_step2.A"
+      ]
+    },
+    "LEDB_RST_n": {
+      "pins": [
+        "ubuf3.14",
+        "rl_rst_n.2"
+      ]
+    },
+    "LEDB_AUX1": {
+      "pins": [
+        "ubuf3.15",
+        "rl_aux1.1"
+      ]
+    },
+    "LEDB_F1": {
+      "pins": [
+        "ubuf3.16",
+        "rl_f1.1"
+      ]
+    },
+    "LEDB_F0": {
+      "pins": [
+        "ubuf3.17",
+        "rl_f0.1"
+      ]
+    },
+    "LEDB_STEP3": {
+      "pins": [
+        "ubuf3.18",
+        "rl_step3.1"
+      ]
+    },
+    "LEDA_STEP3": {
+      "pins": [
+        "rl_step3.2",
+        "led_step3.A"
+      ]
+    },
+    "LEDA_F0": {
+      "pins": [
+        "rl_f0.2",
+        "led_f0.A"
+      ]
+    },
+    "LEDA_F1": {
+      "pins": [
+        "rl_f1.2",
+        "led_f1.A"
+      ]
+    },
+    "LEDA_AUX1": {
+      "pins": [
+        "rl_aux1.2",
+        "led_aux1.A"
+      ]
+    },
+    "LEDA_RST_n": {
+      "pins": [
+        "rl_rst_n.1",
+        "led_rst_n.K"
+      ]
+    }
+  },
+  "holes": [
+    {
+      "at": [
+        4,
+        4
+      ],
+      "drill": 3.2,
+      "plated": false
+    },
+    {
+      "at": [
+        226,
+        4
+      ],
+      "drill": 3.2,
+      "plated": false
+    },
+    {
+      "at": [
+        4,
+        171
+      ],
+      "drill": 3.2,
+      "plated": false
+    },
+    {
+      "at": [
+        226,
+        171
+      ],
+      "drill": 3.2,
+      "plated": false
+    }
+  ],
+  "pours": [
+    {
+      "name": "gnd",
+      "layer": "B.Cu",
+      "net": "GND",
+      "edges": [
+        {
+          "line": {
+            "from": [
+              3,
+              0
+            ],
+            "to": [
+              227,
+              0
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              227,
+              0
+            ],
+            "to": [
+              230,
+              3
+            ],
+            "center": [
+              227,
+              3
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              230,
+              3
+            ],
+            "to": [
+              230,
+              172
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              230,
+              172
+            ],
+            "to": [
+              227,
+              175
+            ],
+            "center": [
+              227,
+              172
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              227,
+              175
+            ],
+            "to": [
+              3,
+              175
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              3,
+              175
+            ],
+            "to": [
+              0,
+              172
+            ],
+            "center": [
+              3,
+              172
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              0,
+              172
+            ],
+            "to": [
+              0,
+              3
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              0,
+              3
+            ],
+            "to": [
+              3,
+              0
+            ],
+            "center": [
+              3,
+              3
+            ],
+            "clockwise": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "vcc",
+      "layer": "F.Cu",
+      "net": "VCC",
+      "edges": [
+        {
+          "line": {
+            "from": [
+              3,
+              0
+            ],
+            "to": [
+              227,
+              0
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              227,
+              0
+            ],
+            "to": [
+              230,
+              3
+            ],
+            "center": [
+              227,
+              3
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              230,
+              3
+            ],
+            "to": [
+              230,
+              172
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              230,
+              172
+            ],
+            "to": [
+              227,
+              175
+            ],
+            "center": [
+              227,
+              172
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              227,
+              175
+            ],
+            "to": [
+              3,
+              175
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              3,
+              175
+            ],
+            "to": [
+              0,
+              172
+            ],
+            "center": [
+              3,
+              172
+            ],
+            "clockwise": false
+          }
+        },
+        {
+          "line": {
+            "from": [
+              0,
+              172
+            ],
+            "to": [
+              0,
+              3
+            ]
+          }
+        },
+        {
+          "arc": {
+            "from": [
+              0,
+              3
+            ],
+            "to": [
+              3,
+              0
+            ],
+            "center": [
+              3,
+              3
+            ],
+            "clockwise": false
+          }
+        }
+      ]
+    }
+  ],
+  "drc": {
+    "rulesets": [
+      {
+        "url": "drc/jlcpcb-fr4-2layer.json",
+        "blake3": "c665f3792f715dbc347bd19e0f12a615abb1cd3d6266bd7b32ff7f2aedd11096"
+      }
+    ],
+    "waivers": [
+      {
+        "rule": "pth-annular-ring",
+        "features": [
+          "jpwr0",
+          "j1"
+        ],
+        "reason": "non-plated locating pegs of the jack and mounting holes of the DB9 carry no copper by design"
+      },
+      {
+        "rule": "pth-annular-ring-recommended",
+        "features": [
+          "jpwr0",
+          "j1"
+        ],
+        "reason": "same: non-plated holes"
+      }
+    ]
+  }
+}

@@ -1,0 +1,159 @@
+{
+ "schema": "pcb-footprint/1",
+ "name": "SW_DIP_4_SMD_EM-04-Q",
+ "description": "Diptronics EM-04-Q 4-position SMD DIP switch, 2.54 mm pitch, pads at +-3.9 y: position k joins pad k (bottom) and pad 9-k (top). VERIFY against the datasheet before ordering",
+ "pads": [
+  {
+   "name": "1",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -3.81,
+    -3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "8",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -3.81,
+    3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "2",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.27,
+    -3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "7",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    -1.27,
+    3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "3",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.27,
+    -3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "6",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    1.27,
+    3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "4",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    3.81,
+    -3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  },
+  {
+   "name": "5",
+   "type": "smd",
+   "shape": "round_rect",
+   "at": [
+    3.81,
+    3.9
+   ],
+   "size": [
+    1.0,
+    1.8
+   ],
+   "corner_radius": 0.15
+  }
+ ],
+ "silkscreen": [
+  {
+   "circle": {
+    "center": [
+     -5.3,
+     -3.9
+    ],
+    "diameter": 0.5,
+    "width": 0.15
+   }
+  }
+ ],
+ "courtyard": [
+  {
+   "polyline": {
+    "points": [
+     [
+      -5.5,
+      -5.0
+     ],
+     [
+      5.5,
+      -5.0
+     ],
+     [
+      5.5,
+      5.0
+     ],
+     [
+      -5.5,
+      5.0
+     ]
+    ]
+   }
+  }
+ ],
+ "label_at": [
+  0,
+  5.6
+ ]
+}

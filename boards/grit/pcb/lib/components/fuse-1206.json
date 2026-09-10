@@ -1,0 +1,23 @@
+{
+  "schema": "pcb-component/1",
+  "name": "fuse-1206",
+  "description": "PTC resettable fuse, 1206 (SMD1206P110TF/16, 1.1 A hold, LCSC C523825)",
+  "footprint": {
+    "url": "/Users/jake/flatland/library-jlcpcb/footprints/1206.json",
+    "blake3": "6b66aeaba6d2389e186bcdcea2b0434ebb2a4b11dba4e46ae3e1cff1f707de1b"
+  },
+  "pins": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2"
+    }
+  ],
+  "metadata": {
+    "assembly": true,
+    "lcsc": "C523825",
+    "mpn": "SMD1206P110TF/16",
+    "manufacturer": "PTTC"
+  }
+}
