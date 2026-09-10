@@ -308,28 +308,44 @@ HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 # Each stack's far connections (the upper chip's address pins, the lower
 # chip's data pins) run as a vertical mini-bus in the gap beside the
 # stack; the router only gets the control nets.
-W, H = 290.0, 165.0
+W, H = 370.0, 178.0
 HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
-ROW_A, ROW_B = 110.0, 57.0
-BUS_X0, BUS_X1 = 14.0, W - 4.0
-DBUS_Y0, ABUS_Y0, BUS_PITCH = 136.0, 31.0, 1.0
+ROW_A, ROW_B = 122.0, 69.0
+BUS_X0, BUS_X1 = 18.0, W - 34.0   # the left end leaves room for the bus headers, the right end for the LED banks
+DBUS_Y0, ABUS_Y0, BUS_PITCH = 148.0, 43.0, 1.0
+# the control band: the pipeline register's lines, CLK and RESET, below the address band
+CTRL_NETS = ["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "TLD", "TDRV", "CLK", "RESET", "NE3"]   # NE3: the ALU's not-equal, the length of the board to the flags chip
+CTRL_Y0, CTRL_PITCH = 21.0, 0.8
 BUS_WIDTH = 0.3
 STUB_WIDTH = 0.25
 VIA_DRILL, VIA_DIA = 0.2, 0.5
 STUB_PITCH = 0.55
-MINI_X0 = 3.0      # first mini-bus line this far from the pad column
-GAL_DX, MEM_DX = 18.0, 30.0
+MINI_X0 = {"B.Cu": 2.85, "F.Cu": 3.0}   # first mini-bus line this far from the pad column, beyond the three outside stub slots
+GAL_DX, MEM_DX = 23.0, 32.0   # a gap holds up to 26 vertical lines at 0.55 mm on one layer
 NO_STUBS = "--stubs" not in sys.argv
 
 
 def bus_y(name, i):
+    if name == "CTRL":
+        return CTRL_Y0 - i * CTRL_PITCH
     return DBUS_Y0 + i * BUS_PITCH if name == "D" else ABUS_Y0 - i * BUS_PITCH
+
+
+def bus_of(net):
+    """(bus name, index) of a net that runs on a band, else None."""
+    if net.startswith("D") and net[1:].isdigit():
+        return "D", int(net[1:])
+    if net.startswith("ADDR") and net[4:].isdigit():
+        return "ADDR", int(net[4:])
+    if net in CTRL_NETS:
+        return "CTRL", CTRL_NETS.index(net)
+    return None
 
 
 PLACE = {}
 STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
-X_SEQ, X_UC, X_MIR, X_ROM, X_RAM = 22.0, 48.0, 72.0, 96.0, 126.0
-X_GAL0 = 150.0
+X_SEQ, X_UC, X_MIR, X_ROM, X_RAM = 30.0, 56.0, 80.0, 112.0, 144.0
+X_GAL0 = 170.0
 X_UART = X_GAL0 + 6 * GAL_DX + 8.0
 COLUMN_XS = [X_SEQ, X_UC, X_MIR, X_ROM, X_RAM] + [X_GAL0 + k * GAL_DX for k in range(6)] + [X_UART]
 
@@ -349,18 +365,20 @@ STAGE_CHIPS[1] = ["rom0", "rom1", "ram0", "ram1", "uart0"]
 PLACE.update({"a0": (X_GAL0, ROW_A, 0), "a1": (X_GAL0, ROW_B, 0)})
 STAGE_CHIPS[2] = ["a0", "a1"]
 # stage 3: pc, b, t
-for i, (n0, n1) in enumerate((("pc0", "pc1"), ("b0", "b1"), ("t0", "t1"))):
-    PLACE[n0] = (X_GAL0 + (1 + i) * GAL_DX, ROW_A, 0)
-    PLACE[n1] = (X_GAL0 + (1 + i) * GAL_DX, ROW_B, 0)
+# pc, t, then the ALU with the B latch between its halves: b0's outputs
+# face left to alu0/alu1 (b0 is turned round), b1's face right to
+# alu2/alu3, so every B operand crosses one gap to an adjacent stack
+PLACE.update({"pc0": (X_GAL0 + 1 * GAL_DX, ROW_A, 0), "pc1": (X_GAL0 + 1 * GAL_DX, ROW_B, 0), "t0": (X_GAL0 + 2 * GAL_DX, ROW_A, 0), "t1": (X_GAL0 + 2 * GAL_DX, ROW_B, 0),
+              "b0": (X_GAL0 + 4 * GAL_DX, ROW_A, 180), "b1": (X_GAL0 + 4 * GAL_DX, ROW_B, 0)})
 STAGE_CHIPS[3] = ["pc0", "pc1", "b0", "b1", "t0", "t1"]
-# stage 4: the ALU, alu0 over alu1, alu2 over alu3
-PLACE.update({"alu0": (X_GAL0 + 4 * GAL_DX, ROW_A, 0), "alu1": (X_GAL0 + 4 * GAL_DX, ROW_B, 0), "alu2": (X_GAL0 + 5 * GAL_DX, ROW_A, 0), "alu3": (X_GAL0 + 5 * GAL_DX, ROW_B, 0)})
+# stage 4: the ALU, alu0 over alu1 left of the B latch, alu2 over alu3 right of it
+PLACE.update({"alu0": (X_GAL0 + 3 * GAL_DX, ROW_A, 0), "alu1": (X_GAL0 + 3 * GAL_DX, ROW_B, 0), "alu2": (X_GAL0 + 5 * GAL_DX, ROW_A, 0), "alu3": (X_GAL0 + 5 * GAL_DX, ROW_B, 0)})
 STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
 # stage 5: sequencer, microcode ROM, pipeline register, stacked at the left end
 PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (X_UC, ROW_A, 0), "uc1": (X_UC, ROW_B, 0), "mir0": (X_MIR, ROW_A, 0), "mir1": (X_MIR, ROW_B, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
 # stage 6: clock and reset in the left strip, the transceiver under the UART
-PLACE.update({"osc0": (8.0, 120.0, 90), "umux0": (8.0, 112.0, 0), "uinv0": (8.0, 105.0, 0), "rst0": (8.0, 90.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
+PLACE.update({"osc0": (8.0, 132.0, 90), "umux0": (8.0, 124.0, 0), "uinv0": (8.0, 117.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -503,7 +521,7 @@ def draw_stubs(chips):
                 continue   # the far bus, past the other row
             x, y, col = pads[p["pin"]]
             yb = bus_y(bus, int(net[len(bus):]))
-            groups.setdefault((round(x, 2), n, "B.Cu"), []).append({"net": net, "x": x, "jogs": [y], "lo": min(y, yb), "hi": max(y, yb), "end": yb, "via": True, "col": col})
+            groups.setdefault((round(x, 2), n, "B.Cu"), []).append({"net": net, "x": x, "jogs": [y], "lo": min(y, yb), "hi": max(y, yb), "end": yb, "via": True, "col": col, "upper": upper})
     # links within a stack: only with --links.  Two parallel links between
     # the same pins of stacked chips have interleaved endpoints along the
     # column, so on one layer they must cross; the router does better
@@ -564,53 +582,72 @@ def draw_stubs(chips):
         for it in items:
             xt = it["x"] + it["sign"] * (1.2 + STUB_PITCH * it["slot"])
             y0 = it["jogs"][0]
-            pts = [f"{it['x']},{y0}", f"{xt:.3f},{y0}", f"{xt:.3f},{it['end']}"]
-            if not it["via"]:
-                pts.append(f"{it['x']},{it['end']}")
-            run("trace", "add", "--layer", layer, "--net", it["net"], "--width", STUB_WIDTH, *pts, quiet=True)
+            outside = it["sign"] == it["col"] and it["via"]
+            if outside:
+                # outside stubs run on the top layer, so that control pins on
+                # the same column can jog outward on the bottom layer to the
+                # control band without crossing them; they drop to the bottom
+                # layer at their band's edge
+                if it["end"] > y0:
+                    y_edge = DBUS_Y0 - 1.5 - (1.0 if it["slot"] % 2 else 0.0)
+                else:
+                    y_edge = ABUS_Y0 + 1.5 + (1.0 if it["slot"] % 2 else 0.0)
+                run("trace", "add", "--layer", "F.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{y0}", f"{xt:.3f},{y0}", f"{xt:.3f},{y_edge}", quiet=True)
+                run("via", "add", f"{xt:.3f},{y_edge}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xt:.3f},{y_edge}", f"{xt:.3f},{it['end']}", quiet=True)
+            else:
+                pts = [f"{it['x']},{y0}", f"{xt:.3f},{y0}", f"{xt:.3f},{it['end']}"]
+                if not it["via"]:
+                    pts.append(f"{it['x']},{it['end']}")
+                run("trace", "add", "--layer", layer, "--net", it["net"], "--width", STUB_WIDTH, *pts, quiet=True)
             if it["via"]:
                 run("via", "add", f"{xt:.3f},{it['end']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                 VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
 
 
 def draw_minibuses(chips):
-    """The far connections of every DIP: the upper chip's address pins run
-    down, the lower chip's data pins up, as vertical lines in the gap on
-    the side of the pin's own column.  Lines going down are on the bottom
-    layer and end in a via on their address line; lines going up are on
-    the top layer to the data band's edge, then a via and a short
-    bottom-layer run to the via on their data line.  Within one side the
-    pin nearest its band takes the innermost line, so no jog crosses
-    another line.  The two directions never share a layer in a gap."""
+    """The far connections of every DIP as vertical lines in the gap on
+    the side of the pin's own column: the upper chip's address pins and
+    every chip's control pins run down on the bottom layer to a via on
+    their line; the lower chip's data pins run up on the top layer to
+    the data band's edge, then a via and a short bottom-layer run to the
+    via on their line.  Lines of one gap side and layer are pooled over
+    the stack, the pin nearest its band by position taking the innermost
+    line, so no jog crosses another line."""
+    pools = {}   # (column x, col, layer) -> items
     for c in chips:
         if not c["package"].startswith("DIP"):
             continue
         pads = dip_pads(c)
         upper = PLACE[c["name"]][1] > (ROW_A + ROW_B) / 2
-        sides = {}
         for p in c["pins"]:
             net = p.get("net") or ""
-            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
-            if bus is None or (bus == "D") == upper:
+            b = bus_of(net)
+            if b is None:
+                continue
+            bus, i = b
+            if bus != "CTRL" and (bus == "D") == upper:
                 continue   # near pins have stubs
             x, y, col = pads[p["pin"]]
-            sides.setdefault(col, []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, int(net[len(bus):])), "up": bus == "D"})
-        for col, items in sides.items():
-            # the pin nearest its band by pad position takes the innermost
-            # line; every line spans from its pin to the band, so only that
-            # order keeps the jogs off the other lines
-            items.sort(key=lambda it: it["y"] if not it["up"] else -it["y"])
-            for k, it in enumerate(items):
-                xt = it["x"] + col * (MINI_X0 + STUB_PITCH * k)
-                if not it["up"]:
-                    run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
-                else:
-                    y_edge = DBUS_Y0 - 1.5 - (1.0 if k % 2 else 0.0)   # two rows of edge vias: 0.55 mm apart in x would touch
-                    run("trace", "add", "--layer", "F.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{y_edge}", quiet=True)
-                    run("via", "add", f"{xt:.3f},{y_edge}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
-                    run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xt:.3f},{y_edge}", f"{xt:.3f},{it['yb']}", quiet=True)
-                run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
-                VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
+            up = bus == "D"
+            pools.setdefault((round(x, 2), col, "F.Cu" if up else "B.Cu"), []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, i), "up": up})
+    for (xcol, col, layer), items in pools.items():
+        items.sort(key=lambda it: it["y"] if not it["up"] else -it["y"])
+        off = MINI_X0[layer]
+        for k, it in enumerate(items):
+            if k and items[k - 1]["net"] == it["net"]:
+                off += 0.15   # two vias of one net on one line: hole-to-hole wants 0.45
+            xt = it["x"] + col * off
+            off += STUB_PITCH
+            if not it["up"]:
+                run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
+            else:
+                y_edge = DBUS_Y0 - 1.5 - (1.0 if k % 2 else 0.0)   # two rows of edge vias: 0.55 mm apart in x would touch
+                run("trace", "add", "--layer", "F.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{y_edge}", quiet=True)
+                run("via", "add", f"{xt:.3f},{y_edge}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xt:.3f},{y_edge}", f"{xt:.3f},{it['yb']}", quiet=True)
+            run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+            VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
 
 
 def quad_pads(chip):
@@ -657,9 +694,9 @@ def draw_smd_stubs(chips, nets):
             net = p.get("net") or ""
             if not net or len(nets.get(net, [])) < 2:
                 continue   # no such net in this stage
-            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            b = bus_of(net)
             x, y, side = pads[p["pin"]]
-            groups.setdefault(side, []).append({"net": net, "pin": p["pin"], "x": x, "y": y, "yb": bus_y(bus, int(net[len(bus):])) if bus else None})
+            groups.setdefault(side, []).append({"net": net, "pin": p["pin"], "x": x, "y": y, "yb": bus_y(*b) if b else None})
         for side, items in groups.items():
             if side == "T": to_xy = lambda u, v: (u, v)
             elif side == "B": to_xy = lambda u, v: (u, -v)
@@ -807,7 +844,8 @@ def draw_power_vias(chips, pinmaps, comps, extras=()):
         wanted = [(pinmaps[name].get(str(p["pin"])), p.get("net") or "") for p in c["pins"]]
         wanted += [(pin, net) for (chip, pin, net) in extras if chip == name]
         for pin, net in wanted:
-            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            b = bus_of(net)
+            bus = b[0] if b else None
             if net not in ("VCC", "GND") and bus is None:
                 continue
             if pin is None:
@@ -827,7 +865,7 @@ def draw_power_vias(chips, pinmaps, comps, extras=()):
                 run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", STUB_WIDTH, f"{x:.3f},{y:.3f}", f"{xe:.3f},{ye:.3f}", quiet=True)
                 run("via", "add", f"{xe:.3f},{ye:.3f}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                 if bus is not None:
-                    yb = bus_y(bus, int(net[len(bus):]))
+                    yb = bus_y(bus, b[1])
                     run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, f"{xe:.3f},{ye:.3f}", f"{xe:.3f},{yb}", quiet=True)
                     run("via", "add", f"{xe:.3f},{yb}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                     VIA_XS.setdefault(net, []).append(round(xe, 3))
@@ -836,9 +874,9 @@ def draw_power_vias(chips, pinmaps, comps, extras=()):
 def draw_buses(nets):
     """The explicit bus wires: one protected trace per bit, only for bits
     that have pins in this stage."""
-    for name, count in (("D", 16), ("ADDR", 16)):
+    for name, count in (("D", 16), ("ADDR", 16), ("CTRL", len(CTRL_NETS))):
         for i in range(count):
-            net = f"{name}{i}"
+            net = f"{name}{i}" if name != "CTRL" else CTRL_NETS[i]
             if net not in nets or len(nets[net]) < 2:
                 continue
             y = bus_y(name, i)
@@ -847,17 +885,18 @@ def draw_buses(nets):
             # staggered by half that so the rings clear each other.  The
             # router only connects pins to pins, never to a wire, so the
             # taps are what let it reach the bus; they are probe points too.
-            x_hole = BUS_X0 - (1.6 if i % 2 else 0.0)
+            if name == "CTRL":   # 0.8 mm pitch: smaller rings, three columns
+                x_hole, drill, dia = BUS_X0 - 1.4 * (i % 3), 0.5, 0.9
+            else:
+                x_hole, drill, dia = BUS_X0 - (1.6 if i % 2 else 0.0), 0.6, 1.1
             taps = [x_hole]   # only the probe hole at the left end; the gaps hold the mini-buses
             xs = sorted(set(taps + [x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1])) + [BUS_X1]
             run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", BUS_WIDTH, *[f"{x},{y}" for x in xs], quiet=True)
-            for x in taps[1:]:
-                run("hole", "add", f"{x},{y}", "--drill", 0.6, "--diameter", 1.1, "--net", net, quiet=True)
             # a probe point at the left end of every line: a plated hole on
             # the net, which is also the pin that tells freerouting the wire
             # belongs to something (a protected wire attached to no pin makes
             # it hang)
-            run("hole", "add", f"{x_hole},{y}", "--drill", 0.6, "--diameter", 1.1, "--net", net, quiet=True)
+            run("hole", "add", f"{x_hole},{y}", "--drill", drill, "--diameter", dia, "--net", net, quiet=True)
 
 
 def hide_hand_wiring(dsn):
