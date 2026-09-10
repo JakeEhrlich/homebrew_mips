@@ -17,7 +17,7 @@ use crate::board::{Board, ChipMeta, Column, Load, Model};
 use crate::ds1100::Grade;
 use crate::galpack::{self, Eq, GalSpec, Mode, SLit, lit, nlit};
 use crate::gal22v10::{Gal22v10, olmc_pin};
-use crate::netlist::{Level, NS, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram8kPin, Time, rom_pin_of, sram8k_pin_of};
+use crate::netlist::{ChipId, Level, NS, NetId, Netlist, Passive, ResetSupervisor, Rom, RomPin, Sim, Sram8kPin, Time, rom_pin_of, sram8k_pin_of};
 use crate::uart16550::{BusTiming, Core, Uart16550, UartPin, uart_pin_of};
 use std::collections::BTreeMap;
 
@@ -722,9 +722,10 @@ pub fn gal_specs() -> Vec<GalSpec> {
 pub const OSC_HZ: f64 = 4_000_000.0;
 /// One CLK period in ps.
 pub const PERIOD: Time = 250_000;
-/// The UART's own crystal: divisor 1 is 115200 baud.  Its clock has
-/// nothing to do with the bus; the 16550's bus side is strobe-driven.
-pub const UART_XIN_HZ: f64 = 1_843_200.0;
+/// The UART's own crystal, the one crag uses (a stocked 3225 part):
+/// divisor 8 is 115200 baud.  Its clock has nothing to do with the bus;
+/// the 16550's bus side is strobe-driven.
+pub const UART_XIN_HZ: f64 = 14_745_600.0;
 
 fn block_of(name: &str) -> (&'static str, &'static str) {
     let prefix: String = name.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
@@ -742,15 +743,32 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "uart" => ("UART", "I/O"),
         "xcvr" | "c" | "j" => ("Serial port", "I/O"),
         "x" | "xc" => ("UART", "I/O"),
-        "osc" => ("Clock", "I/O"),
-        "rst" | "sw" => ("Reset", "I/O"),
+        "osc" | "swm" | "swstep" | "rstep" | "cst" | "uinv" | "umux" | "jclk" => ("Clock", "Board"),
+        "rst" | "swr" => ("Reset", "Board"),
+        "jpwr" | "f" | "q" | "cb" | "cd" | "ledp" | "rlp" => ("Power", "Board"),
+        "ubuf" | "led" | "rl" => ("Debug LEDs", "Board"),
+        "ja" | "jd" | "jc" | "js" => ("Analyzer headers", "Board"),
+        "swb" | "rp" | "rd" => ("Bank switches", "Board"),
         _ => ("?", "?"),
     }
 }
 
 fn meta(part: &str, package: &str, name: &str, role: Option<String>, model: Model) -> ChipMeta {
     let (block, stage) = block_of(name);
-    ChipMeta { part: part.into(), package: package.into(), block: block.into(), stage: stage.into(), role, model }
+    ChipMeta { part: part.into(), package: package.into(), block: block.into(), stage: stage.into(), role, model, lcsc: None }
+}
+
+/// Metadata with the LCSC part number.
+fn lcsc(m: ChipMeta, code: &str) -> ChipMeta {
+    ChipMeta { lcsc: Some(code.into()), ..m }
+}
+
+/// A two-pin part (resistor, capacitor, LED, crystal).
+fn two_pin(nl: &mut Netlist, name: &str, part: &str, package: &str, code: Option<&str>) -> ChipId {
+    let c = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+    let m = meta(part, package, name, None, Model::Passive);
+    nl.set_meta(c, match code { Some(code) => lcsc(m, code), None => m });
+    c
 }
 
 pub fn layout() -> Vec<Column> {
@@ -759,7 +777,8 @@ pub fn layout() -> Vec<Column> {
         col("Control", 300, &["Sequencer", "Microcode ROM", "Pipeline register"]),
         col("Datapath", 330, &["PC", "A", "B", "T", "ALU"]),
         col("Memory", 240, &["Program flash", "SRAM"]),
-        col("I/O", 300, &["UART", "Serial port", "Clock", "Reset"]),
+        col("I/O", 300, &["UART", "Serial port"]),
+        col("Board", 300, &["Clock", "Reset", "Power", "Debug LEDs", "Analyzer headers", "Bank switches"]),
     ]
 }
 
@@ -769,7 +788,7 @@ pub fn build_netlist() -> Netlist {
     for spec in gal_specs() {
         let (id, pins) = galpack::instantiate(&mut nl, &spec);
         let model = Model::Gal { clk: spec.clk.clone(), ar: spec.ar.clone(), eqs: spec.eqs.clone(), pins };
-        nl.set_meta(id, meta("ATF22V10C-7PX", "DIP-24", &spec.name, None, model));
+        nl.set_meta(id, meta("ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket", "DIP-24 (300 mil)", &spec.name, None, model));
     }
     // T's register pins sit on the data bus.
     for i in 0..16 {
@@ -786,13 +805,15 @@ pub fn build_netlist() -> Netlist {
     nl.tie(gnd, Level::L);
     nl.tie(vcc, Level::H);
 
-    // The oscillator (an SMD 4-pin module: 1 EN, 2 GND, 3 OUT, 4 VCC) is
-    // the machine clock.
+    // The oscillator (an SMD 4-pin module: 1 EN, 2 GND, 3 OUT, 4 VCC),
+    // a 5 V CMOS part still to be picked from stock.  Its output OSC
+    // reaches CLK through the run/step multiplexer (see `physical`).
     let osc = nl.add_chip("osc0", Passive::new(vec![(1, "EN".into()), (2, "GND".into()), (3, "OUT".into()), (4, "VCC".into())]));
-    nl.set_meta(osc, meta("SG-8018CA 4.000MHz", "3225", "osc0", None, Model::Passive));
+    nl.set_meta(osc, meta("Oscillator 4.000 MHz 5 V CMOS", "7050", "osc0", None, Model::Passive));
+    let osc_net = nl.net("OSC");
     nl.connect(vcc, osc, 1);
     nl.connect(gnd, osc, 2);
-    nl.connect(clk, osc, 3);
+    nl.connect(osc_net, osc, 3);
     nl.connect(vcc, osc, 4);
 
     // Reset supervisor; MR# is the button (pulled up in the part).
@@ -811,7 +832,7 @@ pub fn build_netlist() -> Netlist {
     // on A15..A18, CE# from Addr15, OE# from MEMRD_n.
     for lane in 0..2 {
         let c = nl.add_chip(&format!("rom{lane}"), Rom::sst39sf040_70());
-        nl.set_meta(c, meta("SST39SF040-70-4C-PHE", "DIP-32", &format!("rom{lane}"), Some(format!("rom:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }));
+        nl.set_meta(c, lcsc(meta("SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket", "DIP-32 (600 mil)", &format!("rom{lane}"), Some(format!("rom:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }), "C72122"));
         for j in 0..19u32 {
             let net = match j {
                 0..=14 => nl.net(&n("ADDR", j as usize)),
@@ -851,7 +872,7 @@ pub fn build_netlist() -> Netlist {
     // selected and enabled.
     for lane in 0..2 {
         let c = nl.add_chip(&format!("uc{lane}"), Rom::sst39sf040_70());
-        nl.set_meta(c, meta("SST39SF040-70-4C-PHE", "DIP-32", &format!("uc{lane}"), Some(format!("ucode:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }));
+        nl.set_meta(c, lcsc(meta("SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket", "DIP-32 (600 mil)", &format!("uc{lane}"), Some(format!("ucode:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }), "C72122"));
         for j in 0..19u32 {
             let net = match j {
                 0..=3 => nl.net(&n("STEP", j as usize)),
@@ -876,7 +897,7 @@ pub fn build_netlist() -> Netlist {
     // CE1# = Addr14, OE# = MEMRD_n, WE# = WE_n.
     for lane in 0..2 {
         let c = nl.add_chip(&format!("ram{lane}"), As7c164a::with_timing(as7c164a::Timing::grade_15()));
-        nl.set_meta(c, meta("AS7C164A-15PCN", "DIP-28", &format!("ram{lane}"), Some(format!("ram:{lane}")), Model::Sram8k { timing: "AS7C164A-15".into() }));
+        nl.set_meta(c, lcsc(meta("AS7C164A-15PCN in DS1009-28AT1WX-0A2 socket", "DIP-28 (600 mil)", &format!("ram{lane}"), Some(format!("ram:{lane}")), Model::Sram8k { timing: "AS7C164A-15".into() }), "C72121"));
         for a in 0..13 {
             let net = nl.net(&n("ADDR", a));
             nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
@@ -919,13 +940,11 @@ pub fn build_netlist() -> Netlist {
         // Crystal and load capacitors.
         let xin = nl.net("XIN");
         let xout = nl.net("XOUT");
-        let x = nl.add_chip("x1", Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-        nl.set_meta(x, meta("X322518432MOB4SI", "3225", "x1", None, Model::Passive));
+        let x = two_pin(&mut nl, "x1", "Crystal 14.7456 MHz 12 pF", "3225", Some("C2885591"));
         nl.connect(xin, x, 1);
         nl.connect(xout, x, 2);
         for (name, net) in [("xc1", xin), ("xc2", xout)] {
-            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-            nl.set_meta(cap, meta("18pF 0603 C0G", "0603", name, None, Model::Passive));
+            let cap = two_pin(&mut nl, name, "18pF 0603 C0G", "0603", Some("C1653"));
             nl.connect(net, cap, 1);
             nl.connect(gnd, cap, 2);
         }
@@ -952,7 +971,7 @@ pub fn build_netlist() -> Netlist {
         // 12 R1OUT, 13 R1IN, 14 T1OUT, 15 GND, 16 VCC.
         let xc_names = ["C1+", "V+", "C1-", "C2+", "C2-", "V-", "T2OUT", "R2IN", "R2OUT", "T2IN", "T1IN", "R1OUT", "R1IN", "T1OUT", "GND", "VCC"];
         let xc = nl.add_chip("xcvr0", Passive::new(xc_names.iter().enumerate().map(|(i, s)| (i + 1, s.to_string())).collect()));
-        nl.set_meta(xc, meta("SP3232EEY-L/TR", "TSSOP-16", "xcvr0", None, Model::Passive));
+        nl.set_meta(xc, lcsc(meta("SP3232EEY-L/TR", "TSSOP-16", "xcvr0", None, Model::Passive), "C13482"));
         nl.connect(sout, xc, 11);
         nl.connect(sin, xc, 12);
         nl.connect(rts, xc, 10);
@@ -968,8 +987,7 @@ pub fn build_netlist() -> Netlist {
         nl.connect(gnd, xc, 15);
         nl.connect(vcc, xc, 16);
         for (name, a, b) in [("c1", 1, 3), ("c2", 4, 5)] {
-            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-            nl.set_meta(cap, meta("100nF 0603 X7R", "0603", name, None, Model::Passive));
+            let cap = two_pin(&mut nl, name, "100nF 0603 X7R", "0603", Some("C14663"));
             let na = nl.net(&format!("XC_{name}A"));
             let nb = nl.net(&format!("XC_{name}B"));
             nl.connect(na, xc, a);
@@ -978,22 +996,225 @@ pub fn build_netlist() -> Netlist {
             nl.connect(nb, cap, 2);
         }
         for (name, pin, rail_net) in [("c3", 2, "XC_VP"), ("c4", 6, "XC_VM")] {
-            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
-            nl.set_meta(cap, meta("100nF 0603 X7R", "0603", name, None, Model::Passive));
+            let cap = two_pin(&mut nl, name, "100nF 0603 X7R", "0603", Some("C14663"));
             let net = nl.net(rail_net);
             nl.connect(net, xc, pin);
             nl.connect(net, cap, 1);
             nl.connect(gnd, cap, 2);
         }
-        let j = nl.add_chip("j1", Passive::new(vec![(1, "GND".into()), (2, "TX".into()), (3, "RX".into()), (4, "RTS".into()), (5, "CTS".into())]));
-        nl.set_meta(j, meta("Header 1x5 2.54mm", "PinHeader_1x05", "j1", None, Model::Passive));
-        nl.connect(gnd, j, 1);
+        // DB9 female, wired as a DCE: a straight cable to a PC or a
+        // USB-serial DTE.  Pin 2 is data out of grit, 3 data in, 7 the
+        // DTE's RTS (grit's CTS#), 8 grit's RTS# (the DTE's CTS), 5 GND;
+        // 1, 4, 6, 9 open.
+        let j = nl.add_chip("j1", Passive::new(vec![(1, "DCD".into()), (2, "RXD".into()), (3, "TXD".into()), (4, "DTR".into()), (5, "GND".into()), (6, "DSR".into()), (7, "RTS".into()), (8, "CTS".into()), (9, "RI".into())]));
+        nl.set_meta(j, lcsc(meta("DB9 female, right angle, through hole", "DSUB-9", "j1", None, Model::Passive), "C9900026339"));
         nl.connect(tx, j, 2);
         nl.connect(rx, j, 3);
-        nl.connect(rts232, j, 4);
-        nl.connect(cts232, j, 5);
+        nl.connect(gnd, j, 5);
+        nl.connect(cts232, j, 7);
+        nl.connect(rts232, j, 8);
     }
+    physical(&mut nl);
     nl
+}
+
+/// The board around the machine: power entry, decoupling, the run/step
+/// clock, the reset button, bank switches, debug LEDs behind buffers,
+/// and logic-analyzer headers.  Nothing here is modelled: every part is
+/// passive to the simulator, and CLK is driven by the test bench at the
+/// multiplexer's output exactly as the oscillator would through it.
+fn physical(nl: &mut Netlist) {
+    let gnd = nl.net("GND");
+    let vcc = nl.net("VCC");
+    let clk = nl.net("CLK");
+
+    // Power: 5 V barrel jack (1 centre +, 2 sleeve, 3 switch), a 1.1 A
+    // polyfuse, a P-MOSFET against reverse polarity (drain on the input,
+    // source on the rail, gate to ground: the body diode starts it and
+    // the channel carries it), bulk capacitors, a power LED.
+    let vin = nl.net("VIN");
+    let vf = nl.net("VF");
+    let jack = nl.add_chip("jpwr0", Passive::new(vec![(1, "+".into()), (2, "SLEEVE".into()), (3, "SWITCH".into())]));
+    nl.set_meta(jack, lcsc(meta("DC-005-5A-2.0-SMT barrel jack 5.5/2.1 mm", "DC-005 SMT", "jpwr0", None, Model::Passive), "C319134"));
+    nl.connect(vin, jack, 1);
+    nl.connect(gnd, jack, 2);
+    let fuse = two_pin(nl, "f0", "Polyfuse 1.1 A SMD1206P110TF/16", "1206", Some("C523825"));
+    nl.connect(vin, fuse, 1);
+    nl.connect(vf, fuse, 2);
+    let fet = nl.add_chip("q0", Passive::new(vec![(1, "G".into()), (2, "S".into()), (3, "D".into())]));
+    nl.set_meta(fet, lcsc(meta("AO3401A P-MOSFET", "SOT-23", "q0", None, Model::Passive), "C15127"));
+    nl.connect(gnd, fet, 1);
+    nl.connect(vcc, fet, 2);
+    nl.connect(vf, fet, 3);
+    let cb = two_pin(nl, "cb0", "100uF 16V electrolytic RVT1C101M0605", "SMD 6.3x5.4", Some("C970684"));
+    nl.connect(vcc, cb, 1);
+    nl.connect(gnd, cb, 2);
+    for i in 1..=4 {
+        let c = two_pin(nl, &format!("cb{i}"), "10uF 0805 X5R 25V", "0805", Some("C15850"));
+        nl.connect(vcc, c, 1);
+        nl.connect(gnd, c, 2);
+    }
+    let r = two_pin(nl, "rlp0", "1k 0603", "0603", Some("C21190"));
+    let led = two_pin(nl, "ledp0", "LED red 0603", "0603", Some("C2286"));
+    let la = nl.net("LEDA_POWER");
+    nl.connect(vcc, r, 1);
+    nl.connect(la, r, 2);
+    nl.connect(la, led, 1);
+    nl.connect(gnd, led, 2);
+
+    // One 100 nF at every chip's supply pins.
+    let chips = ["seq0", "seq1", "mir0", "mir1", "pc0", "pc1", "a0", "a1", "b0", "b1", "t0", "t1", "alu0", "alu1", "alu2", "alu3", "rom0", "rom1", "uc0", "uc1", "ram0", "ram1", "uart0", "xcvr0", "osc0", "rst0", "umux0", "uinv0", "ubuf0", "ubuf1", "ubuf2", "ubuf3"];
+    for name in chips {
+        let c = two_pin(nl, &format!("cd_{name}"), "100nF 0603 X7R", "0603", Some("C14663"));
+        nl.connect(vcc, c, 1);
+        nl.connect(gnd, c, 2);
+    }
+
+    // The clock.  A slide switch picks run (OSC) or single step; the
+    // step button is debounced by an RC into a Schmitt inverter, so one
+    // press is one rising edge of CLK.  Flip the switch while holding
+    // reset: the multiplexer is not glitch-free at the moment of
+    // switching.
+    let osc = nl.net("OSC");
+    let mode = nl.net("STEPMODE");
+    let step_n = nl.net("STEPBTN_n");
+    let stepclk = nl.net("STEPCLK");
+    let swm = nl.add_chip("swm0", Passive::new(vec![(1, "RUN".into()), (2, "COM".into()), (3, "STEP".into())]));
+    nl.set_meta(swm, lcsc(meta("MSK12C02 slide switch SPDT", "SMD 8x2.8", "swm0", None, Model::Passive), "C431540"));
+    nl.connect(gnd, swm, 1);
+    nl.connect(mode, swm, 2);
+    nl.connect(vcc, swm, 3);
+    let sw = nl.add_chip("swstep0", Passive::new(vec![(1, "1".into()), (2, "2".into()), (3, "3".into()), (4, "4".into())]));
+    nl.set_meta(sw, lcsc(meta("TS-1187A-B-A-B tactile switch", "SMD 5.1x5.1", "swstep0", None, Model::Passive), "C318884"));
+    nl.connect(step_n, sw, 1);
+    nl.connect(step_n, sw, 2);
+    nl.connect(gnd, sw, 3);
+    nl.connect(gnd, sw, 4);
+    let rp = two_pin(nl, "rstep0", "10k 0603", "0603", Some("C25804"));
+    nl.connect(vcc, rp, 1);
+    nl.connect(step_n, rp, 2);
+    let cst = two_pin(nl, "cst0", "100nF 0603 X7R", "0603", Some("C14663"));
+    nl.connect(step_n, cst, 1);
+    nl.connect(gnd, cst, 2);
+    let inv = nl.add_chip("uinv0", Passive::new(vec![(1, "NC".into()), (2, "A".into()), (3, "GND".into()), (4, "Y".into()), (5, "VCC".into())]));
+    nl.set_meta(inv, lcsc(meta("SN74LVC1G14DBVR Schmitt inverter", "SOT-23-5", "uinv0", None, Model::Passive), "C7835"));
+    nl.connect(step_n, inv, 2);
+    nl.connect(gnd, inv, 3);
+    nl.connect(stepclk, inv, 4);
+    nl.connect(vcc, inv, 5);
+    let mux = nl.add_chip("umux0", Passive::new(vec![(1, "I0".into()), (2, "I1".into()), (3, "S".into()), (4, "Y".into()), (5, "GND".into()), (6, "VCC".into())]));
+    nl.set_meta(mux, lcsc(meta("74LVC1G157GW,125 2:1 multiplexer", "SC-88", "umux0", None, Model::Passive), "C135822"));
+    nl.connect(osc, mux, 1);
+    nl.connect(stepclk, mux, 2);
+    nl.connect(mode, mux, 3);
+    nl.connect(clk, mux, 4);
+    nl.connect(gnd, mux, 5);
+    nl.connect(vcc, mux, 6);
+    let jclk = nl.add_chip("jclk0", Passive::new(vec![(1, "CLK".into()), (2, "OSC".into()), (3, "GND".into())]));
+    nl.set_meta(jclk, meta("Header 1x3 2.54 mm", "PinHeader_1x03", "jclk0", None, Model::Passive));
+    nl.connect(clk, jclk, 1);
+    nl.connect(osc, jclk, 2);
+    nl.connect(gnd, jclk, 3);
+
+    // The reset button, on the supervisor's MR# (pulled up inside it).
+    let mr_n = nl.net("MR_n");
+    let sw = nl.add_chip("swr0", Passive::new(vec![(1, "1".into()), (2, "2".into()), (3, "3".into()), (4, "4".into())]));
+    nl.set_meta(sw, lcsc(meta("TS-1187A-B-A-B tactile switch", "SMD 5.1x5.1", "swr0", None, Model::Passive), "C318884"));
+    nl.connect(mr_n, sw, 1);
+    nl.connect(mr_n, sw, 2);
+    nl.connect(gnd, sw, 3);
+    nl.connect(gnd, sw, 4);
+
+    // Bank switches: 4-position DIP switches with 10k pull-ups; a
+    // position ON pulls its bank bit low.  The simulation ties the bank
+    // nets low: every switch ON.  Pull-downs on Addr14 and Addr15 keep
+    // the selects at "flash" while nothing drives the address bus.
+    for (name, nets) in [("swb0", vec!["PBANK0", "PBANK1", "PBANK2", "PBANK3"]), ("swb1", vec!["UBANK0", "UBANK1", "UBANK2"])] {
+        let sw = nl.add_chip(name, Passive::new((1..=8).map(|p| (p, format!("{p}"))).collect()));
+        nl.set_meta(sw, lcsc(meta("EM-04-Q DIP switch, 4 positions", "SMD-8P 6x10", name, None, Model::Passive), "C501635"));
+        for (k, net) in nets.iter().enumerate() {
+            let n_ = nl.net(net);
+            nl.connect(n_, sw, k + 1);
+            nl.connect(gnd, sw, 8 - k);
+            let r = two_pin(nl, &format!("rp_{}", net.to_ascii_lowercase()), "10k 0603", "0603", Some("C25804"));
+            nl.connect(vcc, r, 1);
+            nl.connect(n_, r, 2);
+        }
+    }
+    for (name, net) in [("rd0", "ADDR14"), ("rd1", "ADDR15")] {
+        let r = two_pin(nl, name, "10k 0603", "0603", Some("C25804"));
+        let n_ = nl.net(net);
+        nl.connect(n_, r, 1);
+        nl.connect(gnd, r, 2);
+    }
+
+    // Debug LEDs behind 74HC541 buffers, one CMOS input per signal so
+    // the logic sees no load.  An LED shows its pin's level: an
+    // active-low net's LED hangs from VCC and lights when the net is
+    // low, that is, when the strobe is active.
+    let groups: [[&str; 8]; 4] = [
+        ["CLK", "RESET", "PCDRV", "ADRV", "MEMRD_n", "WE_n", "ALUOE", "TDRV"],
+        ["ALD", "BLD", "TLD", "PCLD", "PCINC", "IRLD", "NEL", "AUX0"],
+        ["IR0", "IR1", "IR2", "IR3", "IR4", "STEP0", "STEP1", "STEP2"],
+        ["STEP3", "F0", "F1", "AUX1", "RST_n", "", "", ""],
+    ];
+    for (b, group) in groups.iter().enumerate() {
+        let name = format!("ubuf{b}");
+        let mut names: Vec<(usize, String)> = vec![(1, "OE1_n".into()), (19, "OE2_n".into()), (10, "GND".into()), (20, "VCC".into())];
+        for i in 0..8 {
+            names.push((2 + i, format!("A{i}")));
+            names.push((18 - i, format!("Y{i}")));
+        }
+        let buf = nl.add_chip(&name, Passive::new(names));
+        nl.set_meta(buf, lcsc(meta("74HC541D,653 octal buffer", "SOIC-20", &name, None, Model::Passive), "C126008"));
+        nl.connect(gnd, buf, 1);
+        nl.connect(gnd, buf, 19);
+        nl.connect(gnd, buf, 10);
+        nl.connect(vcc, buf, 20);
+        for (i, sig) in group.iter().enumerate() {
+            if sig.is_empty() {
+                nl.connect(gnd, buf, 2 + i);
+                continue;
+            }
+            let src = nl.net(sig);
+            nl.connect(src, buf, 2 + i);
+            let out = nl.net(&format!("LEDB_{sig}"));
+            nl.connect(out, buf, 18 - i);
+            let mid = nl.net(&format!("LEDA_{sig}"));
+            let r = two_pin(nl, &format!("rl_{}", sig.to_ascii_lowercase()), "1k 0603", "0603", Some("C21190"));
+            let led = two_pin(nl, &format!("led_{}", sig.to_ascii_lowercase()), "LED red 0603", "0603", Some("C2286"));
+            if sig.ends_with("_n") {
+                nl.connect(vcc, led, 1);
+                nl.connect(mid, led, 2);
+                nl.connect(mid, r, 1);
+                nl.connect(out, r, 2);
+            } else {
+                nl.connect(out, r, 1);
+                nl.connect(mid, r, 2);
+                nl.connect(mid, led, 1);
+                nl.connect(gnd, led, 2);
+            }
+        }
+    }
+
+    // Logic-analyzer headers, 2 x 10 pins each.
+    let header = |nl: &mut Netlist, name: &str, pins: Vec<&str>| {
+        let names: Vec<(usize, String)> = pins.iter().enumerate().map(|(i, s)| (i + 1, s.to_string())).collect();
+        let j = nl.add_chip(name, Passive::new(names));
+        nl.set_meta(j, meta("Header 2x10 2.54 mm", "PinHeader_2x10", name, None, Model::Passive));
+        for (i, s) in pins.iter().enumerate() {
+            let net = nl.net(s);
+            nl.connect(net, j, i + 1);
+        }
+    };
+    let mut addr: Vec<String> = (0..16).map(|i| n("ADDR", i)).collect();
+    addr.extend(["CLK", "RESET", "GND", "GND"].map(String::from));
+    header(nl, "ja0", addr.iter().map(String::as_str).collect());
+    let mut data: Vec<String> = (0..16).map(|i| n("D", i)).collect();
+    data.extend(["CLK", "MEMRD_n", "WE_n", "GND"].map(String::from));
+    header(nl, "jd0", data.iter().map(String::as_str).collect());
+    header(nl, "jc0", vec!["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "TLD", "TDRV", "CLK", "RESET", "NEL", "AUX0", "AUX1", "GND"]);
+    header(nl, "js0", vec!["IR0", "IR1", "IR2", "IR3", "IR4", "STEP0", "STEP1", "STEP2", "STEP3", "NEL", "CLK", "RESET", "RST_n", "STEPMODE", "OSC", "AUX0", "AUX1", "GND", "GND", "GND"]);
 }
 
 /// What each bus is, for the chip map.
@@ -1035,15 +1256,25 @@ pub fn bus_descriptions() -> BTreeMap<String, String> {
         ("TLD", "Microword bit 12: T copies D at the ending edge."),
         ("TDRV", "Microword bit 13: T drives D."),
         ("AUX", "Microword bits 14 and 15, spare: debug outputs."),
-        ("CLK", "The machine clock, 4 MHz straight from the oscillator. Every GAL's clock; every flop moves on its rising edge."),
-        ("XIN", "The UART's own crystal, 1.8432 MHz: divisor 1 is 115200 baud. Nothing to do with the bus clock."),
+        ("CLK", "The machine clock: the run/step multiplexer's output, 4 MHz from the oscillator or one edge per press of the step button. Every GAL's clock; every flop moves on its rising edge."),
+        ("OSC", "The 4 MHz oscillator's output, into the run/step multiplexer and the clock header."),
+        ("STEPMODE", "The slide switch: low = run (CLK is OSC), high = single step (CLK is the step button). Change it while holding reset."),
+        ("STEPBTN", "STEPBTN_n: the step button, pulled up, with 100 nF for debounce; low while pressed."),
+        ("STEPCLK", "The debounced step button through a Schmitt inverter: high while pressed, so a press is a rising edge of CLK in step mode."),
+        ("VIN", "The barrel jack's centre pin, 5 V in."),
+        ("VF", "5 V after the polyfuse, at the reverse-polarity MOSFET's drain."),
+        ("VCC", "The 5 V rail."),
+        ("LEDA", "Between a debug LED and its resistor."),
+        ("LEDB", "A 74HC541 buffer output driving a debug LED: the level of the signal named."),
+        ("MR", "MR_n: the MAX811L's manual reset input, pulled up inside it; the reset button pulls it low."),
+        ("XIN", "The UART's own crystal, 14.7456 MHz: divisor 8 is 115200 baud. Nothing to do with the bus clock."),
         ("XOUT", "The other side of the UART's crystal."),
         ("RST_n", "The MAX811L's reset output, active low: power-on and the button."),
         ("RS", "RS1: the first stage of the reset synchroniser in the sequencer's flags chip, RST_n sampled on CLK. RESET is the second stage."),
         ("RESET", "Reset synchronised to CLK, active high, from the sequencer's flags chip: a factor of every product term in the IR, step counter, pipeline register, PC and NEL; the UART's MR."),
         ("MR_n", "The reset button, to the MAX811L's manual-reset input (pulled up inside the part)."),
-        ("PBANK", "Program flash bank: A15..A18 of the program flash, from a 4-way jumper (tied low here): 16 banks of 32 KB."),
-        ("UBANK", "Microcode bank: A10..A12 of the microcode ROM, from a 3-way jumper (tied low here)."),
+        ("PBANK", "Program flash bank: A15..A18 of the program flash, from the 4-position DIP switch (pulled up; ON = 0; every switch ON here): 16 banks of 32 K words."),
+        ("UBANK", "Microcode bank: A10..A12 of the microcode ROM, from three positions of a DIP switch (pulled up; ON = 0; every switch ON here): 8 microcode images."),
         ("SIN", "Serial in, from the transceiver."),
         ("SOUT", "Serial out, to the transceiver."),
         ("URTS_n", "The UART's RTS#, to the transceiver's second pair."),
@@ -1071,7 +1302,7 @@ pub fn board() -> Board {
     let nl = build_netlist();
     let mut b = nl.export(
         "grit",
-        "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator.",
+        "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator with a single-step switch, debug LEDs, analyzer headers, 5 V barrel jack.",
         PERIOD as f64 / NS as f64,
         BTreeMap::new(),
         layout(),

@@ -1142,6 +1142,7 @@ impl Netlist {
                 stage: meta.stage.clone(),
                 role: meta.role.clone(),
                 model: meta.model.clone(),
+                lcsc: meta.lcsc.clone(),
                 pins,
             });
         }

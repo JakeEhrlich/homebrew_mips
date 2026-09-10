@@ -1510,7 +1510,7 @@ pub fn layout() -> Vec<Column> {
 
 fn meta(part: &str, package: &str, name: &str, role: Option<String>, model: Model) -> ChipMeta {
     let (block, stage) = block_of(name);
-    ChipMeta { part: part.into(), package: package.into(), block: block.into(), stage: stage.into(), role, model }
+    ChipMeta { part: part.into(), package: package.into(), block: block.into(), stage: stage.into(), role, model, lcsc: None }
 }
 
 /// The board file for these parameters.

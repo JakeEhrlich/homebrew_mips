@@ -271,15 +271,19 @@ so.  The UART's frequency is its own business.
 |---|---|---|
 | ATF22V10C-7 (DIP-24, socketed) | 16 | section 4 |
 | SST39SF040 (DIP-32, socketed) | 4 | program, microcode |
-| AS7C164A 8K x 8 (DIP-28) | 2 | registers and data |
+| AS7C164A 8K x 8 (DIP-28, socketed) | 2 | registers and data |
 | TL16C550 (LQFP-48) | 1 | serial |
-| SP3232 (SSOP-16) + 5 x 100 nF | 1 | RS-232, two pairs |
-| 4 MHz oscillator | 1 | CLK |
-| 1.8432 MHz crystal + 2 x 18 pF | 1 | the UART's XIN/XOUT |
+| SP3232 (TSSOP-16) + 4 x 100 nF | 1 | RS-232, two pairs, DB9 female (DCE) |
+| 14.7456 MHz crystal + 2 x 18 pF | 1 | the UART's XIN/XOUT; divisor 8 |
+| 4 MHz oscillator, 2:1 multiplexer, Schmitt inverter, slide switch, button | 1 each | CLK: run, or one edge per press |
 | MAX811L + button | 1 | reset |
-| headers: serial, program bank (4), microcode bank (3) | | |
+| 4 x 74HC541 + 30 LEDs | | debug LEDs |
+| 2 x 4-position DIP switch | | program bank (4), microcode bank (3) |
+| 4 x 2x10 headers + 1x3 | | logic analyzer: address, data, control, sequencer, clock |
+| barrel jack, polyfuse, P-MOSFET, 100 uF + 4 x 10 uF + 100 nF per chip | | 5 V in |
 
-26 chips.
+26 chips in the machine; 161 parts on the board.  The board layer,
+part numbers and layout rules are in `docs/grit-pcb.md`.
 
 ## 7. Choices made along the way
 

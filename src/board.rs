@@ -84,6 +84,10 @@ pub struct ChipRec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
     pub model: Model,
+    /// LCSC part number for the JLCPCB bill of materials; absent while
+    /// the part is still to be sourced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lcsc: Option<String>,
     pub pins: Vec<PinRec>,
 }
 
@@ -145,6 +149,9 @@ pub struct ChipMeta {
     pub stage: String,
     pub role: Option<String>,
     pub model: Model,
+    /// LCSC part number, for the JLCPCB bill of materials.  None for a
+    /// part still to be sourced.
+    pub lcsc: Option<String>,
 }
 
 /// Test-bench choices made when a board is instantiated.
@@ -188,7 +195,7 @@ impl Board {
     pub fn instantiate(&self, load: &Load) -> Netlist {
         let mut nl = Netlist::new();
         for c in &self.chips {
-            let meta = ChipMeta { part: c.part.clone(), package: c.package.clone(), block: c.block.clone(), stage: c.stage.clone(), role: c.role.clone(), model: c.model.clone() };
+            let meta = ChipMeta { part: c.part.clone(), package: c.package.clone(), block: c.block.clone(), stage: c.stage.clone(), role: c.role.clone(), model: c.model.clone(), lcsc: c.lcsc.clone() };
             let id = match &c.model {
                 Model::Gal { clk, ar, eqs, pins } => {
                     let spec = galpack::GalSpec { name: c.name.clone(), clk: clk.clone(), ar: ar.clone(), eqs: eqs.clone() };

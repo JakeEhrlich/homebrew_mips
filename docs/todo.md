@@ -29,8 +29,13 @@ is not listed here.
 ## grit (the first board)
 
 - [x] Design, model, netlist, board file, soak and fuzz (docs/grit.md).
-- [ ] Bank jumper headers (4 program, 3 microcode) and the Addr14/Addr15 pull-downs as parts in
-      the board file (they are nets and pulls today).
+- [x] The board layer in the board file (docs/grit-pcb.md): power entry,
+      decoupling, run/step clock, reset button, bank DIP switches and
+      pull-ups, Addr14/15 pull-downs, 30 debug LEDs behind buffers,
+      analyzer headers, DB9.
+- [ ] Source the last parts: 300 mil DIP-24 socket, 5 V 4 MHz
+      oscillator, 2x10 and 1x3 headers; confirm TL16C550D and MAX811L
+      stock; verify C1653 (18 pF) and C2286 (LED) are what we think.
 - [ ] The PCB (Jake, flatland).
 - [ ] The macro assembler (MIPS-looking syntax over the grit ISA).
 - [x] Why the fuzz fails at 6 ns per pin: clock skew above the GAL's

@@ -1,6 +1,6 @@
 {
   "name": "grit",
-  "description": "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator.",
+  "description": "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator with a single-step switch, debug LEDs, analyzer headers, 5 V barrel jack.",
   "period_ns": 250.0,
   "params": {},
   "layout": [
@@ -40,9 +40,20 @@
       "width": 300,
       "blocks": [
         "UART",
-        "Serial port",
+        "Serial port"
+      ],
+      "reg": false
+    },
+    {
+      "title": "Board",
+      "width": 300,
+      "blocks": [
         "Clock",
-        "Reset"
+        "Reset",
+        "Power",
+        "Debug LEDs",
+        "Analyzer headers",
+        "Bank switches"
       ],
       "reg": false
     }
@@ -50,8 +61,8 @@
   "chips": [
     {
       "name": "seq0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "Sequencer",
       "stage": "Control",
       "model": {
@@ -632,8 +643,8 @@
     },
     {
       "name": "seq1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "Sequencer",
       "stage": "Control",
       "model": {
@@ -793,8 +804,8 @@
     },
     {
       "name": "mir0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "Pipeline register",
       "stage": "Control",
       "model": {
@@ -1133,8 +1144,8 @@
     },
     {
       "name": "mir1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "Pipeline register",
       "stage": "Control",
       "model": {
@@ -1471,8 +1482,8 @@
     },
     {
       "name": "pc0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "PC",
       "stage": "Datapath",
       "model": {
@@ -2877,8 +2888,8 @@
     },
     {
       "name": "pc1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "PC",
       "stage": "Datapath",
       "model": {
@@ -4229,8 +4240,8 @@
     },
     {
       "name": "a0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "A",
       "stage": "Datapath",
       "model": {
@@ -4705,8 +4716,8 @@
     },
     {
       "name": "a1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "A",
       "stage": "Datapath",
       "model": {
@@ -5181,8 +5192,8 @@
     },
     {
       "name": "b0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "B",
       "stage": "Datapath",
       "model": {
@@ -5599,8 +5610,8 @@
     },
     {
       "name": "b1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "B",
       "stage": "Datapath",
       "model": {
@@ -6017,8 +6028,8 @@
     },
     {
       "name": "t0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "T",
       "stage": "Datapath",
       "model": {
@@ -6493,8 +6504,8 @@
     },
     {
       "name": "t1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "T",
       "stage": "Datapath",
       "model": {
@@ -6969,8 +6980,8 @@
     },
     {
       "name": "alu0",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "ALU",
       "stage": "Datapath",
       "model": {
@@ -7997,8 +8008,8 @@
     },
     {
       "name": "alu1",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "ALU",
       "stage": "Datapath",
       "model": {
@@ -9131,8 +9142,8 @@
     },
     {
       "name": "alu2",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "ALU",
       "stage": "Datapath",
       "model": {
@@ -10265,8 +10276,8 @@
     },
     {
       "name": "alu3",
-      "part": "ATF22V10C-7PX",
-      "package": "DIP-24",
+      "part": "ATF22V10C-7PX in DS1009-24AT1NX-0A2 socket",
+      "package": "DIP-24 (300 mil)",
       "block": "ALU",
       "stage": "Datapath",
       "model": {
@@ -11329,10 +11340,10 @@
     },
     {
       "name": "osc0",
-      "part": "SG-8018CA 4.000MHz",
-      "package": "3225",
+      "part": "Oscillator 4.000 MHz 5 V CMOS",
+      "package": "7050",
       "block": "Clock",
-      "stage": "I/O",
+      "stage": "Board",
       "model": {
         "kind": "passive"
       },
@@ -11352,7 +11363,7 @@
         {
           "pin": 3,
           "name": "OUT",
-          "net": "CLK",
+          "net": "OSC",
           "kind": "passive"
         },
         {
@@ -11368,7 +11379,7 @@
       "part": "MAX811LEUS+T",
       "package": "SOT-143",
       "block": "Reset",
-      "stage": "I/O",
+      "stage": "Board",
       "role": "supervisor",
       "model": {
         "kind": "supervisor"
@@ -11402,8 +11413,8 @@
     },
     {
       "name": "rom0",
-      "part": "SST39SF040-70-4C-PHE",
-      "package": "DIP-32",
+      "part": "SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket",
+      "package": "DIP-32 (600 mil)",
       "block": "Program flash",
       "stage": "Memory",
       "role": "rom:0",
@@ -11413,6 +11424,7 @@
         "toe_ns": 35,
         "tdf_ns": 25
       },
+      "lcsc": "C72122",
       "pins": [
         {
           "pin": 1,
@@ -11610,8 +11622,8 @@
     },
     {
       "name": "rom1",
-      "part": "SST39SF040-70-4C-PHE",
-      "package": "DIP-32",
+      "part": "SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket",
+      "package": "DIP-32 (600 mil)",
       "block": "Program flash",
       "stage": "Memory",
       "role": "rom:1",
@@ -11621,6 +11633,7 @@
         "toe_ns": 35,
         "tdf_ns": 25
       },
+      "lcsc": "C72122",
       "pins": [
         {
           "pin": 1,
@@ -11818,8 +11831,8 @@
     },
     {
       "name": "uc0",
-      "part": "SST39SF040-70-4C-PHE",
-      "package": "DIP-32",
+      "part": "SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket",
+      "package": "DIP-32 (600 mil)",
       "block": "Microcode ROM",
       "stage": "Control",
       "role": "ucode:0",
@@ -11829,6 +11842,7 @@
         "toe_ns": 35,
         "tdf_ns": 25
       },
+      "lcsc": "C72122",
       "pins": [
         {
           "pin": 1,
@@ -12026,8 +12040,8 @@
     },
     {
       "name": "uc1",
-      "part": "SST39SF040-70-4C-PHE",
-      "package": "DIP-32",
+      "part": "SST39SF040-70-4C-PHE in DS1009-32AT1WX-0A2 socket",
+      "package": "DIP-32 (600 mil)",
       "block": "Microcode ROM",
       "stage": "Control",
       "role": "ucode:1",
@@ -12037,6 +12051,7 @@
         "toe_ns": 35,
         "tdf_ns": 25
       },
+      "lcsc": "C72122",
       "pins": [
         {
           "pin": 1,
@@ -12234,8 +12249,8 @@
     },
     {
       "name": "ram0",
-      "part": "AS7C164A-15PCN",
-      "package": "DIP-28",
+      "part": "AS7C164A-15PCN in DS1009-28AT1WX-0A2 socket",
+      "package": "DIP-28 (600 mil)",
       "block": "SRAM",
       "stage": "Memory",
       "role": "ram:0",
@@ -12243,6 +12258,7 @@
         "kind": "sram8k",
         "timing": "AS7C164A-15"
       },
+      "lcsc": "C72121",
       "pins": [
         {
           "pin": 2,
@@ -12410,8 +12426,8 @@
     },
     {
       "name": "ram1",
-      "part": "AS7C164A-15PCN",
-      "package": "DIP-28",
+      "part": "AS7C164A-15PCN in DS1009-28AT1WX-0A2 socket",
+      "package": "DIP-28 (600 mil)",
       "block": "SRAM",
       "stage": "Memory",
       "role": "ram:1",
@@ -12419,6 +12435,7 @@
         "kind": "sram8k",
         "timing": "AS7C164A-15"
       },
+      "lcsc": "C72121",
       "pins": [
         {
           "pin": 2,
@@ -12593,7 +12610,7 @@
       "role": "uart",
       "model": {
         "kind": "uart",
-        "xin_hz": 1843200.0
+        "xin_hz": 14745600.0
       },
       "pins": [
         {
@@ -12804,13 +12821,14 @@
     },
     {
       "name": "x1",
-      "part": "X322518432MOB4SI",
+      "part": "Crystal 14.7456 MHz 12 pF",
       "package": "3225",
       "block": "UART",
       "stage": "I/O",
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C2885591",
       "pins": [
         {
           "pin": 1,
@@ -12835,6 +12853,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C1653",
       "pins": [
         {
           "pin": 1,
@@ -12859,6 +12878,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C1653",
       "pins": [
         {
           "pin": 1,
@@ -12883,6 +12903,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C13482",
       "pins": [
         {
           "pin": 1,
@@ -12991,6 +13012,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C14663",
       "pins": [
         {
           "pin": 1,
@@ -13015,6 +13037,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C14663",
       "pins": [
         {
           "pin": 1,
@@ -13039,6 +13062,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C14663",
       "pins": [
         {
           "pin": 1,
@@ -13063,6 +13087,7 @@
       "model": {
         "kind": "passive"
       },
+      "lcsc": "C14663",
       "pins": [
         {
           "pin": 1,
@@ -13080,42 +13105,4197 @@
     },
     {
       "name": "j1",
-      "part": "Header 1x5 2.54mm",
-      "package": "PinHeader_1x05",
+      "part": "DB9 female, right angle, through hole",
+      "package": "DSUB-9",
       "block": "Serial port",
       "stage": "I/O",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C9900026339",
+      "pins": [
+        {
+          "pin": 2,
+          "name": "RXD",
+          "net": "RS232_TX",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "TXD",
+          "net": "RS232_RX",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "RTS",
+          "net": "RS232_CTS",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "CTS",
+          "net": "RS232_RTS",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "jpwr0",
+      "part": "DC-005-5A-2.0-SMT barrel jack 5.5/2.1 mm",
+      "package": "DC-005 SMT",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C319134",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "+",
+          "net": "VIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "SLEEVE",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "f0",
+      "part": "Polyfuse 1.1 A SMD1206P110TF/16",
+      "package": "1206",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C523825",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "VF",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "q0",
+      "part": "AO3401A P-MOSFET",
+      "package": "SOT-23",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C15127",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "G",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "S",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "D",
+          "net": "VF",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cb0",
+      "part": "100uF 16V electrolytic RVT1C101M0605",
+      "package": "SMD 6.3x5.4",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C970684",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cb1",
+      "part": "10uF 0805 X5R 25V",
+      "package": "0805",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C15850",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cb2",
+      "part": "10uF 0805 X5R 25V",
+      "package": "0805",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C15850",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cb3",
+      "part": "10uF 0805 X5R 25V",
+      "package": "0805",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C15850",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cb4",
+      "part": "10uF 0805 X5R 25V",
+      "package": "0805",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C15850",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rlp0",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_POWER",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ledp0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_POWER",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_seq0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_seq1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_mir0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_mir1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_pc0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_pc1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_a0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_a1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_b0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_b1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_t0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_t1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_alu0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_alu1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_alu2",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_alu3",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_rom0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_rom1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_uc0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_uc1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ram0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ram1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_uart0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_xcvr0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_osc0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_rst0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_umux0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_uinv0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ubuf0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ubuf1",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ubuf2",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cd_ubuf3",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Power",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "swm0",
+      "part": "MSK12C02 slide switch SPDT",
+      "package": "SMD 8x2.8",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C431540",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "RUN",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "COM",
+          "net": "STEPMODE",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "STEP",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "swstep0",
+      "part": "TS-1187A-B-A-B tactile switch",
+      "package": "SMD 5.1x5.1",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C318884",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "STEPBTN_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "STEPBTN_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "3",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "4",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rstep0",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "STEPBTN_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "cst0",
+      "part": "100nF 0603 X7R",
+      "package": "0603",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C14663",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "STEPBTN_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "uinv0",
+      "part": "SN74LVC1G14DBVR Schmitt inverter",
+      "package": "SOT-23-5",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C7835",
+      "pins": [
+        {
+          "pin": 2,
+          "name": "A",
+          "net": "STEPBTN_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "Y",
+          "net": "STEPCLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "umux0",
+      "part": "74LVC1G157GW,125 2:1 multiplexer",
+      "package": "SC-88",
+      "block": "Clock",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C135822",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "I0",
+          "net": "OSC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "I1",
+          "net": "STEPCLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "S",
+          "net": "STEPMODE",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "Y",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "jclk0",
+      "part": "Header 1x3 2.54 mm",
+      "package": "PinHeader_1x03",
+      "block": "Clock",
+      "stage": "Board",
       "model": {
         "kind": "passive"
       },
       "pins": [
         {
           "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "OSC",
+          "net": "OSC",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
           "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "swr0",
+      "part": "TS-1187A-B-A-B tactile switch",
+      "package": "SMD 5.1x5.1",
+      "block": "Reset",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C318884",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "MR_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "MR_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "3",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "4",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "swb0",
+      "part": "EM-04-Q DIP switch, 4 positions",
+      "package": "SMD-8P 6x10",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C501635",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "PBANK0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "PBANK1",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "3",
+          "net": "PBANK2",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "4",
+          "net": "PBANK3",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "5",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "6",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "7",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "8",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_pbank0",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "PBANK0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_pbank1",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "PBANK1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_pbank2",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "PBANK2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_pbank3",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "PBANK3",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "swb1",
+      "part": "EM-04-Q DIP switch, 4 positions",
+      "package": "SMD-8P 6x10",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C501635",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "UBANK0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "UBANK1",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "3",
+          "net": "UBANK2",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "6",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "7",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "8",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_ubank0",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "UBANK0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_ubank1",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "UBANK1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rp_ubank2",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "UBANK2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rd0",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR14",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rd1",
+      "part": "10k 0603",
+      "package": "0603",
+      "block": "Bank switches",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C25804",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR15",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ubuf0",
+      "part": "74HC541D,653 octal buffer",
+      "package": "SOIC-20",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C126008",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "OE1_n",
           "net": "GND",
           "kind": "passive"
         },
         {
           "pin": 2,
-          "name": "TX",
-          "net": "RS232_TX",
+          "name": "A0",
+          "net": "CLK",
           "kind": "passive"
         },
         {
           "pin": 3,
-          "name": "RX",
-          "net": "RS232_RX",
+          "name": "A1",
+          "net": "RESET",
           "kind": "passive"
         },
         {
           "pin": 4,
-          "name": "RTS",
-          "net": "RS232_RTS",
+          "name": "A2",
+          "net": "PCDRV",
           "kind": "passive"
         },
         {
           "pin": 5,
-          "name": "CTS",
-          "net": "RS232_CTS",
+          "name": "A3",
+          "net": "ADRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "A4",
+          "net": "MEMRD_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "A5",
+          "net": "WE_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "A6",
+          "net": "ALUOE",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "A7",
+          "net": "TDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "Y7",
+          "net": "LEDB_TDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "Y6",
+          "net": "LEDB_ALUOE",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "Y5",
+          "net": "LEDB_WE_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "Y4",
+          "net": "LEDB_MEMRD_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "Y3",
+          "net": "LEDB_ADRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "Y2",
+          "net": "LEDB_PCDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "Y1",
+          "net": "LEDB_RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "Y0",
+          "net": "LEDB_CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "OE2_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_clk",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_CLK",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_clk",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_reset",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_RESET",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_reset",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_pcdrv",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_PCDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_PCDRV",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_pcdrv",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_PCDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_adrv",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_ADRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADRV",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_adrv",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_memrd_n",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_MEMRD_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDB_MEMRD_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_memrd_n",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_MEMRD_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_we_n",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_WE_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDB_WE_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_we_n",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_WE_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_aluoe",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_ALUOE",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ALUOE",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_aluoe",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ALUOE",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_tdrv",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_TDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_TDRV",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_tdrv",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_TDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ubuf1",
+      "part": "74HC541D,653 octal buffer",
+      "package": "SOIC-20",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C126008",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "OE1_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "A0",
+          "net": "ALD",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "A1",
+          "net": "BLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "A2",
+          "net": "TLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "A3",
+          "net": "PCLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "A4",
+          "net": "PCINC",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "A5",
+          "net": "IRLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "A6",
+          "net": "NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "A7",
+          "net": "AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "Y7",
+          "net": "LEDB_AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "Y6",
+          "net": "LEDB_NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "Y5",
+          "net": "LEDB_IRLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "Y4",
+          "net": "LEDB_PCINC",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "Y3",
+          "net": "LEDB_PCLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "Y2",
+          "net": "LEDB_TLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "Y1",
+          "net": "LEDB_BLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "Y0",
+          "net": "LEDB_ALD",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "OE2_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ald",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_ALD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ALD",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ald",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ALD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_bld",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_BLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_BLD",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_bld",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_BLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_tld",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_TLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_TLD",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_tld",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_TLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_pcld",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_PCLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_PCLD",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_pcld",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_PCLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_pcinc",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_PCINC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_PCINC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_pcinc",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_PCINC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_irld",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IRLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IRLD",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_irld",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IRLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_nel",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_NEL",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_nel",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_aux0",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_AUX0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_aux0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ubuf2",
+      "part": "74HC541D,653 octal buffer",
+      "package": "SOIC-20",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C126008",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "OE1_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "A0",
+          "net": "IR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "A1",
+          "net": "IR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "A2",
+          "net": "IR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "A3",
+          "net": "IR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "A4",
+          "net": "IR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "A5",
+          "net": "STEP0",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "A6",
+          "net": "STEP1",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "A7",
+          "net": "STEP2",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "Y7",
+          "net": "LEDB_STEP2",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "Y6",
+          "net": "LEDB_STEP1",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "Y5",
+          "net": "LEDB_STEP0",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "Y4",
+          "net": "LEDB_IR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "Y3",
+          "net": "LEDB_IR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "Y2",
+          "net": "LEDB_IR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "Y1",
+          "net": "LEDB_IR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "Y0",
+          "net": "LEDB_IR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "OE2_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ir0",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IR0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ir0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ir1",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IR1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ir1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ir2",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IR2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ir2",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ir3",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IR3",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ir3",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_ir4",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_IR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_IR4",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_ir4",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_IR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_step0",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_STEP0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_STEP0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_step0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_STEP0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_step1",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_STEP1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_STEP1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_step1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_STEP1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_step2",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_STEP2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_STEP2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_step2",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_STEP2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ubuf3",
+      "part": "74HC541D,653 octal buffer",
+      "package": "SOIC-20",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C126008",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "OE1_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "A0",
+          "net": "STEP3",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "A1",
+          "net": "F0",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "A2",
+          "net": "F1",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "A3",
+          "net": "AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "A4",
+          "net": "RST_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "A5",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "A6",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "A7",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "Y4",
+          "net": "LEDB_RST_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "Y3",
+          "net": "LEDB_AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "Y2",
+          "net": "LEDB_F1",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "Y1",
+          "net": "LEDB_F0",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "Y0",
+          "net": "LEDB_STEP3",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "OE2_n",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_step3",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_STEP3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_STEP3",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_step3",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_STEP3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_f0",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_F0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_F0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_f0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_F0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_f1",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_F1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_F1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_f1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_F1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_aux1",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDB_AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_AUX1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_aux1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rl_rst_n",
+      "part": "1k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C21190",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_RST_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDB_RST_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "led_rst_n",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "VCC",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_RST_n",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "ja0",
+      "part": "Header 2x10 2.54 mm",
+      "package": "PinHeader_2x10",
+      "block": "Analyzer headers",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "ADDR0",
+          "net": "ADDR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "ADDR1",
+          "net": "ADDR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "ADDR2",
+          "net": "ADDR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "ADDR3",
+          "net": "ADDR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "ADDR4",
+          "net": "ADDR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "ADDR5",
+          "net": "ADDR5",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "ADDR6",
+          "net": "ADDR6",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "ADDR7",
+          "net": "ADDR7",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "ADDR8",
+          "net": "ADDR8",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "ADDR9",
+          "net": "ADDR9",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "ADDR10",
+          "net": "ADDR10",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "ADDR11",
+          "net": "ADDR11",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "ADDR12",
+          "net": "ADDR12",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "ADDR13",
+          "net": "ADDR13",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "ADDR14",
+          "net": "ADDR14",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "ADDR15",
+          "net": "ADDR15",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "jd0",
+      "part": "Header 2x10 2.54 mm",
+      "package": "PinHeader_2x10",
+      "block": "Analyzer headers",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "D0",
+          "net": "D0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "D1",
+          "net": "D1",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "D2",
+          "net": "D2",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "D3",
+          "net": "D3",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "D4",
+          "net": "D4",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "D5",
+          "net": "D5",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "D6",
+          "net": "D6",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "D7",
+          "net": "D7",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "D8",
+          "net": "D8",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "D9",
+          "net": "D9",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "D10",
+          "net": "D10",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "D11",
+          "net": "D11",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "D12",
+          "net": "D12",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "D13",
+          "net": "D13",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "D14",
+          "net": "D14",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "D15",
+          "net": "D15",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "MEMRD_n",
+          "net": "MEMRD_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "WE_n",
+          "net": "WE_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "jc0",
+      "part": "Header 2x10 2.54 mm",
+      "package": "PinHeader_2x10",
+      "block": "Analyzer headers",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "PCDRV",
+          "net": "PCDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "MEMRD_n",
+          "net": "MEMRD_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "ALUOE",
+          "net": "ALUOE",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "WE_n",
+          "net": "WE_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "ALD",
+          "net": "ALD",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "BLD",
+          "net": "BLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "PCLD",
+          "net": "PCLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "PCINC",
+          "net": "PCINC",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "IRLD",
+          "net": "IRLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "F0",
+          "net": "F0",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "F1",
+          "net": "F1",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "ADRV",
+          "net": "ADRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "TLD",
+          "net": "TLD",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "TDRV",
+          "net": "TDRV",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "NEL",
+          "net": "NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "AUX0",
+          "net": "AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "AUX1",
+          "net": "AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "js0",
+      "part": "Header 2x10 2.54 mm",
+      "package": "PinHeader_2x10",
+      "block": "Analyzer headers",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "IR0",
+          "net": "IR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "IR1",
+          "net": "IR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 3,
+          "name": "IR2",
+          "net": "IR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 4,
+          "name": "IR3",
+          "net": "IR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 5,
+          "name": "IR4",
+          "net": "IR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 6,
+          "name": "STEP0",
+          "net": "STEP0",
+          "kind": "passive"
+        },
+        {
+          "pin": 7,
+          "name": "STEP1",
+          "net": "STEP1",
+          "kind": "passive"
+        },
+        {
+          "pin": 8,
+          "name": "STEP2",
+          "net": "STEP2",
+          "kind": "passive"
+        },
+        {
+          "pin": 9,
+          "name": "STEP3",
+          "net": "STEP3",
+          "kind": "passive"
+        },
+        {
+          "pin": 10,
+          "name": "NEL",
+          "net": "NEL",
+          "kind": "passive"
+        },
+        {
+          "pin": 11,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "passive"
+        },
+        {
+          "pin": 12,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "passive"
+        },
+        {
+          "pin": 13,
+          "name": "RST_n",
+          "net": "RST_n",
+          "kind": "passive"
+        },
+        {
+          "pin": 14,
+          "name": "STEPMODE",
+          "net": "STEPMODE",
+          "kind": "passive"
+        },
+        {
+          "pin": 15,
+          "name": "OSC",
+          "net": "OSC",
+          "kind": "passive"
+        },
+        {
+          "pin": 16,
+          "name": "AUX0",
+          "net": "AUX0",
+          "kind": "passive"
+        },
+        {
+          "pin": 17,
+          "name": "AUX1",
+          "net": "AUX1",
+          "kind": "passive"
+        },
+        {
+          "pin": 18,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 19,
+          "name": "GND",
+          "net": "GND",
+          "kind": "passive"
+        },
+        {
+          "pin": 20,
+          "name": "GND",
+          "net": "GND",
           "kind": "passive"
         }
       ]
@@ -13477,6 +17657,9 @@
       "tie": "high"
     },
     {
+      "name": "OSC"
+    },
+    {
       "name": "MR_n",
       "pull": "high",
       "role": "reset_button"
@@ -13562,6 +17745,198 @@
     },
     {
       "name": "XC_VM"
+    },
+    {
+      "name": "VIN"
+    },
+    {
+      "name": "VF"
+    },
+    {
+      "name": "LEDA_POWER"
+    },
+    {
+      "name": "STEPMODE"
+    },
+    {
+      "name": "STEPBTN_n"
+    },
+    {
+      "name": "STEPCLK"
+    },
+    {
+      "name": "LEDB_CLK"
+    },
+    {
+      "name": "LEDA_CLK"
+    },
+    {
+      "name": "LEDB_RESET"
+    },
+    {
+      "name": "LEDA_RESET"
+    },
+    {
+      "name": "LEDB_PCDRV"
+    },
+    {
+      "name": "LEDA_PCDRV"
+    },
+    {
+      "name": "LEDB_ADRV"
+    },
+    {
+      "name": "LEDA_ADRV"
+    },
+    {
+      "name": "LEDB_MEMRD_n"
+    },
+    {
+      "name": "LEDA_MEMRD_n"
+    },
+    {
+      "name": "LEDB_WE_n"
+    },
+    {
+      "name": "LEDA_WE_n"
+    },
+    {
+      "name": "LEDB_ALUOE"
+    },
+    {
+      "name": "LEDA_ALUOE"
+    },
+    {
+      "name": "LEDB_TDRV"
+    },
+    {
+      "name": "LEDA_TDRV"
+    },
+    {
+      "name": "LEDB_ALD"
+    },
+    {
+      "name": "LEDA_ALD"
+    },
+    {
+      "name": "LEDB_BLD"
+    },
+    {
+      "name": "LEDA_BLD"
+    },
+    {
+      "name": "LEDB_TLD"
+    },
+    {
+      "name": "LEDA_TLD"
+    },
+    {
+      "name": "LEDB_PCLD"
+    },
+    {
+      "name": "LEDA_PCLD"
+    },
+    {
+      "name": "LEDB_PCINC"
+    },
+    {
+      "name": "LEDA_PCINC"
+    },
+    {
+      "name": "LEDB_IRLD"
+    },
+    {
+      "name": "LEDA_IRLD"
+    },
+    {
+      "name": "LEDB_NEL"
+    },
+    {
+      "name": "LEDA_NEL"
+    },
+    {
+      "name": "LEDB_AUX0"
+    },
+    {
+      "name": "LEDA_AUX0"
+    },
+    {
+      "name": "LEDB_IR0"
+    },
+    {
+      "name": "LEDA_IR0"
+    },
+    {
+      "name": "LEDB_IR1"
+    },
+    {
+      "name": "LEDA_IR1"
+    },
+    {
+      "name": "LEDB_IR2"
+    },
+    {
+      "name": "LEDA_IR2"
+    },
+    {
+      "name": "LEDB_IR3"
+    },
+    {
+      "name": "LEDA_IR3"
+    },
+    {
+      "name": "LEDB_IR4"
+    },
+    {
+      "name": "LEDA_IR4"
+    },
+    {
+      "name": "LEDB_STEP0"
+    },
+    {
+      "name": "LEDA_STEP0"
+    },
+    {
+      "name": "LEDB_STEP1"
+    },
+    {
+      "name": "LEDA_STEP1"
+    },
+    {
+      "name": "LEDB_STEP2"
+    },
+    {
+      "name": "LEDA_STEP2"
+    },
+    {
+      "name": "LEDB_STEP3"
+    },
+    {
+      "name": "LEDA_STEP3"
+    },
+    {
+      "name": "LEDB_F0"
+    },
+    {
+      "name": "LEDA_F0"
+    },
+    {
+      "name": "LEDB_F1"
+    },
+    {
+      "name": "LEDA_F1"
+    },
+    {
+      "name": "LEDB_AUX1"
+    },
+    {
+      "name": "LEDA_AUX1"
+    },
+    {
+      "name": "LEDB_RST_n"
+    },
+    {
+      "name": "LEDA_RST_n"
     }
   ],
   "bus_descriptions": {
@@ -13584,7 +17959,7 @@
     "AUX": "Microword bits 14 and 15, spare: debug outputs.",
     "B": "The B latch: the ALU's second operand and the value a store writes. Point-to-point into the ALU.",
     "BLD": "Microword bit 5: B copies D at the ending edge.",
-    "CLK": "The machine clock, 4 MHz straight from the oscillator. Every GAL's clock; every flop moves on its rising edge.",
+    "CLK": "The machine clock: the run/step multiplexer's output, 4 MHz from the oscillator or one edge per press of the step button. Every GAL's clock; every flop moves on its rising edge.",
     "CO": "The PC's carry from bit 7 into bit 8.",
     "COUT": "Carry between ALU slices: COUT0 from slice 0 into slice 1, and so on.",
     "D": "The data bus. One driver per clock: the memory or device that Addr selects on MEMRD, the ALU on ALUOE, or T on TDRV. Read by A, B, T, the PC and the IR at the clock edge.",
@@ -13592,12 +17967,16 @@
     "GND": "Ground.",
     "IR": "The instruction register: the opcode, bits 15:11 of the instruction word. Address bits A5..A9 of the microcode ROM.",
     "IRLD": "Microword bit 8: the IR copies D[15:11] and the step counter clears at the ending edge. The fetch.",
+    "LEDA": "Between a debug LED and its resistor.",
+    "LEDB": "A 74HC541 buffer output driving a debug LED: the level of the signal named.",
     "M": "The microcode ROM's data: the next microword, latched into the pipeline register at every edge.",
     "MEMRD_n": "Microword bit 1, active low: the memory or device that Addr selects drives D. OE# of the flash and SRAM, RD# of the UART.",
+    "MR": "MR_n: the MAX811L's manual reset input, pulled up inside it; the reset button pulls it low.",
     "MR_n": "The reset button, to the MAX811L's manual-reset input (pulled up inside the part).",
     "NE": "The not-equal chain: NE0 out of ALU slice 0 (bits 0..3 differ), NE1 (bits 0..7), NE2 (0..11) and NE3 (all: A differs from B), each slice taking the previous one in. NE3 feeds the NEL flop in the sequencer's flags chip.",
     "NEL": "The condition, in the sequencer's flags chip: NE3 latched at the end of every word in which A is on the bus (ADRV), held otherwise. Address bit A4 of the microcode ROM.",
-    "PBANK": "Program flash bank: A15..A18 of the program flash, from a 4-way jumper (tied low here): 16 banks of 32 KB.",
+    "OSC": "The 4 MHz oscillator's output, into the run/step multiplexer and the clock header.",
+    "PBANK": "Program flash bank: A15..A18 of the program flash, from the 4-position DIP switch (pulled up; ON = 0; every switch ON here): 16 banks of 32 K words.",
     "PCDRV": "Microword bit 0: the PC drives Addr, and counts a word at the edge. Also the flash's OE# through MEMRD.",
     "PCINC": "Microword bit 7: PC += 2 at the ending edge.",
     "PCLD": "Microword bit 6: the PC copies D at the ending edge.",
@@ -13611,14 +17990,19 @@
     "SIN": "Serial in, from the transceiver.",
     "SOUT": "Serial out, to the transceiver.",
     "STEP": "The step counter: cleared by the fetch, counting every other clock. Address bits A0..A3 of the microcode ROM.",
+    "STEPBTN": "STEPBTN_n: the step button, pulled up, with 100 nF for debounce; low while pressed.",
+    "STEPCLK": "The debounced step button through a Schmitt inverter: high while pressed, so a press is a rising edge of CLK in step mode.",
+    "STEPMODE": "The slide switch: low = run (CLK is OSC), high = single step (CLK is the step button). Change it while holding reset.",
     "TDRV": "Microword bit 13: T drives D.",
     "TLD": "Microword bit 12: T copies D at the ending edge.",
-    "UBANK": "Microcode bank: A10..A12 of the microcode ROM, from a 3-way jumper (tied low here).",
+    "UBANK": "Microcode bank: A10..A12 of the microcode ROM, from three positions of a DIP switch (pulled up; ON = 0; every switch ON here): 8 microcode images.",
     "UBAUD": "BAUDOUT# to RCLK: the baud generator clocks its own receiver.",
     "UCTS_n": "The UART's CTS#, from the transceiver's second pair.",
     "UDTR_n": "DTR# looped back to DSR# and DCD#: the modem status always reads ready.",
     "URTS_n": "The UART's RTS#, to the transceiver's second pair.",
     "VCC": "+5 V.",
+    "VF": "5 V after the polyfuse, at the reverse-polarity MOSFET's drain.",
+    "VIN": "The barrel jack's centre pin, 5 V in.",
     "WE_n": "Microword bit 3, active low: the memory or device that Addr selects takes D. WE# of the SRAM, WR# of the UART, for the whole clock.",
     "XC_VM": "SP3232 V- reservoir.",
     "XC_VP": "SP3232 V+ reservoir.",
@@ -13626,7 +18010,7 @@
     "XC_c1B": "SP3232 charge pump: C1- to its capacitor.",
     "XC_c2A": "SP3232 charge pump: C2+ to its capacitor.",
     "XC_c2B": "SP3232 charge pump: C2- to its capacitor.",
-    "XIN": "The UART's own crystal, 1.8432 MHz: divisor 1 is 115200 baud. Nothing to do with the bus clock.",
+    "XIN": "The UART's own crystal, 14.7456 MHz: divisor 8 is 115200 baud. Nothing to do with the bus clock.",
     "XOUT": "The other side of the UART's crystal."
   }
 }
