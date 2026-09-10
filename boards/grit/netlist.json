@@ -21,6 +21,7 @@
         "PC",
         "A",
         "B",
+        "T",
         "ALU"
       ],
       "reg": false
@@ -1109,9 +1110,8 @@
             ]
           },
           {
-            "out": "IORD_n",
+            "out": "TLD",
             "mode": "reg",
-            "active_low": true,
             "terms": [
               [
                 [
@@ -1126,9 +1126,8 @@
             ]
           },
           {
-            "out": "IOWR_n",
+            "out": "TDRV",
             "mode": "reg",
-            "active_low": true,
             "terms": [
               [
                 [
@@ -1234,11 +1233,11 @@
           ],
           [
             21,
-            "IORD_n"
+            "TLD"
           ],
           [
             16,
-            "IOWR_n"
+            "TDRV"
           ],
           [
             22,
@@ -1325,8 +1324,8 @@
         },
         {
           "pin": 16,
-          "name": "IOWR_n",
-          "net": "IOWR_n",
+          "name": "TDRV",
+          "net": "TDRV",
           "kind": "out"
         },
         {
@@ -1355,8 +1354,8 @@
         },
         {
           "pin": 21,
-          "name": "IORD_n",
-          "net": "IORD_n",
+          "name": "TLD",
+          "net": "TLD",
           "kind": "out"
         },
         {
@@ -5724,6 +5723,958 @@
           "pin": 22,
           "name": "B14",
           "net": "B14",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "t0",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "T",
+      "stage": "Datapath",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
+          {
+            "out": "T0",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D0",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T0",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T1",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D1",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T1",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T2",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D2",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T2",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T3",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D3",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T3",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T4",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D4",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T4",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T5",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D5",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T5",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T6",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D6",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T6",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T7",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D7",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T7",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "D0"
+          ],
+          [
+            3,
+            "D1"
+          ],
+          [
+            4,
+            "D2"
+          ],
+          [
+            5,
+            "D3"
+          ],
+          [
+            6,
+            "D4"
+          ],
+          [
+            7,
+            "D5"
+          ],
+          [
+            8,
+            "D6"
+          ],
+          [
+            9,
+            "D7"
+          ],
+          [
+            10,
+            "TDRV"
+          ],
+          [
+            11,
+            "TLD"
+          ],
+          [
+            19,
+            "T0"
+          ],
+          [
+            18,
+            "T1"
+          ],
+          [
+            20,
+            "T2"
+          ],
+          [
+            17,
+            "T3"
+          ],
+          [
+            21,
+            "T4"
+          ],
+          [
+            16,
+            "T5"
+          ],
+          [
+            22,
+            "T6"
+          ],
+          [
+            15,
+            "T7"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "D0",
+          "net": "D0",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "D1",
+          "net": "D1",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "D2",
+          "net": "D2",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "D3",
+          "net": "D3",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "D4",
+          "net": "D4",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "D5",
+          "net": "D5",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "D6",
+          "net": "D6",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "D7",
+          "net": "D7",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "TDRV",
+          "net": "TDRV",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "TLD",
+          "net": "TLD",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 15,
+          "name": "T7",
+          "net": "D7",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "T5",
+          "net": "D5",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "T3",
+          "net": "D3",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "T1",
+          "net": "D1",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "T0",
+          "net": "D0",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "T2",
+          "net": "D2",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "T4",
+          "net": "D4",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "T6",
+          "net": "D6",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "t1",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "T",
+      "stage": "Datapath",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
+          {
+            "out": "T8",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D8",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T8",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T9",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D9",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T9",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T10",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D10",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T10",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T11",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D11",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T11",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T12",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D12",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T12",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T13",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D13",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T13",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T14",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D14",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T14",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          },
+          {
+            "out": "T15",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "TLD",
+                  true
+                ],
+                [
+                  "D15",
+                  true
+                ]
+              ],
+              [
+                [
+                  "TLD",
+                  false
+                ],
+                [
+                  "T15",
+                  true
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "TDRV",
+                true
+              ]
+            ]
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "D10"
+          ],
+          [
+            3,
+            "D11"
+          ],
+          [
+            4,
+            "D12"
+          ],
+          [
+            5,
+            "D13"
+          ],
+          [
+            6,
+            "D14"
+          ],
+          [
+            7,
+            "D15"
+          ],
+          [
+            8,
+            "D8"
+          ],
+          [
+            9,
+            "D9"
+          ],
+          [
+            10,
+            "TDRV"
+          ],
+          [
+            11,
+            "TLD"
+          ],
+          [
+            19,
+            "T8"
+          ],
+          [
+            18,
+            "T9"
+          ],
+          [
+            20,
+            "T10"
+          ],
+          [
+            17,
+            "T11"
+          ],
+          [
+            21,
+            "T12"
+          ],
+          [
+            16,
+            "T13"
+          ],
+          [
+            22,
+            "T14"
+          ],
+          [
+            15,
+            "T15"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "D10",
+          "net": "D10",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "D11",
+          "net": "D11",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "D12",
+          "net": "D12",
+          "kind": "in"
+        },
+        {
+          "pin": 5,
+          "name": "D13",
+          "net": "D13",
+          "kind": "in"
+        },
+        {
+          "pin": 6,
+          "name": "D14",
+          "net": "D14",
+          "kind": "in"
+        },
+        {
+          "pin": 7,
+          "name": "D15",
+          "net": "D15",
+          "kind": "in"
+        },
+        {
+          "pin": 8,
+          "name": "D8",
+          "net": "D8",
+          "kind": "in"
+        },
+        {
+          "pin": 9,
+          "name": "D9",
+          "net": "D9",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
+          "name": "TDRV",
+          "net": "TDRV",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "TLD",
+          "net": "TLD",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 15,
+          "name": "T15",
+          "net": "D15",
+          "kind": "out"
+        },
+        {
+          "pin": 16,
+          "name": "T13",
+          "net": "D13",
+          "kind": "out"
+        },
+        {
+          "pin": 17,
+          "name": "T11",
+          "net": "D11",
+          "kind": "out"
+        },
+        {
+          "pin": 18,
+          "name": "T9",
+          "net": "D9",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "T8",
+          "net": "D8",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "T10",
+          "net": "D10",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "T12",
+          "net": "D12",
+          "kind": "out"
+        },
+        {
+          "pin": 22,
+          "name": "T14",
+          "net": "D14",
           "kind": "out"
         },
         {
@@ -11464,7 +12415,7 @@
         {
           "pin": 16,
           "name": "WR1#",
-          "net": "IOWR_n",
+          "net": "WE_n",
           "kind": "in"
         },
         {
@@ -11482,7 +12433,7 @@
         {
           "pin": 19,
           "name": "RD1#",
-          "net": "IORD_n",
+          "net": "MEMRD_n",
           "kind": "in"
         },
         {
@@ -11983,10 +12934,10 @@
       "name": "F1"
     },
     {
-      "name": "IORD_n"
+      "name": "TLD"
     },
     {
-      "name": "IOWR_n"
+      "name": "TDRV"
     },
     {
       "name": "AUX0"

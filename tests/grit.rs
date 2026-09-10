@@ -292,5 +292,5 @@ fn board_file() {
     assert!(g.warnings().is_empty());
     assert_eq!(g.reg(1), Some(7));
     let gals = cb.chips.iter().filter(|c| matches!(c.model, mips32::board::Model::Gal { .. })).count();
-    assert_eq!(gals, 13);
+    assert_eq!(gals, 15);
 }

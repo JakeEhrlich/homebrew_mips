@@ -38,13 +38,14 @@ pub const F1: u16 = 1 << 10;
 /// A drives Addr (and so the ALU sees A).  Never in the word next to a
 /// PCDRV word: the address bus changes hands with an idle word between.
 pub const ADRV: u16 = 1 << 11;
-/// The I/O strobes, separate from the memory strobes as on the 8080 and
-/// ISA buses: the UART's RD# and WR# are IORD and IOWR, so a device is
-/// only ever strobed by an instruction that means to (`LDB (A)`,
-/// `STB (A)`), never by `LDA (A)`, which changes the address at the edge
-/// that ends its read.
-pub const IORD: u16 = 1 << 12;
-pub const IOWR: u16 = 1 << 13;
+/// The T latch: sixteen flops that load from D (TLD) and drive D (TDRV).
+/// Memory data bound for a register that drives the address bus (A on
+/// `LDA (A)`, the PC on a jump) lands here first, so that no address
+/// register ever changes at the edge that ends a strobe: the one bus
+/// rule then holds for memories and devices alike.  Invisible to the
+/// instruction set; every instruction may clobber it.
+pub const TLD: u16 = 1 << 12;
+pub const TDRV: u16 = 1 << 13;
 pub const F_ADD: u16 = 0;
 pub const F_AND: u16 = F0;
 pub const F_NOR: u16 = F1;
@@ -53,7 +54,7 @@ pub const F_PASSB: u16 = F1 | F0;
 pub const FETCH: u16 = PCDRV | MEMRD | IRLD;
 
 /// Microword bit names, bit 0 first.
-pub const BIT_NAMES: [&str; 14] = ["PCDRV", "MEMRD", "ALUOE", "WE", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "IORD", "IOWR"];
+pub const BIT_NAMES: [&str; 14] = ["PCDRV", "MEMRD", "ALUOE", "WE", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "TLD", "TDRV"];
 
 // ---------------------------------------------------------------------------
 // The instruction set
@@ -152,12 +153,12 @@ pub fn sequence(op: Op, ne: bool) -> Vec<u16> {
         // with side effects).  A's data hold then rests on the memory's
         // output-disable time against the clock skew between the pipeline
         // register and the A chips: under 2 ns of skew (docs/grit.md).
-        // LDA (A) is a memory read only: it changes the address at the edge
-        // that ends its strobe, which a device may not see.  LDB (A) and
-        // STB (A) strobe memory and I/O alike.
-        Op::LdaA => vec![0, ADRV, ADRV | MEMRD | ALD, ADRV, PCINC, FETCH, FETCH_HOLD],
-        Op::LdbA => vec![0, ADRV, ADRV | MEMRD | IORD | BLD, ADRV | MEMRD | IORD, PCINC, FETCH, FETCH_HOLD],
-        Op::StbA => vec![0, ADRV, ADRV | ALUOE | F_PASSB | WE | IOWR, ADRV | ALUOE | F_PASSB, 0, PCINC, FETCH, FETCH_HOLD],
+        // A load into an address register goes through T: the read lands
+        // in T with the address held, and the register takes it from T in
+        // a word with no strobe.
+        Op::LdaA => vec![0, ADRV, ADRV | MEMRD | TLD, ADRV | MEMRD, 0, TDRV | ALD, PCINC, FETCH, FETCH_HOLD],
+        Op::LdbA => vec![0, ADRV, ADRV | MEMRD | BLD, ADRV | MEMRD, PCINC, FETCH, FETCH_HOLD],
+        Op::StbA => vec![0, ADRV, ADRV | ALUOE | F_PASSB | WE, ADRV | ALUOE | F_PASSB, 0, PCINC, FETCH, FETCH_HOLD],
         Op::AddA => alu(F_ADD, ALD),
         Op::AddB => alu(F_ADD, BLD),
         Op::AndA => alu(F_AND, ALD),
@@ -165,16 +166,13 @@ pub fn sequence(op: Op, ne: bool) -> Vec<u16> {
         Op::NorA => alu(F_NOR, ALD),
         Op::NorB => alu(F_NOR, BLD),
         Op::MovAB => alu(F_PASSB, ALD),
-        // After PCLD the address changes: the strobe is dropped for that
-        // word (no chip sees its address move under a read), and the PC
-        // needs no data hold, being its own source.
-        Op::Jmp => vec![PCINC, PCDRV | MEMRD | PCLD, PCDRV, FETCH, FETCH_HOLD],
+        Op::Jmp => vec![PCINC, PCDRV | MEMRD | TLD, PCDRV | MEMRD, 0, TDRV | PCLD, 0, FETCH, FETCH_HOLD],
         // The condition: word 1 puts A on the bus so that NE is valid and
         // the NEL flop latches it at the word's end; the ROM read for step
         // 3, during word 2, is the one that sees the fresh NEL, so the two
         // variants differ from step 3 on.
-        Op::Jeq if !ne => vec![0, ADRV, PCINC, PCDRV | MEMRD | PCLD, PCDRV, FETCH, FETCH_HOLD],
-        Op::Jeq => vec![0, ADRV, PCINC, PCINC, 0, FETCH, FETCH_HOLD],
+        Op::Jeq if !ne => vec![0, ADRV, PCINC, PCDRV | MEMRD | TLD, PCDRV | MEMRD, 0, TDRV | PCLD, 0, FETCH, FETCH_HOLD],
+        Op::Jeq => vec![0, ADRV, PCINC, PCINC, FETCH, FETCH_HOLD],
         Op::Nop => vec![PCINC, FETCH, FETCH_HOLD],
         Op::Halt => vec![],
     }
@@ -202,7 +200,7 @@ pub fn microcode() -> Vec<u16> {
 }
 
 fn driver(w: u16) -> u16 {
-    w & (MEMRD | ALUOE)
+    w & (MEMRD | ALUOE | TDRV)
 }
 
 /// The ordering rules, plus at most one driver per word.
@@ -227,17 +225,13 @@ fn check_sequence(op: Op, s: &[u16]) {
             // word keeps the same drivers on Addr and D.  A load into the
             // PC changes the address at the edge: the next word keeps the
             // PC on Addr but drops the strobe.
-            let addr_changes = w & PCLD != 0 || (w & ALD != 0 && w & ADRV != 0);
-            assert!(w & IORD == 0 || w & MEMRD != 0, "{op:?} step {k}: an I/O read without the memory read");
-            assert!(w & IOWR == 0 || w & WE != 0, "{op:?} step {k}: an I/O write without the memory write");
-            if w & ALD != 0 && w & ADRV != 0 {
-                assert!(w & (IORD | IOWR) == 0, "{op:?} step {k}: a load into A must not strobe a device");
-            }
-            if addr_changes {
-                let other = (PCDRV | ADRV) & !(w & (PCDRV | ADRV));
-                assert!(n & other == 0 && n & (MEMRD | WE) == 0, "{op:?} step {k}: the address changes at this edge: no strobe in the next word");
-            } else if (w & MEMRD != 0 && w & (ALD | BLD | IRLD) != 0) || w & WE != 0 {
-                let drivers = PCDRV | ADRV | MEMRD | ALUOE | IORD;
+            // The one bus rule: a register that drives the address bus is
+            // never loaded at an edge that ends a strobe.
+            let strobed = w & (MEMRD | WE) != 0;
+            assert!(!(strobed && w & ALD != 0 && w & ADRV != 0), "{op:?} step {k}: A loaded while it drives the address under a strobe");
+            assert!(!(strobed && w & PCLD != 0 && w & PCDRV != 0), "{op:?} step {k}: the PC loaded while it drives the address under a strobe");
+            if (w & MEMRD != 0 && w & (BLD | IRLD | TLD) != 0) || w & WE != 0 {
+                let drivers = PCDRV | ADRV | MEMRD | ALUOE | TDRV;
                 assert_eq!(n & drivers, w & drivers, "{op:?} step {k}: address or data not held after a load or a write");
             }
         }
@@ -533,6 +527,19 @@ fn a_specs() -> Vec<GalSpec> {
         .collect()
 }
 
+/// The T latch, two chips: loads from D on TLD, drives D on TDRV.  Its
+/// register nets are T0..T15, merged with D0..D15 in the netlist (the
+/// pin is on the data bus); the equations load from the D pin and hold
+/// from the register.
+fn t_specs() -> Vec<GalSpec> {
+    (0..2)
+        .map(|half| {
+            let eqs = (8 * half..8 * half + 8).map(|i| latch(&n("T", i), &n("D", i), "TLD").with_oe(vec![l("TDRV")])).collect();
+            GalSpec { name: format!("t{half}"), clk: Some("CLK".into()), ar: None, eqs }
+        })
+        .collect()
+}
+
 /// The B latch: `b0` bits 0..7 plus the reset synchroniser, `b1` bits
 /// 8..15.
 fn b_specs() -> Vec<GalSpec> {
@@ -551,7 +558,7 @@ fn b_specs() -> Vec<GalSpec> {
 /// The pipeline register: `mir0` holds M0..M7, `mir1` M8..M15.  The
 /// pins the memories want are active low.
 fn mir_specs() -> Vec<GalSpec> {
-    let names = ["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "IORD_n", "IOWR_n", "AUX0", "AUX1"];
+    let names = ["PCDRV", "MEMRD_n", "ALUOE", "WE_n", "ALD", "BLD", "PCLD", "PCINC", "IRLD", "F0", "F1", "ADRV", "TLD", "TDRV", "AUX0", "AUX1"];
     let eq = |i: usize| {
         let e = with_reset(Eq::sop(names[i], Mode::Reg, vec![vec![l(&n("M", i))]]));
         if names[i].ends_with("_n") { e.active_low() } else { e }
@@ -701,6 +708,7 @@ pub fn gal_specs() -> Vec<GalSpec> {
     v.extend(pc_specs());
     v.extend(a_specs());
     v.extend(b_specs());
+    v.extend(t_specs());
     v.extend(alu_specs());
     for s in &v {
         if let Err(e) = s.fits() {
@@ -728,6 +736,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "pc" => ("PC", "Datapath"),
         "a" => ("A", "Datapath"),
         "b" => ("B", "Datapath"),
+        "t" => ("T", "Datapath"),
         "alu" => ("ALU", "Datapath"),
         "rom" => ("Program flash", "Memory"),
         "ram" => ("SRAM", "Memory"),
@@ -748,7 +757,7 @@ pub fn layout() -> Vec<Column> {
     let col = |title: &str, width: u32, blocks: &[&str]| Column { title: title.into(), width, blocks: blocks.iter().map(|b| b.to_string()).collect(), reg: false };
     vec![
         col("Control", 300, &["IR + step counter", "Microcode ROM", "Pipeline register"]),
-        col("Datapath", 330, &["PC", "A", "B", "ALU"]),
+        col("Datapath", 330, &["PC", "A", "B", "T", "ALU"]),
         col("Memory", 240, &["Program flash", "SRAM"]),
         col("I/O", 300, &["UART", "Serial port", "Clock", "Reset"]),
     ]
@@ -761,6 +770,12 @@ pub fn build_netlist() -> Netlist {
         let (id, pins) = galpack::instantiate(&mut nl, &spec);
         let model = Model::Gal { clk: spec.clk.clone(), ar: spec.ar.clone(), eqs: spec.eqs.clone(), pins };
         nl.set_meta(id, meta("ATF22V10C-7PX", "DIP-24", &spec.name, None, model));
+    }
+    // T's register pins sit on the data bus.
+    for i in 0..16 {
+        let t = nl.net(&n("T", i));
+        let d = nl.net(&n("D", i));
+        nl.merge(d, t);
     }
     let clk2x = nl.net("CLK2X");
     nl.set_net_role(clk2x, "clk");
@@ -894,7 +909,7 @@ pub fn build_netlist() -> Netlist {
             let net = nl.net(&n("ADDR", i as usize + 1));
             nl.connect(net, c, uart_pin_of(UartPin::A(i)));
         }
-        for (net, p) in [("ADDR14", UartPin::Cs0), ("ADDR15", UartPin::Cs1), ("IORD_n", UartPin::Rd1N), ("IOWR_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout), ("CLK2X", UartPin::Xin)] {
+        for (net, p) in [("ADDR14", UartPin::Cs0), ("ADDR15", UartPin::Cs1), ("MEMRD_n", UartPin::Rd1N), ("WE_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout), ("CLK2X", UartPin::Xin)] {
             let net = nl.net(net);
             nl.connect(net, c, uart_pin_of(p));
         }
