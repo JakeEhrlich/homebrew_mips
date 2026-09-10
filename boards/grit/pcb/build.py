@@ -301,12 +301,14 @@ W, H = 300.0, 175.0   # one chip row between the two buses needs the width
 HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 
 # Placement A: the data bus band at the top, two chip rows between the
-# buses, the address bus band at the bottom.  The low byte's chips sit
-# in the upper row over the high byte's in the lower row (rom0 over rom1,
-# a0 over a1, ...).  The buses are literal top-layer wires; the router
-# connects the pins to them, so the columns are spaced to leave it room:
-# GALs at 15 mm, memories at 22 mm.
-W, H = 220.0, 200.0
+# buses, the address bus band at the bottom, every chip of the machine
+# between the bands in stacks: the low byte's chip over the high byte's
+# (rom0 over rom1, a0 over a1, ...), uc0 over uc1, mir0 over mir1, the
+# UART over its transceiver.  The buses are literal top-layer wires.
+# Each stack's far connections (the upper chip's address pins, the lower
+# chip's data pins) run as a vertical mini-bus in the gap beside the
+# stack; the router only gets the control nets.
+W, H = 290.0, 165.0
 HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 ROW_A, ROW_B = 110.0, 57.0
 BUS_X0, BUS_X1 = 14.0, W - 4.0
@@ -315,8 +317,9 @@ BUS_WIDTH = 0.3
 STUB_WIDTH = 0.25
 VIA_DRILL, VIA_DIA = 0.2, 0.5
 STUB_PITCH = 0.55
-GAL_DX, MEM_DX = 18.0, 26.0   # room beside every column for the router
-NO_STUBS = "--stubs" not in sys.argv   # DIP pins are left to the router unless --stubs
+MINI_X0 = 3.0      # first mini-bus line this far from the pad column
+GAL_DX, MEM_DX = 18.0, 30.0
+NO_STUBS = "--stubs" not in sys.argv
 
 
 def bus_y(name, i):
@@ -325,9 +328,21 @@ def bus_y(name, i):
 
 PLACE = {}
 STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
-X_SEQ, X_ROM, X_RAM, X_UART = 22.0, 44.0, 70.0, 96.0
-X_GAL0 = 114.0
-# stage 1: memories and UART; the DIPs rotated so their data pins face the data bus
+X_SEQ, X_UC, X_MIR, X_ROM, X_RAM = 22.0, 48.0, 72.0, 96.0, 126.0
+X_GAL0 = 150.0
+X_UART = X_GAL0 + 6 * GAL_DX + 8.0
+COLUMN_XS = [X_SEQ, X_UC, X_MIR, X_ROM, X_RAM] + [X_GAL0 + k * GAL_DX for k in range(6)] + [X_UART]
+
+
+def tap_columns():
+    """x of the bus taps: the centre of every gap between chip columns,
+    clear of the stub slots and mini-buses beside the columns; not beside
+    the UART, whose escapes fill both gaps around it."""
+    xs = sorted(COLUMN_XS)
+    return [(a + b) / 2 for a, b in zip(xs, xs[1:]) if X_UART not in (a, b)]
+
+
+# stage 1: memories and UART; the DIP memories rotated so their data pins face the data bus
 PLACE.update({"rom0": (X_ROM, ROW_A, 180), "rom1": (X_ROM, ROW_B, 180), "ram0": (X_RAM, ROW_A, 180), "ram1": (X_RAM, ROW_B, 180), "uart0": (X_UART, ROW_A, 0)})
 STAGE_CHIPS[1] = ["rom0", "rom1", "ram0", "ram1", "uart0"]
 # stage 2: the address drivers, a0 over a1
@@ -341,13 +356,11 @@ STAGE_CHIPS[3] = ["pc0", "pc1", "b0", "b1", "t0", "t1"]
 # stage 4: the ALU, alu0 over alu1, alu2 over alu3
 PLACE.update({"alu0": (X_GAL0 + 4 * GAL_DX, ROW_A, 0), "alu1": (X_GAL0 + 4 * GAL_DX, ROW_B, 0), "alu2": (X_GAL0 + 5 * GAL_DX, ROW_A, 0), "alu3": (X_GAL0 + 5 * GAL_DX, ROW_B, 0)})
 STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
-# stage 5: the sequencer at the left end of the buses (seq0 reads D11..D15,
-# seq1 has no bus pins); the microcode ROM and pipeline register above the
-# data bus, next to them
-PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (40.0, 174.0, 0), "uc1": (62.0, 174.0, 0), "mir0": (82.0, 174.0, 0), "mir1": (97.0, 174.0, 0)})
+# stage 5: sequencer, microcode ROM, pipeline register, stacked at the left end
+PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (X_UC, ROW_A, 0), "uc1": (X_UC, ROW_B, 0), "mir0": (X_MIR, ROW_A, 0), "mir1": (X_MIR, ROW_B, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
-# stage 6: clock and reset in the left strip, the transceiver under the UART in the lower row
-PLACE.update({"osc0": (8.0, 160.0, 90), "umux0": (8.0, 152.0, 0), "uinv0": (8.0, 145.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
+# stage 6: clock and reset in the left strip, the transceiver under the UART
+PLACE.update({"osc0": (8.0, 120.0, 90), "umux0": (8.0, 112.0, 0), "uinv0": (8.0, 105.0, 0), "rst0": (8.0, 90.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -557,6 +570,46 @@ def draw_stubs(chips):
             run("trace", "add", "--layer", layer, "--net", it["net"], "--width", STUB_WIDTH, *pts, quiet=True)
             if it["via"]:
                 run("via", "add", f"{xt:.3f},{it['end']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
+
+
+def draw_minibuses(chips):
+    """The far connections of every DIP: the upper chip's address pins run
+    down, the lower chip's data pins up, as vertical lines in the gap on
+    the side of the pin's own column.  Lines going down are on the bottom
+    layer and end in a via on their address line; lines going up are on
+    the top layer to the data band's edge, then a via and a short
+    bottom-layer run to the via on their data line.  Within one side the
+    pin nearest its band takes the innermost line, so no jog crosses
+    another line.  The two directions never share a layer in a gap."""
+    for c in chips:
+        if not c["package"].startswith("DIP"):
+            continue
+        pads = dip_pads(c)
+        upper = PLACE[c["name"]][1] > (ROW_A + ROW_B) / 2
+        sides = {}
+        for p in c["pins"]:
+            net = p.get("net") or ""
+            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            if bus is None or (bus == "D") == upper:
+                continue   # near pins have stubs
+            x, y, col = pads[p["pin"]]
+            sides.setdefault(col, []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, int(net[len(bus):])), "up": bus == "D"})
+        for col, items in sides.items():
+            # the pin nearest its band by pad position takes the innermost
+            # line; every line spans from its pin to the band, so only that
+            # order keeps the jogs off the other lines
+            items.sort(key=lambda it: it["y"] if not it["up"] else -it["y"])
+            for k, it in enumerate(items):
+                xt = it["x"] + col * (MINI_X0 + STUB_PITCH * k)
+                if not it["up"]:
+                    run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
+                else:
+                    y_edge = DBUS_Y0 - 1.5 - (1.0 if k % 2 else 0.0)   # two rows of edge vias: 0.55 mm apart in x would touch
+                    run("trace", "add", "--layer", "F.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{y_edge}", quiet=True)
+                    run("via", "add", f"{xt:.3f},{y_edge}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                    run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{xt:.3f},{y_edge}", f"{xt:.3f},{it['yb']}", quiet=True)
+                run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                 VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
 
 
@@ -790,11 +843,16 @@ def draw_buses(nets):
                 continue
             y = bus_y(name, i)
             # a vertex at every via, so the router's connectivity sees the junctions
-            # the probe holes at the left ends alternate between two columns
-            # so their rings clear each other at the 1.0 mm line pitch
+            # taps: a plated hole on the line every TAP_DX, adjacent lines
+            # staggered by half that so the rings clear each other.  The
+            # router only connects pins to pins, never to a wire, so the
+            # taps are what let it reach the bus; they are probe points too.
             x_hole = BUS_X0 - (1.6 if i % 2 else 0.0)
-            xs = [x_hole] + sorted(x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1) + [BUS_X1]
+            taps = [x_hole]   # only the probe hole at the left end; the gaps hold the mini-buses
+            xs = sorted(set(taps + [x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1])) + [BUS_X1]
             run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", BUS_WIDTH, *[f"{x},{y}" for x in xs], quiet=True)
+            for x in taps[1:]:
+                run("hole", "add", f"{x},{y}", "--drill", 0.6, "--diameter", 1.1, "--net", net, quiet=True)
             # a probe point at the left end of every line: a plated hole on
             # the net, which is also the pin that tells freerouting the wire
             # belongs to something (a protected wire attached to no pin makes
@@ -966,6 +1024,7 @@ def main():
     if "--no-stubs" not in sys.argv:
         if not NO_STUBS:
             draw_stubs(chips)
+            draw_minibuses(chips)
             draw_header_stubs(chips)
         draw_smd_stubs(chips, nets)
         draw_power_vias([c for c in chips if not c["package"].startswith(("DIP", "LQFP"))], pinmaps, comps, extras)
@@ -977,6 +1036,12 @@ def main():
         run("pour", "new", "gnd", "--layer", "B.Cu", "--net", "GND", "--follow-outline", quiet=True)
         run("pour", "new", "vcc", "--layer", "F.Cu", "--net", "VCC", "--follow-outline", quiet=True)
     run("status", quiet=True)
+    pre = run("check", check=False, quiet=True).stdout
+    errs = [l for l in pre.splitlines() if l.startswith("error") and "nets-routed" not in l]
+    if errs:
+        print("hand wiring / placement errors before routing:")
+        print("\n".join(errs[:12]))
+        sys.exit(1)
     if ROUTE:
         # freerouting writes build/grit.ses; import it with the redundancy pass
         # skipped (that pass takes hours on a board of this size)
