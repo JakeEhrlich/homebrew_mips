@@ -34,7 +34,7 @@ fn run_one(seed: u64, opt: Build) {
         assert_eq!(g.reg(r), Some(iss.reg(r)), "seed {seed}: r{r}\n{src}");
     }
     for i in 0..512 {
-        assert_eq!(g.ram_word(0x8100 + 2 * i), Some(iss.ram[0x80 + i as usize]), "seed {seed}: data word {i}");
+        assert_eq!(g.ram_word(0x8100 + i), Some(iss.ram[0x100 + i as usize]), "seed {seed}: data word {i}");
     }
     eprintln!("seed {seed}: {} instructions, {} clocks", iss.retired, g.clocks);
 }

@@ -163,22 +163,22 @@ fn not_via_nor() {
 #[test]
 fn uart_hello() {
     let src = "
-        LDA 0xC006      ; LCR
+        LDA 0xC003      ; LCR
         LDB 0x80        ; DLAB
         STB (A)
         LDA 0xC000      ; DLL
         LDB 1
         STB (A)
-        LDA 0xC002      ; DLM
+        LDA 0xC001      ; DLM
         LDB 0
         STB (A)
-        LDA 0xC006      ; LCR: 8N1
+        LDA 0xC003      ; LCR: 8N1
         LDB 0x03
         STB (A)
-        LDA 0xC004      ; FCR: FIFOs on
+        LDA 0xC002      ; FCR: FIFOs on
         LDB 0x07
         STB (A)
-        LDA 0xC008      ; MCR: DTR RTS auto-flow
+        LDA 0xC004      ; MCR: DTR RTS auto-flow
         LDB 0x22
         STB (A)
         LDB 0x68        ; 'h'
@@ -189,7 +189,7 @@ fn uart_hello() {
     back2:
         ; wait for a received character, store it in r1
     rxwait:
-        LDA 0xC00A      ; LSR
+        LDA 0xC005      ; LSR
         LDB (A)
         LDA 0x00FF
         ANDB
@@ -209,7 +209,7 @@ fn uart_hello() {
         LDA &r2
         STB (A)         ; r2 = the character
     txwait:
-        LDA 0xC00A
+        LDA 0xC005
         LDB (A)
         LDA 0x00FF
         ANDB
@@ -226,7 +226,7 @@ fn uart_hello() {
         LDA &r2
         STB (A)
     txwait2:
-        LDA 0xC00A
+        LDA 0xC005
         LDB (A)
         LDA 0x00FF
         ANDB
@@ -292,5 +292,5 @@ fn board_file() {
     assert!(g.warnings().is_empty());
     assert_eq!(g.reg(1), Some(7));
     let gals = cb.chips.iter().filter(|c| matches!(c.model, mips32::board::Model::Gal { .. })).count();
-    assert_eq!(gals, 15);
+    assert_eq!(gals, 16);
 }

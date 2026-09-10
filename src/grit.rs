@@ -334,13 +334,13 @@ pub fn assemble(src: &str) -> Result<Program, String> {
             ("HALT", None) => Line { op: Some(Op::Halt), imm: None, data: None },
             _ => return Err(format!("line {}: cannot parse {text:?}", ln + 1)),
         };
-        pc += 2 * (1 + line.imm.is_some() as u16);
+        pc += 1 + line.imm.is_some() as u16;
         lines.push(line);
     }
     let value = |s: &str| -> Result<u16, String> {
         if let Some(r) = s.strip_prefix("&r") {
             let n: u16 = r.parse().map_err(|_| format!("bad register {s}"))?;
-            return Ok(0x8000 + 2 * n);
+            return Ok(0x8000 + n);
         }
         if let Some(h) = s.strip_prefix("0x") {
             return u16::from_str_radix(h, 16).map_err(|_| format!("bad number {s}"));
@@ -372,7 +372,7 @@ pub fn assemble(src: &str) -> Result<Program, String> {
 // ---------------------------------------------------------------------------
 // The reference interpreter
 
-pub const FLASH_WORDS: usize = 1 << 14;
+pub const FLASH_WORDS: usize = 1 << 15;
 pub const RAM_WORDS: usize = 1 << 13;
 
 /// The programmer's model: A, B, PC, the memories, the UART's registers.
@@ -395,12 +395,12 @@ impl Iss {
     }
     pub fn read(&mut self, addr: u16) -> u16 {
         match addr >> 14 {
-            0 | 1 => self.flash[(addr as usize >> 1) & (FLASH_WORDS - 1)],
-            2 => self.ram[(addr as usize >> 1) & (RAM_WORDS - 1)],
+            0 | 1 => self.flash[addr as usize & (FLASH_WORDS - 1)],
+            2 => self.ram[addr as usize & (RAM_WORDS - 1)],
             _ => {
                 // The reference has no line time: whatever the far end
                 // queued has arrived by the time the program looks.
-                let v = self.uart.read((addr >> 1) as u8 & 7) as u16;
+                let v = self.uart.read(addr as u8 & 7) as u16;
                 while self.uart.rx_deliver() {}
                 v
             }
@@ -408,9 +408,9 @@ impl Iss {
     }
     pub fn write(&mut self, addr: u16, v: u16) {
         match addr >> 14 {
-            2 => self.ram[(addr as usize >> 1) & (RAM_WORDS - 1)] = v,
+            2 => self.ram[addr as usize & (RAM_WORDS - 1)] = v,
             3 => {
-                self.uart.write((addr >> 1) as u8 & 7, v as u8);
+                self.uart.write(addr as u8 & 7, v as u8);
                 // The reference has no line time: what is written is sent.
                 while self.uart.tx_start() {
                     self.uart.tx_done();
@@ -429,8 +429,8 @@ impl Iss {
         }
         let w = self.read(self.pc);
         let op = Op::from_code(opcode(w)).ok_or_else(|| format!("pc {:#06x}: bad opcode {:#06x}", self.pc, w))?;
-        let imm = if op.has_imm() { self.read(self.pc.wrapping_add(2)) } else { 0 };
-        let next = self.pc.wrapping_add(if op.has_imm() { 4 } else { 2 });
+        let imm = if op.has_imm() { self.read(self.pc.wrapping_add(1)) } else { 0 };
+        let next = self.pc.wrapping_add(if op.has_imm() { 2 } else { 1 });
         let (a, b) = (self.a, self.b);
         self.pc = next;
         match op {
@@ -454,7 +454,7 @@ impl Iss {
                 }
             }
             Op::Halt => {
-                self.pc = self.pc.wrapping_sub(2);
+                self.pc = self.pc.wrapping_sub(1);
                 self.halted = true;
             }
         }
@@ -488,10 +488,11 @@ fn strs(v: &[String]) -> Vec<&str> {
     v.iter().map(String::as_str).collect()
 }
 
-/// Net of A latch bit `i`: bit 0 goes to the ALU only, the rest are the
-/// address bus.
+/// Net of A latch bit `i`: the address bus.  Addr is a 16-bit word
+/// address: everything on the bus is a 16-bit word (the UART's registers
+/// are the low byte of consecutive words).
 fn a_net(i: usize) -> String {
-    if i == 0 { "A0".into() } else { n("ADDR", i) }
+    n("ADDR", i)
 }
 
 /// `Q := LD & D + !LD & Q`.
@@ -511,17 +512,12 @@ fn with_reset(mut e: Eq) -> Eq {
     e
 }
 
-/// The A latch, two chips: `a0` bits 0..7, `a1` bits 8..15.  Bits 1..15
-/// drive Addr while PCDRV is low.
+/// The A latch, two chips: `a0` bits 0..7, `a1` bits 8..15, driving Addr
+/// on ADRV.
 fn a_specs() -> Vec<GalSpec> {
     (0..2)
         .map(|half| {
-            let eqs = (8 * half..8 * half + 8)
-                .map(|i| {
-                    let e = latch(&a_net(i), &n("D", i), "ALD");
-                    if i == 0 { e } else { e.with_oe(vec![l("ADRV")]) }
-                })
-                .collect();
+            let eqs = (8 * half..8 * half + 8).map(|i| latch(&a_net(i), &n("D", i), "ALD").with_oe(vec![l("ADRV")])).collect();
             GalSpec { name: format!("a{half}"), clk: Some("CLK".into()), ar: None, eqs }
         })
         .collect()
@@ -540,19 +536,14 @@ fn t_specs() -> Vec<GalSpec> {
         .collect()
 }
 
-/// The B latch: `b0` bits 0..7 plus the reset synchroniser, `b1` bits
-/// 8..15.
+/// The B latch: `b0` bits 0..7, `b1` bits 8..15.
 fn b_specs() -> Vec<GalSpec> {
-    let mut b0: Vec<Eq> = (0..8).map(|i| latch(&n("B", i), &n("D", i), "BLD")).collect();
-    b0.push(Eq::sop("RS1", Mode::Reg, vec![vec![l("RST_n")]]).active_low().sync());
-    // RESET is high at power-up (Q = 0 behind an active-low pin) and
-    // follows RS1 a clock later.
-    b0.push(Eq::sop("RESET", Mode::Reg, vec![vec![nl_("RS1")]]).active_low());
-    let b1: Vec<Eq> = (8..16).map(|i| latch(&n("B", i), &n("D", i), "BLD")).collect();
-    vec![
-        GalSpec { name: "b0".into(), clk: Some("CLK".into()), ar: None, eqs: b0 },
-        GalSpec { name: "b1".into(), clk: Some("CLK".into()), ar: None, eqs: b1 },
-    ]
+    (0..2)
+        .map(|half| {
+            let eqs = (8 * half..8 * half + 8).map(|i| latch(&n("B", i), &n("D", i), "BLD")).collect();
+            GalSpec { name: format!("b{half}"), clk: Some("CLK".into()), ar: None, eqs }
+        })
+        .collect()
 }
 
 /// The pipeline register: `mir0` holds M0..M7, `mir1` M8..M15.  The
@@ -586,11 +577,22 @@ fn seq_spec() -> GalSpec {
             Some(!irld && (q ^ lower_all_one))
         })));
     }
-    // NEL: the ALU's not-equal, latched at the end of every word in
-    // which A is on the bus (NE is only meaningful then), held otherwise.
-    // It is the microcode ROM's condition address bit.
-    eqs.push(with_reset(Eq::sop("NEL", Mode::Reg, vec![vec![l("ADRV"), l("NE")], vec![nl_("ADRV"), l("NEL")]])));
     GalSpec { name: "seq0".into(), clk: Some("CLK".into()), ar: None, eqs }
+}
+
+/// The sequencer's second chip, the flags: the reset synchroniser and
+/// the condition.  RS1 samples RST_n on CLK (a synchroniser stage);
+/// RESET is the second stage, high at power-up (a zero register behind
+/// an active-low pin).  NEL is the ALU's not-equal, latched at the end
+/// of every word in which A is on the bus (NE3 is only meaningful then),
+/// held otherwise: the microcode ROM's condition address bit.
+fn flags_spec() -> GalSpec {
+    let eqs = vec![
+        Eq::sop("RS1", Mode::Reg, vec![vec![l("RST_n")]]).active_low().sync(),
+        Eq::sop("RESET", Mode::Reg, vec![vec![nl_("RS1")]]).active_low(),
+        with_reset(Eq::sop("NEL", Mode::Reg, vec![vec![l("ADRV"), l("NE3")], vec![nl_("ADRV"), l("NEL")]])),
+    ];
+    GalSpec { name: "seq1".into(), clk: Some("CLK".into()), ar: None, eqs }
 }
 
 /// The PC: `pc0` bits 1..8 and the carry into bit 9, `pc1` bits 9..15.
@@ -615,14 +617,14 @@ fn pc_specs() -> Vec<GalSpec> {
         }))
         .with_oe(vec![l("PCDRV")])
     };
-    let low: Vec<String> = (1..=8).map(|i| n("ADDR", i)).collect();
-    let mut pc0: Vec<Eq> = (1..=8).map(|k| bit(k, &low[..k - 1], "PCINC")).collect();
-    // CO: the count carries into bit 9.
+    let low: Vec<String> = (0..8).map(|i| n("ADDR", i)).collect();
+    let mut pc0: Vec<Eq> = (0..8).map(|k| bit(k, &low[..k], "PCINC")).collect();
+    // CO: the count carries into bit 8.
     let mut co_ins: Vec<String> = vec!["PCINC".into()];
     co_ins.extend(low.iter().cloned());
     pc0.push(Eq::table_pos("CO", Mode::Comb, &strs(&co_ins), |m| Some(m == 0x1FF)));
-    let high: Vec<String> = (9..=15).map(|i| n("ADDR", i)).collect();
-    let pc1: Vec<Eq> = (9..=15).map(|k| bit(k, &high[..k - 9], "CO")).collect();
+    let high: Vec<String> = (8..16).map(|i| n("ADDR", i)).collect();
+    let pc1: Vec<Eq> = (8..16).map(|k| bit(k, &high[..k - 8], "CO")).collect();
     vec![
         GalSpec { name: "pc0".into(), clk: Some("CLK".into()), ar: None, eqs: pc0 },
         GalSpec { name: "pc1".into(), clk: Some("CLK".into()), ar: None, eqs: pc1 },
@@ -631,7 +633,7 @@ fn pc_specs() -> Vec<GalSpec> {
 
 /// The ALU: four 4-bit slices with ripple carry inside and between, the
 /// function folded into every sum term, and a not-equal chain beside
-/// the carry chain.  Slice 0 also divides CLK2X into CLK.
+/// the carry chain (NE0..NE3, cumulative; NE3 is "A differs from B").
 fn alu_specs() -> Vec<GalSpec> {
     (0..4)
         .map(|s| {
@@ -681,7 +683,7 @@ fn alu_specs() -> Vec<GalSpec> {
             ne_ins.extend(a.iter().cloned());
             ne_ins.extend(b.iter().cloned());
             let has_nein = nein.is_some();
-            let ne_out = if s == 3 { "NE".to_string() } else { n("NE", s) };
+            let ne_out = n("NE", s);
             eqs.push(Eq::table(&ne_out, Mode::Comb, &strs(&ne_ins), move |m| {
                 let off = has_nein as u32;
                 let prev = has_nein && m & 1 == 1;
@@ -689,13 +691,7 @@ fn alu_specs() -> Vec<GalSpec> {
                 let bv = m >> (off + 4) & 0xF;
                 Some(prev || av != bv)
             }));
-            let clk = if s == 0 {
-                eqs.push(Eq::sop("CLK", Mode::Reg, vec![vec![nl_("CLK")]]));
-                Some("CLK2X".to_string())
-            } else {
-                None
-            };
-            GalSpec { name: format!("alu{s}"), clk, ar: None, eqs }
+            GalSpec { name: format!("alu{s}"), clk: None, ar: None, eqs }
         })
         .collect()
 }
@@ -704,6 +700,7 @@ fn alu_specs() -> Vec<GalSpec> {
 pub fn gal_specs() -> Vec<GalSpec> {
     let mut v = Vec::new();
     v.push(seq_spec());
+    v.push(flags_spec());
     v.extend(mir_specs());
     v.extend(pc_specs());
     v.extend(a_specs());
@@ -721,16 +718,18 @@ pub fn gal_specs() -> Vec<GalSpec> {
 // ---------------------------------------------------------------------------
 // The netlist and board file
 
-pub const CLK2X_HZ: f64 = 9_216_000.0;
-/// One CLK2X period in ps.
-pub const PERIOD2X: Time = 108_507;
+/// The oscillator: the machine clock, straight from the can.
+pub const OSC_HZ: f64 = 4_000_000.0;
 /// One CLK period in ps.
-pub const PERIOD: Time = 2 * PERIOD2X;
+pub const PERIOD: Time = 250_000;
+/// The UART's own crystal: divisor 1 is 115200 baud.  Its clock has
+/// nothing to do with the bus; the 16550's bus side is strobe-driven.
+pub const UART_XIN_HZ: f64 = 1_843_200.0;
 
 fn block_of(name: &str) -> (&'static str, &'static str) {
     let prefix: String = name.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
     match prefix.as_str() {
-        "seq" => ("IR + step counter", "Control"),
+        "seq" => ("Sequencer", "Control"),
         "uc" => ("Microcode ROM", "Control"),
         "mir" => ("Pipeline register", "Control"),
         "pc" => ("PC", "Datapath"),
@@ -742,6 +741,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "ram" => ("SRAM", "Memory"),
         "uart" => ("UART", "I/O"),
         "xcvr" | "c" | "j" => ("Serial port", "I/O"),
+        "x" | "xc" => ("UART", "I/O"),
         "osc" => ("Clock", "I/O"),
         "rst" | "sw" => ("Reset", "I/O"),
         _ => ("?", "?"),
@@ -756,7 +756,7 @@ fn meta(part: &str, package: &str, name: &str, role: Option<String>, model: Mode
 pub fn layout() -> Vec<Column> {
     let col = |title: &str, width: u32, blocks: &[&str]| Column { title: title.into(), width, blocks: blocks.iter().map(|b| b.to_string()).collect(), reg: false };
     vec![
-        col("Control", 300, &["IR + step counter", "Microcode ROM", "Pipeline register"]),
+        col("Control", 300, &["Sequencer", "Microcode ROM", "Pipeline register"]),
         col("Datapath", 330, &["PC", "A", "B", "T", "ALU"]),
         col("Memory", 240, &["Program flash", "SRAM"]),
         col("I/O", 300, &["UART", "Serial port", "Clock", "Reset"]),
@@ -777,8 +777,8 @@ pub fn build_netlist() -> Netlist {
         let d = nl.net(&n("D", i));
         nl.merge(d, t);
     }
-    let clk2x = nl.net("CLK2X");
-    nl.set_net_role(clk2x, "clk");
+    let clk = nl.net("CLK");
+    nl.set_net_role(clk, "clk");
     let reset = nl.net("RESET");
     nl.set_net_role(reset, "reset");
     let gnd = nl.net("GND");
@@ -786,12 +786,13 @@ pub fn build_netlist() -> Netlist {
     nl.tie(gnd, Level::L);
     nl.tie(vcc, Level::H);
 
-    // The oscillator (an SMD 4-pin module: 1 EN, 2 GND, 3 OUT, 4 VCC).
+    // The oscillator (an SMD 4-pin module: 1 EN, 2 GND, 3 OUT, 4 VCC) is
+    // the machine clock.
     let osc = nl.add_chip("osc0", Passive::new(vec![(1, "EN".into()), (2, "GND".into()), (3, "OUT".into()), (4, "VCC".into())]));
-    nl.set_meta(osc, meta("SG-8018CA 9.216MHz", "3225", "osc0", None, Model::Passive));
+    nl.set_meta(osc, meta("SG-8018CA 4.000MHz", "3225", "osc0", None, Model::Passive));
     nl.connect(vcc, osc, 1);
     nl.connect(gnd, osc, 2);
-    nl.connect(clk2x, osc, 3);
+    nl.connect(clk, osc, 3);
     nl.connect(vcc, osc, 4);
 
     // Reset supervisor; MR# is the button (pulled up in the part).
@@ -806,16 +807,15 @@ pub fn build_netlist() -> Netlist {
     nl.connect(gnd, sup, 1);
     nl.connect(vcc, sup, 4);
 
-    // Program flash: two lanes, A0..A13 from Addr1..Addr14, bank jumpers
-    // on A16..A18, CE# from Addr15, OE# from MEMRD_n.
+    // Program flash: two lanes, A0..A14 from Addr0..Addr14, bank jumpers
+    // on A15..A18, CE# from Addr15, OE# from MEMRD_n.
     for lane in 0..2 {
         let c = nl.add_chip(&format!("rom{lane}"), Rom::sst39sf040_70());
         nl.set_meta(c, meta("SST39SF040-70-4C-PHE", "DIP-32", &format!("rom{lane}"), Some(format!("rom:{lane}")), Model::Rom { tacc_ns: 70, toe_ns: 35, tdf_ns: 25 }));
         for j in 0..19u32 {
             let net = match j {
-                0..=13 => nl.net(&n("ADDR", j as usize + 1)),
-                16..=18 => nl.net(&n("PBANK", j as usize - 16)),
-                _ => gnd,
+                0..=14 => nl.net(&n("ADDR", j as usize)),
+                _ => nl.net(&n("PBANK", j as usize - 15)),
             };
             nl.connect(net, c, rom_pin_of(RomPin::A(j as u8)));
         }
@@ -838,9 +838,11 @@ pub fn build_netlist() -> Netlist {
         let net = nl.net(name);
         nl.pull(net, Level::L);
     }
-    for i in 0..3 {
+    for i in 0..4 {
         let net = nl.net(&n("PBANK", i));
         nl.tie(net, Level::L);
+    }
+    for i in 0..3 {
         let net = nl.net(&n("UBANK", i));
         nl.tie(net, Level::L);
     }
@@ -870,13 +872,13 @@ pub fn build_netlist() -> Netlist {
         nl.connect(gnd, c, rom_pin_of(RomPin::Gnd));
         nl.connect(vcc, c, rom_pin_of(RomPin::Vcc));
     }
-    // SRAM: two lanes, A0..A12 from Addr1..Addr13, CE2 = Addr15,
+    // SRAM: two lanes, A0..A12 from Addr0..Addr12, CE2 = Addr15,
     // CE1# = Addr14, OE# = MEMRD_n, WE# = WE_n.
     for lane in 0..2 {
         let c = nl.add_chip(&format!("ram{lane}"), As7c164a::with_timing(as7c164a::Timing::grade_15()));
         nl.set_meta(c, meta("AS7C164A-15PCN", "DIP-28", &format!("ram{lane}"), Some(format!("ram:{lane}")), Model::Sram8k { timing: "AS7C164A-15".into() }));
         for a in 0..13 {
-            let net = nl.net(&n("ADDR", a + 1));
+            let net = nl.net(&n("ADDR", a));
             nl.connect(net, c, sram8k_pin_of(Sram8kPin::A(a as u8)));
         }
         for b in 0..8 {
@@ -894,24 +896,38 @@ pub fn build_netlist() -> Netlist {
         nl.connect(gnd, c, sram8k_pin_of(Sram8kPin::Vss));
         nl.connect(vcc, c, sram8k_pin_of(Sram8kPin::Vcc));
     }
-    // UART: D0..D7, A0..A2 from Addr1..Addr3, CS0 = Addr14, CS1 = Addr15,
-    // CS2# ADS# RD2 WR2 low, RD1# = MEMRD_n, WR1# = WE_n, MR = RESET,
-    // XIN = CLK2X, BAUDOUT# -> RCLK, DTR# -> DSR# + DCD#, RI# high,
-    // RTS#/CTS# and SOUT/SIN through the transceiver.
+    // UART: D0..D7, A0..A2 from Addr0..Addr2 (register n at 0xC000 + n),
+    // CS0 = Addr14, CS1 = Addr15, CS2# ADS# RD2 WR2 low, RD1# = MEMRD_n,
+    // WR1# = WE_n, MR = RESET, its own 1.8432 MHz crystal on XIN/XOUT,
+    // BAUDOUT# -> RCLK, DTR# -> DSR# + DCD#, RI# high, RTS#/CTS# and
+    // SOUT/SIN through the transceiver.
     {
-        let c = nl.add_chip("uart0", Uart16550::new(BusTiming::tl16c550c(), CLK2X_HZ));
-        nl.set_meta(c, meta("TL16C550DPTR", "LQFP-48", "uart0", Some("uart".into()), Model::Uart { xin_hz: CLK2X_HZ }));
+        let c = nl.add_chip("uart0", Uart16550::new(BusTiming::tl16c550c(), UART_XIN_HZ));
+        nl.set_meta(c, meta("TL16C550DPTR", "LQFP-48", "uart0", Some("uart".into()), Model::Uart { xin_hz: UART_XIN_HZ }));
         for i in 0..8u8 {
             let net = nl.net(&n("D", i as usize));
             nl.connect(net, c, uart_pin_of(UartPin::D(i)));
         }
         for i in 0..3u8 {
-            let net = nl.net(&n("ADDR", i as usize + 1));
+            let net = nl.net(&n("ADDR", i as usize));
             nl.connect(net, c, uart_pin_of(UartPin::A(i)));
         }
-        for (net, p) in [("ADDR14", UartPin::Cs0), ("ADDR15", UartPin::Cs1), ("MEMRD_n", UartPin::Rd1N), ("WE_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout), ("CLK2X", UartPin::Xin)] {
+        for (net, p) in [("ADDR14", UartPin::Cs0), ("ADDR15", UartPin::Cs1), ("MEMRD_n", UartPin::Rd1N), ("WE_n", UartPin::Wr1N), ("RESET", UartPin::Mr), ("SIN", UartPin::Sin), ("SOUT", UartPin::Sout), ("XIN", UartPin::Xin), ("XOUT", UartPin::Xout)] {
             let net = nl.net(net);
             nl.connect(net, c, uart_pin_of(p));
+        }
+        // Crystal and load capacitors.
+        let xin = nl.net("XIN");
+        let xout = nl.net("XOUT");
+        let x = nl.add_chip("x1", Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+        nl.set_meta(x, meta("X322518432MOB4SI", "3225", "x1", None, Model::Passive));
+        nl.connect(xin, x, 1);
+        nl.connect(xout, x, 2);
+        for (name, net) in [("xc1", xin), ("xc2", xout)] {
+            let cap = nl.add_chip(name, Passive::new(vec![(1, "1".into()), (2, "2".into())]));
+            nl.set_meta(cap, meta("18pF 0603 C0G", "0603", name, None, Model::Passive));
+            nl.connect(net, cap, 1);
+            nl.connect(gnd, cap, 2);
         }
         for p in [UartPin::Cs2N, UartPin::AdsN, UartPin::Rd2, UartPin::Wr2] {
             nl.connect(gnd, c, uart_pin_of(p));
@@ -983,15 +999,14 @@ pub fn build_netlist() -> Netlist {
 /// What each bus is, for the chip map.
 pub fn bus_descriptions() -> BTreeMap<String, String> {
     let d: &[(&str, &str)] = &[
-        ("ADDR", "The address bus, byte address bits 15:1 (everything is 16-bit words). The A latch drives it on ADRV, the PC on PCDRV, nobody in the word between. Addr15 and Addr14 pick the chip: 0x = flash, 10 = SRAM, 11 = UART."),
+        ("ADDR", "The address bus: a 16-bit word address (everything on the bus is a 16-bit word), which is also the A latch's value. A drives it on ADRV, the PC on PCDRV, nobody in the word between. Addr15 and Addr14 pick the chip: 0x = flash (0x0000..0x7FFF), 10 = SRAM (0x8000..0x9FFF, r0..r31 first), 11 = UART (register n at 0xC000 + n)."),
         ("D", "The data bus. One driver per clock: the memory or device that Addr selects on MEMRD, the ALU on ALUOE, or T on TDRV. Read by A, B, T, the PC and the IR at the clock edge."),
-        ("A", "Bit 0 of the A latch. Not an address line (the bus has none); it goes to the ALU only. Bits 1..15 of A are the address bus, ADDR."),
         ("B", "The B latch: the ALU's second operand and the value a store writes. Point-to-point into the ALU."),
         ("M", "The microcode ROM's data: the next microword, latched into the pipeline register at every edge."),
         ("IR", "The instruction register: the opcode, bits 15:11 of the instruction word. Address bits A5..A9 of the microcode ROM."),
         ("STEP", "The step counter: cleared by the fetch, counting every other clock. Address bits A0..A3 of the microcode ROM."),
-        ("NEL", "The condition: the ALU's not-equal, latched at the end of every word in which A is on the bus, held otherwise. Address bit A4 of the microcode ROM."),
-        ("NE", "The not-equal chain: NE0, NE1, NE2 run between the ALU slices (does any bit so far differ?) and NE, out of the top slice, is A differs from B. NE feeds the NEL latch."),
+        ("NEL", "The condition, in the sequencer's flags chip: NE3 latched at the end of every word in which A is on the bus (ADRV), held otherwise. Address bit A4 of the microcode ROM."),
+        ("NE", "The not-equal chain: NE0 out of ALU slice 0 (bits 0..3 differ), NE1 (bits 0..7), NE2 (0..11) and NE3 (all: A differs from B), each slice taking the previous one in. NE3 feeds the NEL flop in the sequencer's flags chip."),
         ("COUT", "Carry between ALU slices: COUT0 from slice 0 into slice 1, and so on."),
         ("ALU0_C1", "Carry into bit 1 of ALU slice 0: a macrocell fed back inside the chip; the pin goes nowhere."),
         ("ALU0_C2", "Carry into bit 2 of ALU slice 0 (internal)."),
@@ -1005,7 +1020,7 @@ pub fn bus_descriptions() -> BTreeMap<String, String> {
         ("ALU3_C1", "Carry into bit 13, inside ALU slice 3 (internal)."),
         ("ALU3_C2", "Carry into bit 14, inside ALU slice 3 (internal)."),
         ("ALU3_C3", "Carry into bit 15, inside ALU slice 3 (internal)."),
-        ("CO", "The PC's carry from bit 8 into bit 9."),
+        ("CO", "The PC's carry from bit 7 into bit 8."),
         ("PCDRV", "Microword bit 0: the PC drives Addr, and counts a word at the edge. Also the flash's OE# through MEMRD."),
         ("ADRV", "Microword bit 11: A drives Addr (and so the ALU sees A). Never in the word next to a PCDRV word."),
         ("MEMRD_n", "Microword bit 1, active low: the memory or device that Addr selects drives D. OE# of the flash and SRAM, RD# of the UART."),
@@ -1020,13 +1035,14 @@ pub fn bus_descriptions() -> BTreeMap<String, String> {
         ("TLD", "Microword bit 12: T copies D at the ending edge."),
         ("TDRV", "Microword bit 13: T drives D."),
         ("AUX", "Microword bits 14 and 15, spare: debug outputs."),
-        ("CLK2X", "The oscillator, 9.216 MHz: the divider's clock and the UART's XIN."),
-        ("CLK", "The machine clock, 4.608 MHz, CLK2X divided by two in ALU slice 0. Every other GAL's clock; every flop moves on its rising edge."),
+        ("CLK", "The machine clock, 4 MHz straight from the oscillator. Every GAL's clock; every flop moves on its rising edge."),
+        ("XIN", "The UART's own crystal, 1.8432 MHz: divisor 1 is 115200 baud. Nothing to do with the bus clock."),
+        ("XOUT", "The other side of the UART's crystal."),
         ("RST_n", "The MAX811L's reset output, active low: power-on and the button."),
-        ("RS", "RS1: the first stage of the reset synchroniser, RST_n sampled on CLK (a synchroniser flop). RESET is the second stage."),
-        ("RESET", "Reset synchronised to CLK, active high: a factor of every product term in the IR, step counter, pipeline register and PC; the UART's MR."),
+        ("RS", "RS1: the first stage of the reset synchroniser in the sequencer's flags chip, RST_n sampled on CLK. RESET is the second stage."),
+        ("RESET", "Reset synchronised to CLK, active high, from the sequencer's flags chip: a factor of every product term in the IR, step counter, pipeline register, PC and NEL; the UART's MR."),
         ("MR_n", "The reset button, to the MAX811L's manual-reset input (pulled up inside the part)."),
-        ("PBANK", "Program flash bank: A16..A18 of the program flash, from a 3-way jumper (tied low here)."),
+        ("PBANK", "Program flash bank: A15..A18 of the program flash, from a 4-way jumper (tied low here): 16 banks of 32 KB."),
         ("UBANK", "Microcode bank: A10..A12 of the microcode ROM, from a 3-way jumper (tied low here)."),
         ("SIN", "Serial in, from the transceiver."),
         ("SOUT", "Serial out, to the transceiver."),
@@ -1055,7 +1071,7 @@ pub fn board() -> Board {
     let nl = build_netlist();
     let mut b = nl.export(
         "grit",
-        "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART, MAX811L reset, 9.216 MHz oscillator.",
+        "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator.",
         PERIOD as f64 / NS as f64,
         BTreeMap::new(),
         layout(),
@@ -1088,7 +1104,7 @@ pub struct Build {
     /// contents (give the reference the same, `fuzz_ram`).
     pub fuzz_seed: u64,
     pub pin_delay_ns: f64,
-    /// Delay on clock pins (CLK and CLK2X) drawn from 0..this instead of
+    /// Delay on the clock pins drawn from 0..this instead of
     /// `pin_delay_ns`: the clock skew between chips, on its own knob.
     /// None: clock pins get the same draw as every other pin.
     pub clock_skew_ns: Option<f64>,
@@ -1098,7 +1114,7 @@ pub struct Build {
 
 impl Default for Build {
     fn default() -> Build {
-        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: CLK2X_HZ, uart_rx: Vec::new(), ram_image: None, fuzz_seed: 0, pin_delay_ns: 0.0, clock_skew_ns: None, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
+        Build { reset_phase_ns: 37.0, reset_clocks: 8, uart_xin_hz: UART_XIN_HZ, uart_rx: Vec::new(), ram_image: None, fuzz_seed: 0, pin_delay_ns: 0.0, clock_skew_ns: None, clock_duty: (0.5, 0.5), clock_jitter_ns: 0.0 }
     }
 }
 
@@ -1115,7 +1131,7 @@ pub struct Grit {
     clock_fuzz: Option<(crate::cpu::Lcg, (f64, f64), Time)>,
     /// When RESET (the synchronised one) fell (ps).
     pub reset_release: Time,
-    clk2x: NetId,
+    clk: NetId,
     reset: NetId,
     ir: Vec<NetId>,
     step: Vec<NetId>,
@@ -1186,20 +1202,20 @@ impl Grit {
             let mut r = crate::cpu::Lcg(opt.fuzz_seed ^ 0xde1a);
             let max = opt.pin_delay_ns;
             let skew = opt.clock_skew_ns.unwrap_or(max);
-            let clock_pins: std::collections::HashSet<(String, usize)> = board.chips.iter().flat_map(|c| c.pins.iter().filter(|p| p.net == "CLK" || p.net == "CLK2X").map(move |p| (c.name.clone(), p.pin))).collect();
+            let clock_pins: std::collections::HashSet<(String, usize)> = board.chips.iter().flat_map(|c| c.pins.iter().filter(|p| p.net == "CLK").map(move |p| (c.name.clone(), p.pin))).collect();
             sim.set_pin_delays(|chip, pin| {
                 let m = if clock_pins.contains(&(chip.to_string(), pin)) { skew } else { max };
                 Self::ns(r.unit() * m)
             });
         }
         let clock_fuzz = (opt.fuzz_seed != 0).then(|| (crate::cpu::Lcg(opt.fuzz_seed ^ 0xc10c), opt.clock_duty, Self::ns(opt.clock_jitter_ns)));
-        let clk2x = sim.net_id("CLK2X");
+        let clk = sim.net_id("CLK");
         let reset = sim.net_id("RESET");
         let ir = (0..5).map(|i| sim.net_id(&n("IR", i))).collect();
         let step = (0..4).map(|i| sim.net_id(&n("STEP", i))).collect();
-        let addr = (1..=15).map(|i| sim.net_id(&n("ADDR", i))).collect();
+        let addr = (0..16).map(|i| sim.net_id(&n("ADDR", i))).collect();
         let pcdrv = sim.net_id("PCDRV");
-        let mut g = Grit { sim, clocks: 0, clock_fuzz, reset_release: 0, clk2x, reset, ir, step, addr, pcdrv, ram };
+        let mut g = Grit { sim, clocks: 0, clock_fuzz, reset_release: 0, clk, reset, ir, step, addr, pcdrv, ram };
         g.wait_reset_release();
         g
     }
@@ -1207,44 +1223,30 @@ impl Grit {
     /// One CLK2X period: low for the first half, high for the second, so
     /// that at power-up the clock settles low before its first rising
     /// edge.
-    /// Schedule one CLK2X period's edges from now and return the period's
-    /// end, without running (for fine-grained tracing).
+    /// Schedule one clock period's edges from now and return the period's
+    /// end, without running (for fine-grained tracing).  The clock is low
+    /// for the first part of the period and high for the second, so that
+    /// at power-up it settles low before its first rising edge.
     pub fn schedule_tick(&mut self) -> Time {
         let base = self.sim.now();
         let (fall, rise) = match &mut self.clock_fuzz {
-            None => (base, base + PERIOD2X / 2),
+            None => (base, base + PERIOD / 2),
             Some((r, duty, jitter)) => {
                 let d = duty.0 + r.unit() * (duty.1 - duty.0);
                 let j1 = (r.unit() * *jitter as f64) as Time;
                 let j2 = (r.unit() * *jitter as f64) as Time;
-                (base + j1, base + (PERIOD2X as f64 * (1.0 - d)) as Time + j2)
+                (base + j1, base + (PERIOD as f64 * (1.0 - d)) as Time + j2)
             }
         };
-        self.sim.schedule(fall, self.clk2x, Level::L);
-        self.sim.schedule(rise, self.clk2x, Level::H);
-        base + PERIOD2X
+        self.sim.schedule(fall, self.clk, Level::L);
+        self.sim.schedule(rise, self.clk, Level::H);
+        base + PERIOD
     }
 
-    fn tick(&mut self) {
-        let base = self.sim.now();
-        let (fall, rise) = match &mut self.clock_fuzz {
-            None => (base, base + PERIOD2X / 2),
-            Some((r, duty, jitter)) => {
-                let d = duty.0 + r.unit() * (duty.1 - duty.0);
-                let j1 = (r.unit() * *jitter as f64) as Time;
-                let j2 = (r.unit() * *jitter as f64) as Time;
-                (base + j1, base + (PERIOD2X as f64 * (1.0 - d)) as Time + j2)
-            }
-        };
-        self.sim.schedule(fall, self.clk2x, Level::L);
-        self.sim.schedule(rise, self.clk2x, Level::H);
-        self.sim.run_until(base + PERIOD2X);
-    }
-
-    /// One CLK period (two ticks).
+    /// One CLK period.
     pub fn clock(&mut self) {
-        self.tick();
-        self.tick();
+        let end = self.schedule_tick();
+        self.sim.run_until(end);
         self.clocks += 1;
     }
 
@@ -1292,7 +1294,7 @@ impl Grit {
     }
     /// The address bus (the PC while PCDRV, else A).
     pub fn addr(&self) -> Option<u16> {
-        self.sim.read_bus(&self.addr).map(|v| (v << 1) as u16)
+        self.sim.read_bus(&self.addr).map(|v| v as u16)
     }
     pub fn pcdrv(&self) -> Level {
         self.sim.value(self.pcdrv)
@@ -1325,19 +1327,19 @@ impl Grit {
         self.gal_bus(&bits)
     }
     pub fn pc(&self) -> Option<u16> {
-        let bits: Vec<(&str, String)> = (1..16).map(|i| (if i < 9 { "pc0" } else { "pc1" }, n("ADDR", i))).collect();
-        self.gal_bus(&bits).map(|v| v << 1)
+        let bits: Vec<(&str, String)> = (0..16).map(|i| (if i < 8 { "pc0" } else { "pc1" }, n("ADDR", i))).collect();
+        self.gal_bus(&bits)
     }
 
-    /// A word of the SRAM (byte address in 0x8000..0xBFFF, or a word index).
+    /// A word of the SRAM (address in 0x8000..0x9FFF, or a word index).
     pub fn ram_word(&self, addr: u16) -> Option<u16> {
-        let i = ((addr & 0x3FFF) >> 1) as u32;
+        let i = (addr & 0x1FFF) as u32;
         let lo = self.sim.chip(self.ram[0]).downcast_ref::<As7c164a>().unwrap().peek(i)?;
         let hi = self.sim.chip(self.ram[1]).downcast_ref::<As7c164a>().unwrap().peek(i)?;
         Some(lo as u16 | (hi as u16) << 8)
     }
     pub fn reg(&self, r: usize) -> Option<u16> {
-        self.ram_word(0x8000 + 2 * r as u16)
+        self.ram_word(0x8000 + r as u16)
     }
 
     pub fn uart(&self) -> &Uart16550 {
@@ -1411,8 +1413,8 @@ pub mod soak {
         let mut labels = 0;
         let mut table: Vec<u16> = (0..8).map(|_| r.next() as u16).collect();
         // Pointers: r8 and r9 hold addresses in the data area.
-        let p8 = 0x8100 + 2 * (r.next() % 64) as u16;
-        let p9 = 0x8200 + 2 * (r.next() % 64) as u16;
+        let p8 = 0x8100 + (r.next() % 64) as u16;
+        let p9 = 0x8200 + (r.next() % 64) as u16;
         out.push_str(&format!("    LDA &r8\n    LDB {p8:#06x}\n    STB (A)\n    LDA &r9\n    LDB {p9:#06x}\n    STB (A)\n"));
         for i in 1..8 {
             let v = imm(&mut r);

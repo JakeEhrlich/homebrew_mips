@@ -37,7 +37,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 </style>
 <main>
 <h1>Grit Block Diagram</h1>
-<p class="lede">A microprogrammed machine: a small instruction set in the program flash, a microcode ROM in the other flash pair, a step counter, and a pipeline register that latches one microword per clock. 15 GALs, 25 chips, simulated on the netlist with no timing complaint from any chip. Blue is the data bus D, gold the address bus Addr, purple the microcode ROM's private wires, green point-to-point. Every control line is a pin of the pipeline register and changes only at a clock edge.</p>
+<p class="lede">A microprogrammed machine: a small instruction set in the program flash, a microcode ROM in the other flash pair, a step counter, and a pipeline register that latches one microword per clock. 16 GALs, 26 chips, simulated on the netlist with no timing complaint from any chip. Blue is the data bus D, gold the address bus Addr, purple the microcode ROM's private wires, green point-to-point. Every control line is a pin of the pipeline register and changes only at a clock edge.</p>
 
 <figure class="scroll">
 <svg viewBox="0 0 1100 860" role="img" aria-label="Grit block diagram: IR and step counter, microcode ROM and pipeline register form the control path across the top; PC, A, B, ALU, program flash, SRAM and UART hang off the data bus in the middle; the address bus runs under the memories">
@@ -50,11 +50,12 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 
 <!-- control path, top -->
 <rect x="60" y="40" width="200" height="120" rx="3" class="blk"/>
-<text x="72" y="62" class="t">IR + step counter</text><text x="250" y="62" text-anchor="end" class="s">1 GAL</text>
-<text x="72" y="82" class="m">in  D11..D15, IRLD, ADRV, NE, CLK, RESET</text>
-<text x="72" y="98" class="m">out IR0..IR4, STEP0..STEP3, NEL</text>
+<text x="72" y="62" class="t">Sequencer</text><text x="250" y="62" text-anchor="end" class="s">2 GALs</text>
+<text x="72" y="82" class="m">in  D11..D15, IRLD, ADRV, NE3, RST_n, CLK</text>
+<text x="72" y="98" class="m">out IR0..IR4, STEP0..STEP3, NEL, RESET</text>
 <text x="72" y="122" class="s">IRLD: IR := D[15:11], step := 0; else step + 1.</text>
-<text x="72" y="136" class="s">NEL := NE at the end of ADRV words, held otherwise</text>
+<text x="72" y="136" class="s">Flags chip: NEL := NE3 at the end of ADRV words,</text>
+<text x="72" y="150" class="s">held otherwise; RS1, RESET sync RST_n to CLK</text>
 <line x1="262" y1="100" x2="328" y2="100" class="ucl" stroke-width="1.5" marker-end="url(#au)"/>
 <text x="295" y="92" text-anchor="middle" class="uc s">address</text>
 
@@ -77,11 +78,11 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 
 <rect x="900" y="40" width="170" height="120" rx="3" class="blk"/>
 <text x="912" y="62" class="t">Clock and reset</text>
-<text x="912" y="82" class="m">9.216 MHz -> CLK2X</text>
-<text x="912" y="98" class="m">ALU 0 divides: CLK</text>
-<text x="912" y="114" class="m">MAX811L -> RST_n</text>
-<text x="912" y="130" class="m">B-low syncs: RESET</text>
-<text x="912" y="152" class="s">4.608 MHz, 217 ns</text>
+<text x="912" y="82" class="m">4 MHz can -> CLK</text>
+<text x="912" y="98" class="m">MAX811L -> RST_n</text>
+<text x="912" y="114" class="m">flags chip -> RESET</text>
+<text x="912" y="138" class="s">250 ns; no GAL makes a clock.</text>
+<text x="912" y="152" class="s">UART: own 1.8432 MHz crystal</text>
 
 <!-- control lines fan out: one dashed line to the register row -->
 <line x1="750" y1="162" x2="750" y2="230" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
@@ -96,15 +97,15 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="565" y="424" text-anchor="middle" class="bus t">D[15:0]  data bus: one driver per clock: MEMRD (the memory or device Addr selects), ALUOE, or TDRV</text>
 <!-- address bus -->
 <rect x="30" y="760" width="1040" height="12" rx="3" fill="var(--abus)"/>
-<text x="565" y="792" text-anchor="middle" class="ab t">Addr[15:1]: the PC on PCDRV, A on ADRV, nobody in the word between. Flash CE# = Addr15; SRAM CE2 = Addr15, CE1# = Addr14; UART CS0 = Addr14, CS1 = Addr15</text>
+<text x="565" y="792" text-anchor="middle" class="ab t">Addr[15:0], a word address: the PC on PCDRV, A on ADRV, nobody in the word between. Flash CE# = Addr15; SRAM CE2 = Addr15, CE1# = Addr14; UART CS0 = Addr14, CS1 = Addr15</text>
 
 <!-- PC -->
 <rect x="60" y="260" width="200" height="130" rx="3" class="blk"/>
 <text x="72" y="282" class="t">PC</text><text x="250" y="282" text-anchor="end" class="s">2 GALs</text>
-<text x="72" y="302" class="m">in  D1..D15, PCLD, PCINC,</text>
+<text x="72" y="302" class="m">in  D0..D15, PCLD, PCINC,</text>
 <text x="72" y="318" class="m">    PCDRV, CLK, RESET</text>
-<text x="72" y="334" class="m">out PC1..PC15 (on PCDRV)</text>
-<text x="72" y="358" class="s">PCINC: += 2 at the edge;</text>
+<text x="72" y="334" class="m">out Addr0..Addr15 (on PCDRV)</text>
+<text x="72" y="358" class="s">PCINC: += 1 at the edge;</text>
 <text x="72" y="372" class="s">PCLD: := D at the edge</text>
 <line x1="160" y1="430" x2="160" y2="392" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="167" y="415" class="bus s">load on PCLD</text>
@@ -122,10 +123,10 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="300" y="260" width="180" height="130" rx="3" class="blk"/>
 <text x="312" y="282" class="t">A = address register</text><text x="470" y="282" text-anchor="end" class="s">2 GALs</text>
 <text x="312" y="302" class="m">in  D0..D15, ALD, ADRV, CLK</text>
-<text x="312" y="318" class="m">out A0..A15</text>
-<text x="312" y="342" class="s">A := ALD ? D : A; outputs feed</text>
-<text x="312" y="356" class="s">the ALU and drive Addr while</text>
-<text x="312" y="370" class="s">ADRV is high</text>
+<text x="312" y="318" class="m">out Addr0..Addr15 (on ADRV)</text>
+<text x="312" y="342" class="s">A := ALD ? D : A; its outputs are</text>
+<text x="312" y="356" class="s">the address bus, and the ALU</text>
+<text x="312" y="370" class="s">reads its A operand from there</text>
 <line x1="390" y1="430" x2="390" y2="392" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="397" y="415" class="bus s">load on ALD</text>
 <line x1="330" y1="392" x2="330" y2="758" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
@@ -134,22 +135,21 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <!-- B -->
 <rect x="520" y="260" width="170" height="130" rx="3" class="blk"/>
 <text x="532" y="282" class="t">B</text><text x="680" y="282" text-anchor="end" class="s">2 GALs</text>
-<text x="532" y="302" class="m">in  D0..D15, BLD, CLK, RST_n</text>
-<text x="532" y="318" class="m">out B0..B15, RS1, RESET</text>
+<text x="532" y="302" class="m">in  D0..D15, BLD, CLK</text>
+<text x="532" y="318" class="m">out B0..B15</text>
 <text x="532" y="342" class="s">B := BLD ? D : B; into the ALU</text>
-<text x="532" y="356" class="s">only; the reset synchroniser</text>
-<text x="532" y="370" class="s">lives in its spare macrocells</text>
+<text x="532" y="356" class="s">only</text>
 <line x1="605" y1="430" x2="605" y2="392" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="612" y="415" class="bus s">load on BLD</text>
 
 <!-- ALU -->
 <rect x="730" y="260" width="200" height="130" rx="3" class="blk"/>
 <text x="742" y="282" class="t">ALU</text><text x="920" y="282" text-anchor="end" class="s">4 GALs</text>
-<text x="742" y="302" class="m">in  A, B, F1, F0, ALUOE</text>
-<text x="742" y="318" class="m">out S0..S15 (on ALUOE), NE</text>
+<text x="742" y="302" class="m">in  Addr (= A), B, F1, F0, ALUOE</text>
+<text x="742" y="318" class="m">out S0..S15 (on ALUOE), NE0..NE3</text>
 <text x="742" y="342" class="s">4-bit ripple slices; add, and,</text>
-<text x="742" y="356" class="s">nor, pass B; slice 0 also holds</text>
-<text x="742" y="370" class="s">the clock divider</text>
+<text x="742" y="356" class="s">nor, pass B; combinational, no</text>
+<text x="742" y="370" class="s">clock; NE3 = A differs from B</text>
 <line x1="830" y1="392" x2="830" y2="430" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="837" y="415" class="bus s">drive on ALUOE</text>
 <!-- A,B -> ALU -->
@@ -162,7 +162,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <line x1="960" y1="300" x2="960" y2="180" class="ucl" stroke-width="1.5"/>
 <line x1="960" y1="180" x2="445" y2="180" class="ucl" stroke-width="1.5"/>
 <line x1="445" y1="180" x2="445" y2="162" class="ucl" stroke-width="1.5" marker-end="url(#au)"/>
-<text x="700" y="176" class="uc s">NE, latched as NEL: an address bit of the microcode ROM</text>
+<text x="700" y="176" class="uc s">NE3, latched as NEL in the sequencer: an address bit of the microcode ROM</text>
 
 <!-- T latch, bottom row left -->
 <rect x="60" y="520" width="270" height="120" rx="3" class="blk"/>
@@ -181,7 +181,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="372" y="562" class="m">CE#  Addr15   OE#  MEMRD_n</text>
 <text x="372" y="578" class="m">WE#  VCC</text>
 <text x="372" y="602" class="s">0x0000..0x7FFF: instructions,</text>
-<text x="372" y="616" class="s">immediates, constants; A16-18 jumpers</text>
+<text x="372" y="616" class="s">immediates, constants; A15-18 jumpers</text>
 <line x1="460" y1="518" x2="460" y2="448" class="busl" stroke-width="1.5" marker-end="url(#ab)"/>
 <text x="466" y="486" class="bus s">drive on MEMRD when selected</text>
 <line x1="460" y1="758" x2="460" y2="642" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
@@ -190,8 +190,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="612" y="542" class="t">SRAM</text><text x="790" y="542" text-anchor="end" class="s">2 x AS7C164A</text>
 <text x="612" y="562" class="m">CE2 Addr15  CE1# Addr14</text>
 <text x="612" y="578" class="m">OE# MEMRD_n  WE# WE_n</text>
-<text x="612" y="602" class="s">0x8000..0xBFFF; r0..r31 at</text>
-<text x="612" y="616" class="s">0x8000 + 2n</text>
+<text x="612" y="602" class="s">0x8000..0x9FFF; r0..r31 at</text>
+<text x="612" y="616" class="s">0x8000 + n</text>
 <line x1="700" y1="448" x2="700" y2="518" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
 <text x="706" y="478" class="bus s">read on MEMRD,</text>
 <text x="706" y="494" class="bus s">write on WE</text>
@@ -201,13 +201,13 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <text x="852" y="542" class="t">UART</text><text x="1060" y="542" text-anchor="end" class="s">TL16C550 + SP3232</text>
 <text x="852" y="562" class="m">CS0 Addr14  CS1 Addr15  CS2# GND</text>
 <text x="852" y="578" class="m">RD1# MEMRD_n  WR1# WE_n  MR RESET</text>
-<text x="852" y="602" class="s">0xC000 + 2n, low byte; XIN from</text>
-<text x="852" y="616" class="s">the oscillator; header TX RX RTS CTS</text>
+<text x="852" y="602" class="s">0xC000 + n, low byte; its own</text>
+<text x="852" y="616" class="s">1.8432 MHz crystal; header TX RX RTS CTS</text>
 <line x1="955" y1="448" x2="955" y2="518" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
 <text x="961" y="486" class="bus s">D0..D7 only</text>
 <line x1="955" y1="758" x2="955" y2="642" class="abl" stroke-width="1.5" marker-end="url(#aa)"/>
 </svg>
-<figcaption>The control path runs across the top: the IR and step counter address the microcode ROM, whose word is latched into the pipeline register at every edge and fans out to every block. NE from the ALU is an address bit of the ROM, which is how JEQ chooses between two sequences. Below, the data bus and the address bus join the PC, A, B, the ALU and the three memories exactly as before.</figcaption>
+<figcaption>The control path runs across the top: the sequencer (IR, step counter, and a flags chip holding NEL and the reset synchroniser) addresses the microcode ROM, whose word is latched into the pipeline register at every edge and fans out to every block. NE3 from the ALU, latched as NEL, is an address bit of the ROM, which is how JEQ chooses between two sequences. Below, the data bus and the address bus join the PC, A, B, the ALU and the three memories exactly as before.</figcaption>
 </figure>
 
 <h2>The microword: one bit per control line</h2>
@@ -223,7 +223,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">4</td><td class="m">ALD</td><td>A copies D at the ending edge</td></tr>
 <tr><td class="m">5</td><td class="m">BLD</td><td>B copies D at the ending edge</td></tr>
 <tr><td class="m">6</td><td class="m">PCLD</td><td>the PC copies D at the ending edge</td></tr>
-<tr><td class="m">7</td><td class="m">PCINC</td><td>PC += 2 at the ending edge</td></tr>
+<tr><td class="m">7</td><td class="m">PCINC</td><td>PC += 1 at the ending edge</td></tr>
 <tr><td class="m">8</td><td class="m">IRLD</td><td>IR copies D[15:11] and the step counter clears at the ending edge: the fetch</td></tr>
 <tr><td class="m">9, 10</td><td class="m">F0 F1</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
 <tr><td class="m">14, 15</td><td></td><td>spare: debug outputs, a halt flag</td></tr>

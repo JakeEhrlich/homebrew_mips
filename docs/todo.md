@@ -29,14 +29,14 @@ is not listed here.
 ## grit (the first board)
 
 - [x] Design, model, netlist, board file, soak and fuzz (docs/grit.md).
-- [ ] Bank jumper headers and the Addr14/Addr15 pull-downs as parts in
+- [ ] Bank jumper headers (4 program, 3 microcode) and the Addr14/Addr15 pull-downs as parts in
       the board file (they are nets and pulls today).
 - [ ] The PCB (Jake, flatland).
 - [ ] The macro assembler (MIPS-looking syntax over the grit ISA).
 - [x] Why the fuzz fails at 6 ns per pin: clock skew above the GAL's
       2 ns minimum clock-to-output is a hold violation on the PC's
       self-addressed load (docs/grit.md section 8).
-- [ ] JEDEC manifest for the 13 GALs and the two ROM images.
+- [ ] JEDEC manifest for the 16 GALs and the two ROM images.
 
 ## Upgrades needed for Doom
 

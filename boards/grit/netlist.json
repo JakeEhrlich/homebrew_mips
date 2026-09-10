@@ -1,14 +1,14 @@
 {
   "name": "grit",
-  "description": "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART, MAX811L reset, 9.216 MHz oscillator.",
-  "period_ns": 217.014,
+  "description": "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART on its own crystal, MAX811L reset, 4 MHz oscillator.",
+  "period_ns": 250.0,
   "params": {},
   "layout": [
     {
       "title": "Control",
       "width": 300,
       "blocks": [
-        "IR + step counter",
+        "Sequencer",
         "Microcode ROM",
         "Pipeline register"
       ],
@@ -52,7 +52,7 @@
       "name": "seq0",
       "part": "ATF22V10C-7PX",
       "package": "DIP-24",
-      "block": "IR + step counter",
+      "block": "Sequencer",
       "stage": "Control",
       "model": {
         "kind": "gal",
@@ -440,40 +440,6 @@
                 ]
               ]
             ]
-          },
-          {
-            "out": "NEL",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "ADRV",
-                  true
-                ],
-                [
-                  "NE",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "ADRV",
-                  false
-                ],
-                [
-                  "NEL",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
           }
         ],
         "pins": [
@@ -483,38 +449,30 @@
           ],
           [
             2,
-            "ADRV"
-          ],
-          [
-            3,
             "D11"
           ],
           [
-            4,
+            3,
             "D12"
           ],
           [
-            5,
+            4,
             "D13"
           ],
           [
-            6,
+            5,
             "D14"
           ],
           [
-            7,
+            6,
             "D15"
           ],
           [
-            8,
+            7,
             "IRLD"
           ],
           [
-            9,
-            "NE"
-          ],
-          [
-            10,
+            8,
             "RESET"
           ],
           [
@@ -538,7 +496,7 @@
             "IR4"
           ],
           [
-            14,
+            23,
             "STEP0"
           ],
           [
@@ -552,10 +510,6 @@
           [
             19,
             "STEP3"
-          ],
-          [
-            23,
-            "NEL"
           ]
         ]
       },
@@ -568,54 +522,42 @@
         },
         {
           "pin": 2,
-          "name": "ADRV",
-          "net": "ADRV",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
           "name": "D11",
           "net": "D11",
           "kind": "in"
         },
         {
-          "pin": 4,
+          "pin": 3,
           "name": "D12",
           "net": "D12",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 4,
           "name": "D13",
           "net": "D13",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 5,
           "name": "D14",
           "net": "D14",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 6,
           "name": "D15",
           "net": "D15",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 7,
           "name": "IRLD",
           "net": "IRLD",
           "kind": "in"
         },
         {
-          "pin": 9,
-          "name": "NE",
-          "net": "NE",
-          "kind": "in"
-        },
-        {
-          "pin": 10,
+          "pin": 8,
           "name": "RESET",
           "net": "RESET",
           "kind": "in"
@@ -625,12 +567,6 @@
           "name": "GND",
           "net": "GND",
           "kind": "power"
-        },
-        {
-          "pin": 14,
-          "name": "STEP0",
-          "net": "STEP0",
-          "kind": "out"
         },
         {
           "pin": 15,
@@ -682,8 +618,169 @@
         },
         {
           "pin": 23,
+          "name": "STEP0",
+          "net": "STEP0",
+          "kind": "out"
+        },
+        {
+          "pin": 24,
+          "name": "VCC",
+          "net": "VCC",
+          "kind": "power"
+        }
+      ]
+    },
+    {
+      "name": "seq1",
+      "part": "ATF22V10C-7PX",
+      "package": "DIP-24",
+      "block": "Sequencer",
+      "stage": "Control",
+      "model": {
+        "kind": "gal",
+        "clk": "CLK",
+        "ar": null,
+        "eqs": [
+          {
+            "out": "RS1",
+            "mode": "reg",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "RST_n",
+                  true
+                ]
+              ]
+            ],
+            "sync": true
+          },
+          {
+            "out": "RESET",
+            "mode": "reg",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "RS1",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "NEL",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "ADRV",
+                  true
+                ],
+                [
+                  "NE3",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "ADRV",
+                  false
+                ],
+                [
+                  "NEL",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          }
+        ],
+        "pins": [
+          [
+            1,
+            "CLK"
+          ],
+          [
+            2,
+            "ADRV"
+          ],
+          [
+            3,
+            "NE3"
+          ],
+          [
+            4,
+            "RST_n"
+          ],
+          [
+            18,
+            "RS1"
+          ],
+          [
+            20,
+            "RESET"
+          ],
+          [
+            19,
+            "NEL"
+          ]
+        ]
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "CLK",
+          "net": "CLK",
+          "kind": "in"
+        },
+        {
+          "pin": 2,
+          "name": "ADRV",
+          "net": "ADRV",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
+          "name": "NE3",
+          "net": "NE3",
+          "kind": "in"
+        },
+        {
+          "pin": 4,
+          "name": "RST_n",
+          "net": "RST_n",
+          "kind": "in"
+        },
+        {
+          "pin": 12,
+          "name": "GND",
+          "net": "GND",
+          "kind": "power"
+        },
+        {
+          "pin": 18,
+          "name": "RS1",
+          "net": "RS1",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
           "name": "NEL",
           "net": "NEL",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "RESET",
+          "net": "RESET",
           "kind": "out"
         },
         {
@@ -1384,6 +1481,68 @@
         "ar": null,
         "eqs": [
           {
+            "out": "ADDR0",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "PCLD",
+                  true
+                ],
+                [
+                  "D0",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
+                  "PCINC",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
+                  "PCINC",
+                  false
+                ],
+                [
+                  "ADDR0",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "PCDRV",
+                true
+              ]
+            ]
+          },
+          {
             "out": "ADDR1",
             "mode": "reg",
             "terms": [
@@ -1407,12 +1566,34 @@
                   false
                 ],
                 [
+                  "ADDR1",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR1",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "RESET",
@@ -1487,12 +1668,34 @@
                   false
                 ],
                 [
+                  "ADDR2",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR2",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -1589,12 +1792,34 @@
                   false
                 ],
                 [
+                  "ADDR3",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR3",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -1713,12 +1938,34 @@
                   false
                 ],
                 [
+                  "ADDR4",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR4",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -1859,12 +2106,34 @@
                   false
                 ],
                 [
+                  "ADDR5",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR5",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -2027,12 +2296,34 @@
                   false
                 ],
                 [
+                  "ADDR6",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR6",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -2217,12 +2508,34 @@
                   false
                 ],
                 [
+                  "ADDR7",
+                  true
+                ],
+                [
+                  "ADDR0",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "PCINC",
                   true
                 ],
                 [
                   "ADDR7",
                   false
+                ],
+                [
+                  "ADDR0",
+                  true
                 ],
                 [
                   "ADDR1",
@@ -2264,222 +2577,6 @@
                 ],
                 [
                   "ADDR7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ],
-            "oe": [
-              [
-                "PCDRV",
-                true
-              ]
-            ]
-          },
-          {
-            "out": "ADDR8",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "PCLD",
-                  true
-                ],
-                [
-                  "D8",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR7",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR6",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR5",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR4",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR3",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR2",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "ADDR8",
-                  true
-                ],
-                [
-                  "ADDR1",
-                  false
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "PCINC",
-                  true
-                ],
-                [
-                  "ADDR8",
-                  false
-                ],
-                [
-                  "ADDR1",
-                  true
-                ],
-                [
-                  "ADDR2",
-                  true
-                ],
-                [
-                  "ADDR3",
-                  true
-                ],
-                [
-                  "ADDR4",
-                  true
-                ],
-                [
-                  "ADDR5",
-                  true
-                ],
-                [
-                  "ADDR6",
-                  true
-                ],
-                [
-                  "ADDR7",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ],
-              [
-                [
-                  "PCLD",
-                  false
-                ],
-                [
-                  "PCINC",
-                  false
-                ],
-                [
-                  "ADDR8",
                   true
                 ],
                 [
@@ -2505,6 +2602,10 @@
                   true
                 ],
                 [
+                  "ADDR0",
+                  true
+                ],
+                [
                   "ADDR1",
                   true
                 ],
@@ -2531,10 +2632,6 @@
                 [
                   "ADDR7",
                   true
-                ],
-                [
-                  "ADDR8",
-                  true
                 ]
               ]
             ]
@@ -2547,35 +2644,35 @@
           ],
           [
             2,
-            "D1"
+            "D0"
           ],
           [
             3,
-            "D2"
+            "D1"
           ],
           [
             4,
-            "D3"
+            "D2"
           ],
           [
             5,
-            "D4"
+            "D3"
           ],
           [
             6,
-            "D5"
+            "D4"
           ],
           [
             7,
-            "D6"
+            "D5"
           ],
           [
             8,
-            "D7"
+            "D6"
           ],
           [
             9,
-            "D8"
+            "D7"
           ],
           [
             10,
@@ -2595,35 +2692,35 @@
           ],
           [
             15,
-            "ADDR1"
+            "ADDR0"
           ],
           [
             22,
-            "ADDR2"
+            "ADDR1"
           ],
           [
             16,
-            "ADDR3"
+            "ADDR2"
           ],
           [
             21,
-            "ADDR4"
+            "ADDR3"
           ],
           [
             17,
-            "ADDR5"
+            "ADDR4"
           ],
           [
             20,
-            "ADDR6"
+            "ADDR5"
           ],
           [
             18,
-            "ADDR7"
+            "ADDR6"
           ],
           [
             19,
-            "ADDR8"
+            "ADDR7"
           ],
           [
             23,
@@ -2640,50 +2737,50 @@
         },
         {
           "pin": 2,
+          "name": "D0",
+          "net": "D0",
+          "kind": "in"
+        },
+        {
+          "pin": 3,
           "name": "D1",
           "net": "D1",
           "kind": "in"
         },
         {
-          "pin": 3,
+          "pin": 4,
           "name": "D2",
           "net": "D2",
           "kind": "in"
         },
         {
-          "pin": 4,
+          "pin": 5,
           "name": "D3",
           "net": "D3",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 6,
           "name": "D4",
           "net": "D4",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 7,
           "name": "D5",
           "net": "D5",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 8,
           "name": "D6",
           "net": "D6",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 9,
           "name": "D7",
           "net": "D7",
-          "kind": "in"
-        },
-        {
-          "pin": 9,
-          "name": "D8",
-          "net": "D8",
           "kind": "in"
         },
         {
@@ -2718,50 +2815,50 @@
         },
         {
           "pin": 15,
-          "name": "ADDR1",
-          "net": "ADDR1",
+          "name": "ADDR0",
+          "net": "ADDR0",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "ADDR3",
-          "net": "ADDR3",
+          "name": "ADDR2",
+          "net": "ADDR2",
           "kind": "out"
         },
         {
           "pin": 17,
-          "name": "ADDR5",
-          "net": "ADDR5",
-          "kind": "out"
-        },
-        {
-          "pin": 18,
-          "name": "ADDR7",
-          "net": "ADDR7",
-          "kind": "out"
-        },
-        {
-          "pin": 19,
-          "name": "ADDR8",
-          "net": "ADDR8",
-          "kind": "out"
-        },
-        {
-          "pin": 20,
-          "name": "ADDR6",
-          "net": "ADDR6",
-          "kind": "out"
-        },
-        {
-          "pin": 21,
           "name": "ADDR4",
           "net": "ADDR4",
           "kind": "out"
         },
         {
+          "pin": 18,
+          "name": "ADDR6",
+          "net": "ADDR6",
+          "kind": "out"
+        },
+        {
+          "pin": 19,
+          "name": "ADDR7",
+          "net": "ADDR7",
+          "kind": "out"
+        },
+        {
+          "pin": 20,
+          "name": "ADDR5",
+          "net": "ADDR5",
+          "kind": "out"
+        },
+        {
+          "pin": 21,
+          "name": "ADDR3",
+          "net": "ADDR3",
+          "kind": "out"
+        },
+        {
           "pin": 22,
-          "name": "ADDR2",
-          "net": "ADDR2",
+          "name": "ADDR1",
+          "net": "ADDR1",
           "kind": "out"
         },
         {
@@ -2790,6 +2887,68 @@
         "ar": null,
         "eqs": [
           {
+            "out": "ADDR8",
+            "mode": "reg",
+            "terms": [
+              [
+                [
+                  "PCLD",
+                  true
+                ],
+                [
+                  "D8",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
+                  "CO",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
+                  "CO",
+                  false
+                ],
+                [
+                  "ADDR8",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ],
+            "oe": [
+              [
+                "PCDRV",
+                true
+              ]
+            ]
+          },
+          {
             "out": "ADDR9",
             "mode": "reg",
             "terms": [
@@ -2813,12 +2972,34 @@
                   false
                 ],
                 [
+                  "ADDR9",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR9",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "RESET",
@@ -2893,12 +3074,34 @@
                   false
                 ],
                 [
+                  "ADDR10",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR10",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -2995,12 +3198,34 @@
                   false
                 ],
                 [
+                  "ADDR11",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR11",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -3119,12 +3344,34 @@
                   false
                 ],
                 [
+                  "ADDR12",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR12",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -3265,12 +3512,34 @@
                   false
                 ],
                 [
+                  "ADDR13",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR13",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -3433,12 +3702,34 @@
                   false
                 ],
                 [
+                  "ADDR14",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR14",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -3623,12 +3914,34 @@
                   false
                 ],
                 [
+                  "ADDR15",
+                  true
+                ],
+                [
+                  "ADDR8",
+                  false
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ],
+              [
+                [
+                  "PCLD",
+                  false
+                ],
+                [
                   "CO",
                   true
                 ],
                 [
                   "ADDR15",
                   false
+                ],
+                [
+                  "ADDR8",
+                  true
                 ],
                 [
                   "ADDR9",
@@ -3721,19 +4034,27 @@
           ],
           [
             9,
-            "D9"
+            "D8"
           ],
           [
             10,
-            "PCDRV"
+            "D9"
           ],
           [
             11,
-            "PCLD"
+            "PCDRV"
           ],
           [
             13,
+            "PCLD"
+          ],
+          [
+            23,
             "RESET"
+          ],
+          [
+            15,
+            "ADDR8"
           ],
           [
             22,
@@ -3816,20 +4137,20 @@
         },
         {
           "pin": 9,
+          "name": "D8",
+          "net": "D8",
+          "kind": "in"
+        },
+        {
+          "pin": 10,
           "name": "D9",
           "net": "D9",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 11,
           "name": "PCDRV",
           "net": "PCDRV",
-          "kind": "in"
-        },
-        {
-          "pin": 11,
-          "name": "PCLD",
-          "net": "PCLD",
           "kind": "in"
         },
         {
@@ -3840,9 +4161,15 @@
         },
         {
           "pin": 13,
-          "name": "RESET",
-          "net": "RESET",
+          "name": "PCLD",
+          "net": "PCLD",
           "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "ADDR8",
+          "net": "ADDR8",
+          "kind": "out"
         },
         {
           "pin": 16,
@@ -3887,6 +4214,12 @@
           "kind": "out"
         },
         {
+          "pin": 23,
+          "name": "RESET",
+          "net": "RESET",
+          "kind": "in"
+        },
+        {
           "pin": 24,
           "name": "VCC",
           "net": "VCC",
@@ -3906,7 +4239,7 @@
         "ar": null,
         "eqs": [
           {
-            "out": "A0",
+            "out": "ADDR0",
             "mode": "reg",
             "terms": [
               [
@@ -3925,9 +4258,15 @@
                   false
                 ],
                 [
-                  "A0",
+                  "ADDR0",
                   true
                 ]
+              ]
+            ],
+            "oe": [
+              [
+                "ADRV",
+                true
               ]
             ]
           },
@@ -4203,7 +4542,7 @@
           ],
           [
             19,
-            "A0"
+            "ADDR0"
           ],
           [
             18,
@@ -4334,8 +4673,8 @@
         },
         {
           "pin": 19,
-          "name": "A0",
-          "net": "A0",
+          "name": "ADDR0",
+          "net": "ADDR0",
           "kind": "out"
         },
         {
@@ -5058,33 +5397,6 @@
                 ]
               ]
             ]
-          },
-          {
-            "out": "RS1",
-            "mode": "reg",
-            "active_low": true,
-            "terms": [
-              [
-                [
-                  "RST_n",
-                  true
-                ]
-              ]
-            ],
-            "sync": true
-          },
-          {
-            "out": "RESET",
-            "mode": "reg",
-            "active_low": true,
-            "terms": [
-              [
-                [
-                  "RS1",
-                  false
-                ]
-              ]
-            ]
           }
         ],
         "pins": [
@@ -5129,10 +5441,6 @@
             "D7"
           ],
           [
-            11,
-            "RST_n"
-          ],
-          [
             19,
             "B0"
           ],
@@ -5163,14 +5471,6 @@
           [
             15,
             "B7"
-          ],
-          [
-            23,
-            "RS1"
-          ],
-          [
-            14,
-            "RESET"
           ]
         ]
       },
@@ -5236,22 +5536,10 @@
           "kind": "in"
         },
         {
-          "pin": 11,
-          "name": "RST_n",
-          "net": "RST_n",
-          "kind": "in"
-        },
-        {
           "pin": 12,
           "name": "GND",
           "net": "GND",
           "kind": "power"
-        },
-        {
-          "pin": 14,
-          "name": "RESET",
-          "net": "RESET",
-          "kind": "out"
         },
         {
           "pin": 15,
@@ -5299,12 +5587,6 @@
           "pin": 22,
           "name": "B6",
           "net": "B6",
-          "kind": "out"
-        },
-        {
-          "pin": 23,
-          "name": "RS1",
-          "net": "RS1",
           "kind": "out"
         },
         {
@@ -6693,7 +6975,7 @@
       "stage": "Datapath",
       "model": {
         "kind": "gal",
-        "clk": "CLK2X",
+        "clk": null,
         "ar": null,
         "eqs": [
           {
@@ -6702,7 +6984,7 @@
             "terms": [
               [
                 [
-                  "A0",
+                  "ADDR0",
                   true
                 ],
                 [
@@ -6720,7 +7002,7 @@
               ],
               [
                 [
-                  "A0",
+                  "ADDR0",
                   false
                 ],
                 [
@@ -6738,7 +7020,7 @@
               ],
               [
                 [
-                  "A0",
+                  "ADDR0",
                   false
                 ],
                 [
@@ -6756,7 +7038,7 @@
               ],
               [
                 [
-                  "A0",
+                  "ADDR0",
                   true
                 ],
                 [
@@ -6796,7 +7078,7 @@
             "terms": [
               [
                 [
-                  "A0",
+                  "ADDR0",
                   true
                 ],
                 [
@@ -7414,7 +7696,7 @@
             "terms": [
               [
                 [
-                  "A0",
+                  "ADDR0",
                   true
                 ],
                 [
@@ -7454,7 +7736,7 @@
               ],
               [
                 [
-                  "A0",
+                  "ADDR0",
                   false
                 ],
                 [
@@ -7490,18 +7772,6 @@
                 [
                   "B3",
                   true
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "CLK",
-            "mode": "reg",
-            "terms": [
-              [
-                [
-                  "CLK",
-                  false
                 ]
               ]
             ]
@@ -7510,50 +7780,46 @@
         "pins": [
           [
             1,
-            "CLK2X"
+            "ADDR0"
           ],
           [
             2,
-            "A0"
-          ],
-          [
-            3,
             "ADDR1"
           ],
           [
-            4,
+            3,
             "ADDR2"
           ],
           [
-            5,
+            4,
             "ADDR3"
           ],
           [
-            6,
+            5,
             "ALUOE"
           ],
           [
-            7,
+            6,
             "B0"
           ],
           [
-            8,
+            7,
             "B1"
           ],
           [
-            9,
+            8,
             "B2"
           ],
           [
-            10,
+            9,
             "B3"
           ],
           [
-            11,
+            10,
             "F0"
           ],
           [
-            13,
+            11,
             "F1"
           ],
           [
@@ -7591,78 +7857,74 @@
           [
             19,
             "NE0"
-          ],
-          [
-            14,
-            "CLK"
           ]
         ]
       },
       "pins": [
         {
           "pin": 1,
-          "name": "CLK2X",
-          "net": "CLK2X",
+          "name": "ADDR0",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
           "pin": 2,
-          "name": "A0",
-          "net": "A0",
-          "kind": "in"
-        },
-        {
-          "pin": 3,
           "name": "ADDR1",
           "net": "ADDR1",
           "kind": "in"
         },
         {
-          "pin": 4,
+          "pin": 3,
           "name": "ADDR2",
           "net": "ADDR2",
           "kind": "in"
         },
         {
-          "pin": 5,
+          "pin": 4,
           "name": "ADDR3",
           "net": "ADDR3",
           "kind": "in"
         },
         {
-          "pin": 6,
+          "pin": 5,
           "name": "ALUOE",
           "net": "ALUOE",
           "kind": "in"
         },
         {
-          "pin": 7,
+          "pin": 6,
           "name": "B0",
           "net": "B0",
           "kind": "in"
         },
         {
-          "pin": 8,
+          "pin": 7,
           "name": "B1",
           "net": "B1",
           "kind": "in"
         },
         {
-          "pin": 9,
+          "pin": 8,
           "name": "B2",
           "net": "B2",
           "kind": "in"
         },
         {
-          "pin": 10,
+          "pin": 9,
           "name": "B3",
           "net": "B3",
           "kind": "in"
         },
         {
-          "pin": 11,
+          "pin": 10,
           "name": "F0",
           "net": "F0",
+          "kind": "in"
+        },
+        {
+          "pin": 11,
+          "name": "F1",
+          "net": "F1",
           "kind": "in"
         },
         {
@@ -7670,18 +7932,6 @@
           "name": "GND",
           "net": "GND",
           "kind": "power"
-        },
-        {
-          "pin": 13,
-          "name": "F1",
-          "net": "F1",
-          "kind": "in"
-        },
-        {
-          "pin": 14,
-          "name": "CLK",
-          "net": "CLK",
-          "kind": "out"
         },
         {
           "pin": 15,
@@ -10757,7 +11007,7 @@
             ]
           },
           {
-            "out": "NE",
+            "out": "NE3",
             "mode": "comb",
             "terms": [
               [
@@ -10932,7 +11182,7 @@
           ],
           [
             19,
-            "NE"
+            "NE3"
           ]
         ]
       },
@@ -11041,8 +11291,8 @@
         },
         {
           "pin": 19,
-          "name": "NE",
-          "net": "NE",
+          "name": "NE3",
+          "net": "NE3",
           "kind": "out"
         },
         {
@@ -11079,7 +11329,7 @@
     },
     {
       "name": "osc0",
-      "part": "SG-8018CA 9.216MHz",
+      "part": "SG-8018CA 4.000MHz",
       "package": "3225",
       "block": "Clock",
       "stage": "I/O",
@@ -11102,7 +11352,7 @@
         {
           "pin": 3,
           "name": "OUT",
-          "net": "CLK2X",
+          "net": "CLK",
           "kind": "passive"
         },
         {
@@ -11167,73 +11417,73 @@
         {
           "pin": 1,
           "name": "A18",
-          "net": "PBANK2",
+          "net": "PBANK3",
           "kind": "in"
         },
         {
           "pin": 2,
           "name": "A16",
-          "net": "PBANK0",
+          "net": "PBANK1",
           "kind": "in"
         },
         {
           "pin": 3,
           "name": "A15",
-          "net": "GND",
+          "net": "PBANK0",
           "kind": "in"
         },
         {
           "pin": 4,
           "name": "A12",
-          "net": "ADDR13",
+          "net": "ADDR12",
           "kind": "in"
         },
         {
           "pin": 5,
           "name": "A7",
-          "net": "ADDR8",
+          "net": "ADDR7",
           "kind": "in"
         },
         {
           "pin": 6,
           "name": "A6",
-          "net": "ADDR7",
+          "net": "ADDR6",
           "kind": "in"
         },
         {
           "pin": 7,
           "name": "A5",
-          "net": "ADDR6",
+          "net": "ADDR5",
           "kind": "in"
         },
         {
           "pin": 8,
           "name": "A4",
-          "net": "ADDR5",
+          "net": "ADDR4",
           "kind": "in"
         },
         {
           "pin": 9,
           "name": "A3",
-          "net": "ADDR4",
+          "net": "ADDR3",
           "kind": "in"
         },
         {
           "pin": 10,
           "name": "A2",
-          "net": "ADDR3",
+          "net": "ADDR2",
           "kind": "in"
         },
         {
           "pin": 11,
           "name": "A1",
-          "net": "ADDR2",
+          "net": "ADDR1",
           "kind": "in"
         },
         {
           "pin": 12,
           "name": "A0",
-          "net": "ADDR1",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
@@ -11299,7 +11549,7 @@
         {
           "pin": 23,
           "name": "A10",
-          "net": "ADDR11",
+          "net": "ADDR10",
           "kind": "in"
         },
         {
@@ -11311,37 +11561,37 @@
         {
           "pin": 25,
           "name": "A11",
-          "net": "ADDR12",
+          "net": "ADDR11",
           "kind": "in"
         },
         {
           "pin": 26,
           "name": "A9",
-          "net": "ADDR10",
+          "net": "ADDR9",
           "kind": "in"
         },
         {
           "pin": 27,
           "name": "A8",
-          "net": "ADDR9",
+          "net": "ADDR8",
           "kind": "in"
         },
         {
           "pin": 28,
           "name": "A13",
-          "net": "ADDR14",
+          "net": "ADDR13",
           "kind": "in"
         },
         {
           "pin": 29,
           "name": "A14",
-          "net": "GND",
+          "net": "ADDR14",
           "kind": "in"
         },
         {
           "pin": 30,
           "name": "A17",
-          "net": "PBANK1",
+          "net": "PBANK2",
           "kind": "in"
         },
         {
@@ -11375,73 +11625,73 @@
         {
           "pin": 1,
           "name": "A18",
-          "net": "PBANK2",
+          "net": "PBANK3",
           "kind": "in"
         },
         {
           "pin": 2,
           "name": "A16",
-          "net": "PBANK0",
+          "net": "PBANK1",
           "kind": "in"
         },
         {
           "pin": 3,
           "name": "A15",
-          "net": "GND",
+          "net": "PBANK0",
           "kind": "in"
         },
         {
           "pin": 4,
           "name": "A12",
-          "net": "ADDR13",
+          "net": "ADDR12",
           "kind": "in"
         },
         {
           "pin": 5,
           "name": "A7",
-          "net": "ADDR8",
+          "net": "ADDR7",
           "kind": "in"
         },
         {
           "pin": 6,
           "name": "A6",
-          "net": "ADDR7",
+          "net": "ADDR6",
           "kind": "in"
         },
         {
           "pin": 7,
           "name": "A5",
-          "net": "ADDR6",
+          "net": "ADDR5",
           "kind": "in"
         },
         {
           "pin": 8,
           "name": "A4",
-          "net": "ADDR5",
+          "net": "ADDR4",
           "kind": "in"
         },
         {
           "pin": 9,
           "name": "A3",
-          "net": "ADDR4",
+          "net": "ADDR3",
           "kind": "in"
         },
         {
           "pin": 10,
           "name": "A2",
-          "net": "ADDR3",
+          "net": "ADDR2",
           "kind": "in"
         },
         {
           "pin": 11,
           "name": "A1",
-          "net": "ADDR2",
+          "net": "ADDR1",
           "kind": "in"
         },
         {
           "pin": 12,
           "name": "A0",
-          "net": "ADDR1",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
@@ -11507,7 +11757,7 @@
         {
           "pin": 23,
           "name": "A10",
-          "net": "ADDR11",
+          "net": "ADDR10",
           "kind": "in"
         },
         {
@@ -11519,37 +11769,37 @@
         {
           "pin": 25,
           "name": "A11",
-          "net": "ADDR12",
+          "net": "ADDR11",
           "kind": "in"
         },
         {
           "pin": 26,
           "name": "A9",
-          "net": "ADDR10",
+          "net": "ADDR9",
           "kind": "in"
         },
         {
           "pin": 27,
           "name": "A8",
-          "net": "ADDR9",
+          "net": "ADDR8",
           "kind": "in"
         },
         {
           "pin": 28,
           "name": "A13",
-          "net": "ADDR14",
+          "net": "ADDR13",
           "kind": "in"
         },
         {
           "pin": 29,
           "name": "A14",
-          "net": "GND",
+          "net": "ADDR14",
           "kind": "in"
         },
         {
           "pin": 30,
           "name": "A17",
-          "net": "PBANK1",
+          "net": "PBANK2",
           "kind": "in"
         },
         {
@@ -11997,55 +12247,55 @@
         {
           "pin": 2,
           "name": "A12",
-          "net": "ADDR13",
+          "net": "ADDR12",
           "kind": "in"
         },
         {
           "pin": 3,
           "name": "A7",
-          "net": "ADDR8",
+          "net": "ADDR7",
           "kind": "in"
         },
         {
           "pin": 4,
           "name": "A6",
-          "net": "ADDR7",
+          "net": "ADDR6",
           "kind": "in"
         },
         {
           "pin": 5,
           "name": "A5",
-          "net": "ADDR6",
+          "net": "ADDR5",
           "kind": "in"
         },
         {
           "pin": 6,
           "name": "A4",
-          "net": "ADDR5",
+          "net": "ADDR4",
           "kind": "in"
         },
         {
           "pin": 7,
           "name": "A3",
-          "net": "ADDR4",
+          "net": "ADDR3",
           "kind": "in"
         },
         {
           "pin": 8,
           "name": "A2",
-          "net": "ADDR3",
+          "net": "ADDR2",
           "kind": "in"
         },
         {
           "pin": 9,
           "name": "A1",
-          "net": "ADDR2",
+          "net": "ADDR1",
           "kind": "in"
         },
         {
           "pin": 10,
           "name": "A0",
-          "net": "ADDR1",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
@@ -12111,7 +12361,7 @@
         {
           "pin": 21,
           "name": "A10",
-          "net": "ADDR11",
+          "net": "ADDR10",
           "kind": "in"
         },
         {
@@ -12123,19 +12373,19 @@
         {
           "pin": 23,
           "name": "A11",
-          "net": "ADDR12",
+          "net": "ADDR11",
           "kind": "in"
         },
         {
           "pin": 24,
           "name": "A9",
-          "net": "ADDR10",
+          "net": "ADDR9",
           "kind": "in"
         },
         {
           "pin": 25,
           "name": "A8",
-          "net": "ADDR9",
+          "net": "ADDR8",
           "kind": "in"
         },
         {
@@ -12173,55 +12423,55 @@
         {
           "pin": 2,
           "name": "A12",
-          "net": "ADDR13",
+          "net": "ADDR12",
           "kind": "in"
         },
         {
           "pin": 3,
           "name": "A7",
-          "net": "ADDR8",
+          "net": "ADDR7",
           "kind": "in"
         },
         {
           "pin": 4,
           "name": "A6",
-          "net": "ADDR7",
+          "net": "ADDR6",
           "kind": "in"
         },
         {
           "pin": 5,
           "name": "A5",
-          "net": "ADDR6",
+          "net": "ADDR5",
           "kind": "in"
         },
         {
           "pin": 6,
           "name": "A4",
-          "net": "ADDR5",
+          "net": "ADDR4",
           "kind": "in"
         },
         {
           "pin": 7,
           "name": "A3",
-          "net": "ADDR4",
+          "net": "ADDR3",
           "kind": "in"
         },
         {
           "pin": 8,
           "name": "A2",
-          "net": "ADDR3",
+          "net": "ADDR2",
           "kind": "in"
         },
         {
           "pin": 9,
           "name": "A1",
-          "net": "ADDR2",
+          "net": "ADDR1",
           "kind": "in"
         },
         {
           "pin": 10,
           "name": "A0",
-          "net": "ADDR1",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
@@ -12287,7 +12537,7 @@
         {
           "pin": 21,
           "name": "A10",
-          "net": "ADDR11",
+          "net": "ADDR10",
           "kind": "in"
         },
         {
@@ -12299,19 +12549,19 @@
         {
           "pin": 23,
           "name": "A11",
-          "net": "ADDR12",
+          "net": "ADDR11",
           "kind": "in"
         },
         {
           "pin": 24,
           "name": "A9",
-          "net": "ADDR10",
+          "net": "ADDR9",
           "kind": "in"
         },
         {
           "pin": 25,
           "name": "A8",
-          "net": "ADDR9",
+          "net": "ADDR8",
           "kind": "in"
         },
         {
@@ -12343,7 +12593,7 @@
       "role": "uart",
       "model": {
         "kind": "uart",
-        "xin_hz": 9216000.0
+        "xin_hz": 1843200.0
       },
       "pins": [
         {
@@ -12409,8 +12659,14 @@
         {
           "pin": 14,
           "name": "XIN",
-          "net": "CLK2X",
+          "net": "XIN",
           "kind": "in"
+        },
+        {
+          "pin": 15,
+          "name": "XOUT",
+          "net": "XOUT",
+          "kind": "out"
         },
         {
           "pin": 16,
@@ -12451,19 +12707,19 @@
         {
           "pin": 26,
           "name": "A2",
-          "net": "ADDR3",
+          "net": "ADDR2",
           "kind": "in"
         },
         {
           "pin": 27,
           "name": "A1",
-          "net": "ADDR2",
+          "net": "ADDR1",
           "kind": "in"
         },
         {
           "pin": 28,
           "name": "A0",
-          "net": "ADDR1",
+          "net": "ADDR0",
           "kind": "in"
         },
         {
@@ -12543,6 +12799,78 @@
           "name": "D4",
           "net": "D4",
           "kind": "bidir"
+        }
+      ]
+    },
+    {
+      "name": "x1",
+      "part": "X322518432MOB4SI",
+      "package": "3225",
+      "block": "UART",
+      "stage": "I/O",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "XOUT",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "xc1",
+      "part": "18pF 0603 C0G",
+      "package": "0603",
+      "block": "UART",
+      "stage": "I/O",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XIN",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "xc2",
+      "part": "18pF 0603 C0G",
+      "package": "0603",
+      "block": "UART",
+      "stage": "I/O",
+      "model": {
+        "kind": "passive"
+      },
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "XOUT",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
         }
       ]
     },
@@ -12795,10 +13123,8 @@
   ],
   "nets": [
     {
-      "name": "CLK"
-    },
-    {
-      "name": "ADRV"
+      "name": "CLK",
+      "role": "clk"
     },
     {
       "name": "D11"
@@ -12817,9 +13143,6 @@
     },
     {
       "name": "IRLD"
-    },
-    {
-      "name": "NE"
     },
     {
       "name": "RESET",
@@ -12851,6 +13174,18 @@
     },
     {
       "name": "STEP3"
+    },
+    {
+      "name": "ADRV"
+    },
+    {
+      "name": "NE3"
+    },
+    {
+      "name": "RST_n"
+    },
+    {
+      "name": "RS1"
     },
     {
       "name": "NEL"
@@ -12946,6 +13281,9 @@
       "name": "AUX1"
     },
     {
+      "name": "D0"
+    },
+    {
       "name": "D1"
     },
     {
@@ -12967,7 +13305,7 @@
       "name": "D7"
     },
     {
-      "name": "D8"
+      "name": "ADDR0"
     },
     {
       "name": "ADDR1"
@@ -12991,16 +13329,19 @@
       "name": "ADDR7"
     },
     {
-      "name": "ADDR8"
-    },
-    {
       "name": "CO"
     },
     {
       "name": "D10"
     },
     {
+      "name": "D8"
+    },
+    {
       "name": "D9"
+    },
+    {
+      "name": "ADDR8"
     },
     {
       "name": "ADDR9"
@@ -13024,15 +13365,6 @@
     {
       "name": "ADDR15",
       "pull": "low"
-    },
-    {
-      "name": "D0"
-    },
-    {
-      "name": "A0"
-    },
-    {
-      "name": "RST_n"
     },
     {
       "name": "B0"
@@ -13059,9 +13391,6 @@
       "name": "B7"
     },
     {
-      "name": "RS1"
-    },
-    {
       "name": "B8"
     },
     {
@@ -13084,10 +13413,6 @@
     },
     {
       "name": "B15"
-    },
-    {
-      "name": "CLK2X",
-      "role": "clk"
     },
     {
       "name": "ALU0_C1"
@@ -13169,6 +13494,10 @@
       "tie": "low"
     },
     {
+      "name": "PBANK3",
+      "tie": "low"
+    },
+    {
       "name": "UBANK0",
       "tie": "low"
     },
@@ -13185,6 +13514,12 @@
     },
     {
       "name": "SOUT"
+    },
+    {
+      "name": "XIN"
+    },
+    {
+      "name": "XOUT"
     },
     {
       "name": "UDTR_n"
@@ -13230,8 +13565,7 @@
     }
   ],
   "bus_descriptions": {
-    "A": "Bit 0 of the A latch. Not an address line (the bus has none); it goes to the ALU only. Bits 1..15 of A are the address bus, ADDR.",
-    "ADDR": "The address bus, byte address bits 15:1 (everything is 16-bit words). The A latch drives it on ADRV, the PC on PCDRV, nobody in the word between. Addr15 and Addr14 pick the chip: 0x = flash, 10 = SRAM, 11 = UART.",
+    "ADDR": "The address bus: a 16-bit word address (everything on the bus is a 16-bit word), which is also the A latch's value. A drives it on ADRV, the PC on PCDRV, nobody in the word between. Addr15 and Addr14 pick the chip: 0x = flash (0x0000..0x7FFF), 10 = SRAM (0x8000..0x9FFF, r0..r31 first), 11 = UART (register n at 0xC000 + n).",
     "ADRV": "Microword bit 11: A drives Addr (and so the ALU sees A). Never in the word next to a PCDRV word.",
     "ALD": "Microword bit 4: A copies D at the ending edge.",
     "ALU0_C1": "Carry into bit 1 of ALU slice 0: a macrocell fed back inside the chip; the pin goes nowhere.",
@@ -13250,9 +13584,8 @@
     "AUX": "Microword bits 14 and 15, spare: debug outputs.",
     "B": "The B latch: the ALU's second operand and the value a store writes. Point-to-point into the ALU.",
     "BLD": "Microword bit 5: B copies D at the ending edge.",
-    "CLK": "The machine clock, 4.608 MHz, CLK2X divided by two in ALU slice 0. Every other GAL's clock; every flop moves on its rising edge.",
-    "CLK2X": "The oscillator, 9.216 MHz: the divider's clock and the UART's XIN.",
-    "CO": "The PC's carry from bit 8 into bit 9.",
+    "CLK": "The machine clock, 4 MHz straight from the oscillator. Every GAL's clock; every flop moves on its rising edge.",
+    "CO": "The PC's carry from bit 7 into bit 8.",
     "COUT": "Carry between ALU slices: COUT0 from slice 0 into slice 1, and so on.",
     "D": "The data bus. One driver per clock: the memory or device that Addr selects on MEMRD, the ALU on ALUOE, or T on TDRV. Read by A, B, T, the PC and the IR at the clock edge.",
     "F": "Microword bits 9 and 10, the ALU function: F1 F0 = 00 add, 01 and, 10 nor, 11 pass B.",
@@ -13262,14 +13595,14 @@
     "M": "The microcode ROM's data: the next microword, latched into the pipeline register at every edge.",
     "MEMRD_n": "Microword bit 1, active low: the memory or device that Addr selects drives D. OE# of the flash and SRAM, RD# of the UART.",
     "MR_n": "The reset button, to the MAX811L's manual-reset input (pulled up inside the part).",
-    "NE": "The not-equal chain: NE0, NE1, NE2 run between the ALU slices (does any bit so far differ?) and NE, out of the top slice, is A differs from B. NE feeds the NEL latch.",
-    "NEL": "The condition: the ALU's not-equal, latched at the end of every word in which A is on the bus, held otherwise. Address bit A4 of the microcode ROM.",
-    "PBANK": "Program flash bank: A16..A18 of the program flash, from a 3-way jumper (tied low here).",
+    "NE": "The not-equal chain: NE0 out of ALU slice 0 (bits 0..3 differ), NE1 (bits 0..7), NE2 (0..11) and NE3 (all: A differs from B), each slice taking the previous one in. NE3 feeds the NEL flop in the sequencer's flags chip.",
+    "NEL": "The condition, in the sequencer's flags chip: NE3 latched at the end of every word in which A is on the bus (ADRV), held otherwise. Address bit A4 of the microcode ROM.",
+    "PBANK": "Program flash bank: A15..A18 of the program flash, from a 4-way jumper (tied low here): 16 banks of 32 KB.",
     "PCDRV": "Microword bit 0: the PC drives Addr, and counts a word at the edge. Also the flash's OE# through MEMRD.",
     "PCINC": "Microword bit 7: PC += 2 at the ending edge.",
     "PCLD": "Microword bit 6: the PC copies D at the ending edge.",
-    "RESET": "Reset synchronised to CLK, active high: a factor of every product term in the IR, step counter, pipeline register and PC; the UART's MR.",
-    "RS": "RS1: the first stage of the reset synchroniser, RST_n sampled on CLK (a synchroniser flop). RESET is the second stage.",
+    "RESET": "Reset synchronised to CLK, active high, from the sequencer's flags chip: a factor of every product term in the IR, step counter, pipeline register, PC and NEL; the UART's MR.",
+    "RS": "RS1: the first stage of the reset synchroniser in the sequencer's flags chip, RST_n sampled on CLK. RESET is the second stage.",
     "RS232_CTS": "RS-232 CTS, from the header.",
     "RS232_RTS": "RS-232 RTS, to the header.",
     "RS232_RX": "RS-232 RX, from the header.",
@@ -13292,6 +13625,8 @@
     "XC_c1A": "SP3232 charge pump: C1+ to its capacitor.",
     "XC_c1B": "SP3232 charge pump: C1- to its capacitor.",
     "XC_c2A": "SP3232 charge pump: C2+ to its capacitor.",
-    "XC_c2B": "SP3232 charge pump: C2- to its capacitor."
+    "XC_c2B": "SP3232 charge pump: C2- to its capacitor.",
+    "XIN": "The UART's own crystal, 1.8432 MHz: divisor 1 is 115200 baud. Nothing to do with the bus clock.",
+    "XOUT": "The other side of the UART's crystal."
   }
 }
