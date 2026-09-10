@@ -70,8 +70,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <rect x="630" y="40" width="240" height="120" rx="3" class="blk"/>
 <text x="642" y="62" class="t">Pipeline register</text><text x="860" y="62" text-anchor="end" class="s">2 GALs</text>
 <text x="642" y="82" class="m">in  M0..M15, CLK, RESET</text>
-<text x="642" y="98" class="m">out PCDRV ADRV MEMRD_n ALUOE WE_n IOOFF</text>
-<text x="642" y="114" class="m">    ALD BLD PCLD PCINC IRLD F1 F0</text>
+<text x="642" y="98" class="m">out PCDRV ADRV MEMRD_n ALUOE WE_n IORD_n</text>
+<text x="642" y="114" class="m">    IOWR_n ALD BLD PCLD PCINC IRLD F1 F0</text>
 <text x="642" y="138" class="s">Q := M at every edge; nothing else</text>
 <text x="642" y="152" class="s">is gated with the clock, anywhere</text>
 
@@ -86,14 +86,14 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <!-- control lines fan out: one dashed line to the register row -->
 <line x1="750" y1="162" x2="750" y2="230" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
 <line x1="90" y1="230" x2="1040" y2="230" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"/>
-<text x="770" y="222" class="s">the twelve control lines, to every block below</text>
+<text x="770" y="222" class="s">the thirteen control lines, to every block below</text>
 <!-- IRLD back to IR -->
 <line x1="90" y1="230" x2="90" y2="162" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#au)"/>
 <text x="96" y="200" class="s">IRLD</text>
 
 <!-- data bus -->
 <rect x="60" y="430" width="1010" height="16" rx="3" fill="var(--bus)"/>
-<text x="565" y="424" text-anchor="middle" class="bus t">D[15:0]  data bus: one driver per clock, MEMRD (the memory Addr selects) or ALUOE</text>
+<text x="565" y="424" text-anchor="middle" class="bus t">D[15:0]  data bus: one driver per clock, MEMRD (the memory Addr selects; the UART with IORD) or ALUOE</text>
 <!-- address bus -->
 <rect x="30" y="760" width="1040" height="12" rx="3" fill="var(--abus)"/>
 <text x="565" y="792" text-anchor="middle" class="ab t">Addr[15:1]: the PC on PCDRV, A on ADRV, nobody in the word between. Flash CE# = Addr15; SRAM CE2 = Addr15, CE1# = Addr14; UART CS0 = Addr14, CS1 = Addr15</text>
@@ -188,8 +188,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 
 <rect x="840" y="520" width="230" height="120" rx="3" class="blk"/>
 <text x="852" y="542" class="t">UART</text><text x="1060" y="542" text-anchor="end" class="s">TL16C550 + SP3232</text>
-<text x="852" y="562" class="m">CS0 Addr14  CS1 Addr15  CS2# IOOFF</text>
-<text x="852" y="578" class="m">RD1# MEMRD_n  WR1# WE_n  MR RESET</text>
+<text x="852" y="562" class="m">CS0 Addr14  CS1 Addr15  CS2# GND</text>
+<text x="852" y="578" class="m">RD1# IORD_n  WR1# IOWR_n  MR RESET</text>
 <text x="852" y="602" class="s">0xC000 + 2n, low byte; XIN from</text>
 <text x="852" y="616" class="s">the oscillator; header TX RX RTS CTS</text>
 <line x1="955" y1="448" x2="955" y2="518" class="busl" stroke-width="1.5" marker-start="url(#ab)" marker-end="url(#ab)"/>
@@ -204,7 +204,8 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><th>Bit</th><th>Line</th><th>For the whole clock</th></tr>
 <tr><td class="m">0</td><td class="m">PCDRV</td><td>the PC drives Addr</td></tr>
 <tr><td class="m">11</td><td class="m">ADRV</td><td>A drives Addr, and so the ALU sees A. Never in the word next to a PCDRV word</td></tr>
-<tr><td class="m">12</td><td class="m">IOOFF</td><td>the UART is deselected (its CS2# high), while A changes at an edge that ends a read strobe</td></tr>
+<tr><td class="m">12</td><td class="m">IORD</td><td>the I/O read strobe, the UART's RD#: only with MEMRD, only in LDB (A)</td></tr>
+<tr><td class="m">13</td><td class="m">IOWR</td><td>the I/O write strobe, the UART's WR#: only with WE, only in STB (A)</td></tr>
 <tr><td class="m">1</td><td class="m">MEMRD</td><td>the memory selected by Addr drives D: flash, SRAM or UART, by Addr's top bits</td></tr>
 <tr><td class="m">2</td><td class="m">ALUOE</td><td>the ALU drives D</td></tr>
 <tr><td class="m">3</td><td class="m">WE</td><td>the memory selected by Addr takes D</td></tr>
@@ -214,7 +215,7 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">7</td><td class="m">PCINC</td><td>PC += 2 at the ending edge</td></tr>
 <tr><td class="m">8</td><td class="m">IRLD</td><td>IR copies D[15:11] and the step counter clears at the ending edge: the fetch</td></tr>
 <tr><td class="m">9, 10</td><td class="m">F0 F1</td><td>ALU function: 00 add, 01 and, 10 nor, 11 pass B</td></tr>
-<tr><td class="m">13..15</td><td></td><td>spare: debug outputs, a halt flag</td></tr>
+<tr><td class="m">14, 15</td><td></td><td>spare: debug outputs, a halt flag</td></tr>
 </table></div>
 
 <h2>The instruction set</h2>
@@ -224,9 +225,9 @@ pre { background: var(--soft); border-radius: 4px; padding: 10px 14px; font-fami
 <tr><td class="m">0</td><td class="m">RESET</td><td>fetch from PC</td><td class="m">FETCH; HOLD</td></tr>
 <tr><td class="m">1</td><td class="m">LDA imm</td><td>A = next word</td><td class="m">PCINC; PCDRV MEMRD ALD; PCDRV MEMRD; PCINC; FETCH; HOLD</td></tr>
 <tr><td class="m">2</td><td class="m">LDB imm</td><td>B = next word</td><td class="m">PCINC; PCDRV MEMRD BLD; PCDRV MEMRD; PCINC; FETCH; HOLD</td></tr>
-<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A], never from the UART</td><td class="m">nop; ADRV; ADRV MEMRD ALD IOOFF; ADRV IOOFF; PCINC; FETCH; HOLD</td></tr>
-<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A]</td><td class="m">nop; ADRV; ADRV MEMRD BLD; ADRV MEMRD; PCINC; FETCH; HOLD</td></tr>
-<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] = B</td><td class="m">nop; ADRV; ADRV ALUOE passB WE; ADRV ALUOE passB; nop; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">3</td><td class="m">LDA (A)</td><td>A = mem[A], memory only</td><td class="m">nop; ADRV; ADRV MEMRD ALD; ADRV; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">4</td><td class="m">LDB (A)</td><td>B = mem[A] or a device</td><td class="m">nop; ADRV; ADRV MEMRD IORD BLD; ADRV MEMRD IORD; PCINC; FETCH; HOLD</td></tr>
+<tr><td class="m">5</td><td class="m">STB (A)</td><td>mem[A] or a device = B</td><td class="m">nop; ADRV; ADRV ALUOE passB WE IOWR; ADRV ALUOE passB; nop; PCINC; FETCH; HOLD</td></tr>
 <tr><td class="m">6, 7</td><td class="m">ADDA, ADDB</td><td>A or B = A + B</td><td class="m">nop; ADRV; ADRV ALUOE add ALD|BLD; nop; PCINC; FETCH; HOLD</td></tr>
 <tr><td class="m">8, 9</td><td class="m">ANDA, ANDB</td><td>A or B = A and B</td><td class="m">as ADD with F = and</td></tr>
 <tr><td class="m">10, 11</td><td class="m">NORA, NORB</td><td>A or B = not (A or B)</td><td class="m">as ADD with F = nor</td></tr>

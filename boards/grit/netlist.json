@@ -1109,12 +1109,30 @@
             ]
           },
           {
-            "out": "IOOFF",
+            "out": "IORD_n",
             "mode": "reg",
+            "active_low": true,
             "terms": [
               [
                 [
                   "M12",
+                  true
+                ],
+                [
+                  "RESET",
+                  false
+                ]
+              ]
+            ]
+          },
+          {
+            "out": "IOWR_n",
+            "mode": "reg",
+            "active_low": true,
+            "terms": [
+              [
+                [
+                  "M13",
                   true
                 ],
                 [
@@ -1130,22 +1148,6 @@
             "terms": [
               [
                 [
-                  "M13",
-                  true
-                ],
-                [
-                  "RESET",
-                  false
-                ]
-              ]
-            ]
-          },
-          {
-            "out": "AUX1",
-            "mode": "reg",
-            "terms": [
-              [
-                [
                   "M14",
                   true
                 ],
@@ -1157,7 +1159,7 @@
             ]
           },
           {
-            "out": "AUX2",
+            "out": "AUX1",
             "mode": "reg",
             "terms": [
               [
@@ -1232,19 +1234,19 @@
           ],
           [
             21,
-            "IOOFF"
+            "IORD_n"
           ],
           [
             16,
-            "AUX0"
+            "IOWR_n"
           ],
           [
             22,
-            "AUX1"
+            "AUX0"
           ],
           [
             15,
-            "AUX2"
+            "AUX1"
           ]
         ]
       },
@@ -1317,14 +1319,14 @@
         },
         {
           "pin": 15,
-          "name": "AUX2",
-          "net": "AUX2",
+          "name": "AUX1",
+          "net": "AUX1",
           "kind": "out"
         },
         {
           "pin": 16,
-          "name": "AUX0",
-          "net": "AUX0",
+          "name": "IOWR_n",
+          "net": "IOWR_n",
           "kind": "out"
         },
         {
@@ -1353,14 +1355,14 @@
         },
         {
           "pin": 21,
-          "name": "IOOFF",
-          "net": "IOOFF",
+          "name": "IORD_n",
+          "net": "IORD_n",
           "kind": "out"
         },
         {
           "pin": 22,
-          "name": "AUX1",
-          "net": "AUX1",
+          "name": "AUX0",
+          "net": "AUX0",
           "kind": "out"
         },
         {
@@ -11444,7 +11446,7 @@
         {
           "pin": 11,
           "name": "CS2#",
-          "net": "IOOFF",
+          "net": "GND",
           "kind": "in"
         },
         {
@@ -11462,7 +11464,7 @@
         {
           "pin": 16,
           "name": "WR1#",
-          "net": "WE_n",
+          "net": "IOWR_n",
           "kind": "in"
         },
         {
@@ -11480,7 +11482,7 @@
         {
           "pin": 19,
           "name": "RD1#",
-          "net": "MEMRD_n",
+          "net": "IORD_n",
           "kind": "in"
         },
         {
@@ -11981,16 +11983,16 @@
       "name": "F1"
     },
     {
-      "name": "IOOFF"
+      "name": "IORD_n"
+    },
+    {
+      "name": "IOWR_n"
     },
     {
       "name": "AUX0"
     },
     {
       "name": "AUX1"
-    },
-    {
-      "name": "AUX2"
     },
     {
       "name": "D1"

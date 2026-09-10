@@ -100,7 +100,8 @@ microcode variants without touching the program.
 |---|---|---|
 | 0 | PCDRV | the PC drives Addr |
 | 11 | ADRV | A drives Addr (and so the ALU sees A) |
-| 12 | IOOFF | the UART is deselected (its CS2# high); set while A changes at an edge that ends a read strobe |
+| 12 | IORD | the I/O read strobe: the UART's RD#.  Only with MEMRD, only in `LDB (A)` |
+| 13 | IOWR | the I/O write strobe: the UART's WR#.  Only with WE, only in `STB (A)` |
 | 1 | MEMRD | the memory selected by Addr drives D (flash, SRAM or UART, by Addr's top bits) |
 | 2 | ALUOE | the ALU drives D |
 | 3 | WE | the memory selected by Addr takes D |
@@ -110,7 +111,7 @@ microcode variants without touching the program.
 | 7 | PCINC | PC += 2 at the ending edge |
 | 8 | IRLD | IR copies D[15:11] and the step counter clears at the ending edge: the fetch |
 | 9, 10 | F0, F1 | ALU function: 00 add, 01 and, 10 nor, 11 pass B |
-| 13 .. 15 | spare | debug outputs, a halt flag |
+| 14, 15 | spare | debug outputs, a halt flag |
 
 **Pipeline.**  In clock k the ROM presents the word for step k while the
 pipeline register executes the word for step k-1.  So the word after a
@@ -145,11 +146,13 @@ microcode generator checks them):
 5. A conditional instruction's two variants differ only at steps whose
    ROM read happens while NEL is fresh: word 1 has ADRV (NEL latches at
    its end), word 2 has not, the variants differ from step 3.
-6. A load into A from memory deselects the UART (IOOFF) in its word and
-   the next: the new value changes the address at the edge that ends
-   the strobe, from a different chip than the strobe, so for up to a
-   few nanoseconds the UART could see itself selected under a read.
-   `LDA (A)` therefore never reads the UART; `LDB (A)` does.
+6. Memory and I/O have separate strobes, as on the 8080 and ISA buses:
+   the UART's RD# and WR# are IORD and IOWR, asserted only by `LDB (A)`
+   and `STB (A)`.  `LDA (A)` changes the address at the edge that ends
+   its read, from a different chip than the strobe and in no fixed
+   order, which a memory tolerates and a device with read side effects
+   must not be shown; it asserts MEMRD only, so the UART is never
+   strobed by it whatever value it loads.
 
 **The sequences.**  Each line is one clock.
 
@@ -158,9 +161,9 @@ FETCH   = PCDRV MEMRD IRLD      HOLD = PCDRV MEMRD
 RESET     FETCH ; HOLD
 LDA imm   PCINC ; PCDRV MEMRD ALD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
 LDB imm   PCINC ; PCDRV MEMRD BLD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
-LDA (A)   nop ; ADRV ; ADRV MEMRD ALD IOOFF ; ADRV IOOFF ; PCINC ; FETCH ; HOLD
-LDB (A)   nop ; ADRV ; ADRV MEMRD BLD ; ADRV MEMRD ; PCINC ; FETCH ; HOLD
-STB (A)   nop ; ADRV ; ADRV ALUOE passB WE ; ADRV ALUOE passB ; nop ; PCINC ; FETCH ; HOLD
+LDA (A)   nop ; ADRV ; ADRV MEMRD ALD ; ADRV ; PCINC ; FETCH ; HOLD
+LDB (A)   nop ; ADRV ; ADRV MEMRD IORD BLD ; ADRV MEMRD IORD ; PCINC ; FETCH ; HOLD
+STB (A)   nop ; ADRV ; ADRV ALUOE passB WE IOWR ; ADRV ALUOE passB ; nop ; PCINC ; FETCH ; HOLD
 ADDA      nop ; ADRV ; ADRV ALUOE add ALD ; nop ; PCINC ; FETCH ; HOLD
 ADDB      nop ; ADRV ; ADRV ALUOE add BLD ; nop ; PCINC ; FETCH ; HOLD
 MOVAB     nop ; ADRV ; ADRV ALUOE passB ALD ; nop ; PCINC ; FETCH ; HOLD
@@ -228,7 +231,7 @@ is high at power-up (a zero register behind an active-low pin).
 | program flash, 2 x SST39SF040 | A0..A13 from Addr1..Addr14; A14, A15 to GND; A16..A18 jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = Addr15 | OE# = MEMRD_n, WE# = VCC |
 | microcode ROM, 2 x SST39SF040 | A0..A3 = STEP0..3, A4 = NEL, A5..A9 = IR0..4, A10..A12 jumpers, the rest GND | chip 0 M0..7, chip 1 M8..15 | CE# = GND | OE# = GND, WE# = VCC |
 | 2 x AS7C164A | A0..A12 from Addr1..Addr13 | as the program flash | CE2 = Addr15, CE1# = Addr14 | OE# = MEMRD_n, WE# = WE_n |
-| TL16C550 | A0..A2 from Addr1..Addr3 | D0..7 | CS0 = Addr14, CS1 = Addr15, CS2# = IOOFF, ADS# = GND | RD1# = MEMRD_n, WR1# = WE_n, RD2 = WR2 = GND; MR = RESET |
+| TL16C550 | A0..A2 from Addr1..Addr3 | D0..7 | CS0 = Addr14, CS1 = Addr15, CS2# = GND, ADS# = GND | RD1# = IORD_n, WR1# = IOWR_n, RD2 = WR2 = GND; MR = RESET |
 
 UART: XIN from the oscillator, XOUT open, BAUDOUT# to RCLK, DTR# looped
 to DSR# and DCD#, RI# high, SOUT/SIN and RTS#/CTS# through the SP3232's
@@ -370,9 +373,12 @@ block diagram.
   dropped in the next word, the address change and the strobe's end
   come from two chips at the same edge, each 2 to 5.5 ns after it, in
   either order.  A value loaded into A that looks like a UART address
-  can select the UART for a few nanoseconds with the strobe still low:
-  a runt read.  Ideal traces hid it; 20 ns of trace mismatch showed it.
-  Hence IOOFF and rule 6.
+  can select the UART for a few nanoseconds with the read strobe still
+  low: a runt read.  Ideal traces hid it; 20 ns of trace mismatch
+  showed it.  The cure is the one every Intel-style bus has, separate
+  I/O strobes (rule 6): wiring the UART's RD# to the memory read line
+  had made a device out of something that is allowed to be read at a
+  changing address.
 - **The condition had to be latched.**  NE is only meaningful while A
   drives the bus (the ALU's A inputs are the address bus), so the ROM's
   condition bit is NEL, latched at the end of ADRV words, and JEQ is
