@@ -296,17 +296,23 @@ STAGE = int(next((a.split("=")[1] for a in sys.argv if a.startswith("--stage="))
 W, H = 300.0, 175.0   # one chip row between the two buses needs the width
 HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 
-# The buses are literal horizontal wires on the top layer: the data bus
-# above the chip row, the address bus below it.  The DIPs sit rotated
-# 180 degrees so their data pins face the data bus and their address
-# pins the address bus.
-ROW_Y = 60.0
-BUS_X0, BUS_X1 = 14.0, 296.0
-DBUS_Y0, ABUS_Y0, BUS_PITCH = 89.0, 31.0, 1.0   # 13 mm channels between the row and each band for the control lines
+# Placement A: the data bus band at the top, two chip rows between the
+# buses, the address bus band at the bottom.  The low byte's chips sit
+# in the upper row over the high byte's in the lower row (rom0 over rom1,
+# a0 over a1, ...).  The buses are literal top-layer wires; the router
+# connects the pins to them, so the columns are spaced to leave it room:
+# GALs at 15 mm, memories at 22 mm.
+W, H = 220.0, 200.0
+HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
+ROW_A, ROW_B = 110.0, 57.0
+BUS_X0, BUS_X1 = 14.0, W - 4.0
+DBUS_Y0, ABUS_Y0, BUS_PITCH = 136.0, 31.0, 1.0
 BUS_WIDTH = 0.3
 STUB_WIDTH = 0.25
-VIA_DRILL, VIA_DIA = 0.2, 0.5    # 0.15 mm ring: hole edge to other copper 0.30 (JLCPCB wants 0.28); stubs at 0.55 mm pitch clear it
+VIA_DRILL, VIA_DIA = 0.2, 0.5
 STUB_PITCH = 0.55
+GAL_DX, MEM_DX = 18.0, 26.0   # room beside every column for the router
+NO_STUBS = "--stubs" not in sys.argv   # DIP pins are left to the router unless --stubs
 
 
 def bus_y(name, i):
@@ -315,32 +321,29 @@ def bus_y(name, i):
 
 PLACE = {}
 STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
-# stage 1: memories and UART
-for i, n in enumerate(["rom0", "rom1", "ram0", "ram1"]):
-    PLACE[n] = (40.0 + i * 20.0, ROW_Y, 180)
-PLACE["uart0"] = (125.0, ROW_Y, 0)
+X_SEQ, X_ROM, X_RAM, X_UART = 22.0, 44.0, 70.0, 96.0
+X_GAL0 = 114.0
+# stage 1: memories and UART; the DIPs rotated so their data pins face the data bus
+PLACE.update({"rom0": (X_ROM, ROW_A, 180), "rom1": (X_ROM, ROW_B, 180), "ram0": (X_RAM, ROW_A, 180), "ram1": (X_RAM, ROW_B, 180), "uart0": (X_UART, ROW_A, 0)})
 STAGE_CHIPS[1] = ["rom0", "rom1", "ram0", "ram1", "uart0"]
-# stage 2: the address drivers, on the row too
-GAL_DX = 13.0   # three stub slots outside each column, five inside
-PLACE["a0"] = (146.0, ROW_Y, 0)
-PLACE["a1"] = (146.0 + GAL_DX, ROW_Y, 0)
+# stage 2: the address drivers, a0 over a1
+PLACE.update({"a0": (X_GAL0, ROW_A, 0), "a1": (X_GAL0, ROW_B, 0)})
 STAGE_CHIPS[2] = ["a0", "a1"]
-# stage 3: the other latches
-for i, n in enumerate(["pc0", "pc1", "b0", "b1", "t0", "t1"]):
-    PLACE[n] = (146.0 + (2 + i) * GAL_DX, ROW_Y, 0)
+# stage 3: pc, b, t
+for i, (n0, n1) in enumerate((("pc0", "pc1"), ("b0", "b1"), ("t0", "t1"))):
+    PLACE[n0] = (X_GAL0 + (1 + i) * GAL_DX, ROW_A, 0)
+    PLACE[n1] = (X_GAL0 + (1 + i) * GAL_DX, ROW_B, 0)
 STAGE_CHIPS[3] = ["pc0", "pc1", "b0", "b1", "t0", "t1"]
-# stage 4: the ALU, on the row too (it reads A from the address bus and drives D)
-for i, n in enumerate(["alu0", "alu1", "alu2", "alu3"]):
-    PLACE[n] = (146.0 + (8 + i) * GAL_DX, ROW_Y, 0)
+# stage 4: the ALU, alu0 over alu1, alu2 over alu3
+PLACE.update({"alu0": (X_GAL0 + 4 * GAL_DX, ROW_A, 0), "alu1": (X_GAL0 + 4 * GAL_DX, ROW_B, 0), "alu2": (X_GAL0 + 5 * GAL_DX, ROW_A, 0), "alu3": (X_GAL0 + 5 * GAL_DX, ROW_B, 0)})
 STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
-# stage 5: sequencer at the end of the bus, microcode ROM and pipeline register beside it
-# seq0 in the row at the left end of the bus (it reads D11..D15); the
-# flags chip, the microcode ROM and the pipeline register above the data
-# bus band, which ends at y = 101
-PLACE.update({"seq0": (22.0, ROW_Y, 0), "seq1": (24.0, 128.0, 0), "uc0": (46.0, 128.0, 0), "uc1": (66.0, 128.0, 0), "mir0": (86.0, 128.0, 0), "mir1": (99.0, 128.0, 0)})
+# stage 5: the sequencer at the left end of the buses (seq0 reads D11..D15,
+# seq1 has no bus pins); the microcode ROM and pipeline register above the
+# data bus, next to them
+PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (40.0, 174.0, 0), "uc1": (62.0, 174.0, 0), "mir0": (82.0, 174.0, 0), "mir1": (97.0, 174.0, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
-# stage 6: clock and reset
-PLACE.update({"osc0": (8.0, 150.0, 90), "umux0": (8.0, 142.0, 0), "uinv0": (8.0, 135.0, 0), "rst0": (36.0, 150.0, 0), "xcvr0": (125.0, 125.0, 0)})
+# stage 6: clock and reset in the left strip, the transceiver under the UART in the lower row
+PLACE.update({"osc0": (8.0, 160.0, 90), "umux0": (8.0, 152.0, 0), "uinv0": (8.0, 145.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -349,7 +352,7 @@ def _place_rest():
     # decoupling: between each socket and its bus band, or beside an SMD chip
     by_name = {c["name"]: c for c in BOARD["chips"]}
     for n, (x, y, r) in list(PLACE.items()):
-        if n in ("seq0", "a0", "a1", "pc0", "pc1", "b0", "b1", "t0", "t1", "alu0", "alu1", "alu2", "alu3"):
+        if n in ("seq0", "a0", "pc0", "b0", "t0", "alu0", "alu2"):   # upper row: above
             # above the column whose stubs do not run upward (its data pins
             # go up, its address pins down); the stub tracks fill the space
             # above the other column
@@ -364,36 +367,40 @@ def _place_rest():
             for col, above in ((-1, True), (1, True), (-1, False), (1, False)):
                 if (up if above else down)[col] == 0:
                     break
-            PLACE["cd_" + n] = (x + col * 3.81, y + (18.5 if above else -18.5), 0)
-        elif n in ("rom0", "rom1", "ram0", "ram1"):
+            PLACE["cd_" + n] = (x + col * 3.81, y + 18.5, 0)
+        elif n in ("seq1", "a1", "pc1", "b1", "t1", "alu1", "alu3"):   # lower row: below
+            PLACE["cd_" + n] = (x, y - 18.5, 0)
+        elif n in ("rom0", "ram0"):
             PLACE["cd_" + n] = (x, y + 23.5, 0)
-        elif n in ("seq1", "mir0", "mir1"):
+        elif n in ("rom1", "ram1"):
+            PLACE["cd_" + n] = (x, y - 23.5, 0)
+        elif n in ("mir0", "mir1"):
             PLACE["cd_" + n] = (x, y + 17.5, 0)
         elif n in ("uc0", "uc1"):
             PLACE["cd_" + n] = (x, y + 22.5, 0)
-    PLACE.update({"cd_uart0": (118.0, 67.0, 90), "cd_xcvr0": (260.0, 131.0, 0), "cd_osc0": (8.0, 156.5, 0), "cd_rst0": (36.0, 155.0, 0), "cd_umux0": (8.0, 138.5, 0), "cd_uinv0": (8.0, 131.5, 0)})
-    # the UART's crystal below it, between the chip and the address band
-    PLACE.update({"x1": (125.0, 44.0, 0), "xc1": (121.0, 40.0, 90), "xc2": (129.0, 40.0, 90)})
-    # transceiver's charge-pump capacitors and the DB9 at the top-right edge
-    PLACE.update({"c1": (253.0, 125.0, 90), "c2": (255.5, 125.0, 90), "c3": (264.5, 125.0, 90), "c4": (267.0, 125.0, 90), "j1": (272.0, 166.0, 180)})
+    PLACE.update({"cd_uart0": (X_UART - 8.0, ROW_A + 8.0, 90), "cd_xcvr0": (X_UART, ROW_B + 6.0, 0), "cd_osc0": (8.0, 166.5, 0), "cd_rst0": (8.0, 104.5, 0), "cd_umux0": (8.0, 148.5, 0), "cd_uinv0": (8.0, 141.5, 0)})
+    # the UART's crystal between the UART and the transceiver
+    PLACE.update({"x1": (X_UART, ROW_A - 16.0, 0), "xc1": (X_UART - 4.0, ROW_A - 20.0, 90), "xc2": (X_UART + 4.0, ROW_A - 20.0, 90)})
+    # transceiver's charge-pump capacitors beside it, the DB9 on the bottom edge under them
+    PLACE.update({"c1": (X_UART - 7.0, ROW_B, 90), "c2": (X_UART - 4.5, ROW_B, 90), "c3": (X_UART + 4.5, ROW_B, 90), "c4": (X_UART + 7.0, ROW_B, 90), "j1": (X_UART, 9.0, 0)})
     # clock corner: step button, slide switch, debounce, clock header
-    PLACE.update({"swstep0": (9.0, 118.0, 0), "rstep0": (8.0, 124.5, 0), "cst0": (8.0, 127.5, 0), "swm0": (9.0, 108.0, 0), "jclk0": (5.0, 168.0, 90)})
+    PLACE.update({"swstep0": (9.0, 130.0, 0), "rstep0": (8.0, 136.5, 0), "cst0": (8.0, 139.5, 0), "swm0": (9.0, 120.0, 0), "jclk0": (5.0, 178.0, 90)})
     # reset button by the supervisor
-    PLACE.update({"swr0": (36.0, 162.0, 0)})
+    PLACE.update({"swr0": (9.0, 92.0, 0)})
     # bank switches and their pull-ups, and the select pull-downs, bottom-left
-    PLACE.update({"swb0": (40.0, 8.0, 0), "swb1": (56.0, 8.0, 0)})
+    PLACE.update({"swb0": (30.0, 8.0, 0), "swb1": (46.0, 8.0, 0)})
     for i in range(4):
-        PLACE[f"rp_pbank{i}"] = (33.0 + i * 3.5, 15.5, 90)
+        PLACE[f"rp_pbank{i}"] = (23.0 + i * 3.5, 15.5, 90)
     for i in range(3):
-        PLACE[f"rp_ubank{i}"] = (49.0 + i * 3.5, 15.5, 90)
-    PLACE.update({"rd0": (230.0, 12.0, 270), "rd1": (234.0, 12.0, 270)})   # pad 1 (the address line) toward the bus
+        PLACE[f"rp_ubank{i}"] = (39.0 + i * 3.5, 15.5, 90)
+    PLACE.update({"rd0": (60.0, 12.0, 270), "rd1": (64.0, 12.0, 270)})   # pad 1 (the address line) toward the bus
     # power entry
     # power entry in the strip left of the sequencer, the plug entering from the left edge
     PLACE.update({"jpwr0": (8.0, 43.0, 90), "cb0": (8.0, 58.0, 0), "f0": (8.0, 65.0, 0), "q0": (8.0, 70.0, 0), "rlp0": (8.0, 75.0, 0), "ledp0": (8.0, 79.0, 0),
-                  "cb1": (135.0, 80.0, 0), "cb2": (200.0, 112.0, 0), "cb3": (175.0, 112.0, 0), "cb4": (115.0, 112.0, 0)})
+                  "cb1": (X_UART, 83.0, 0), "cb2": (X_GAL0 + 3.5 * GAL_DX, 83.0, 0), "cb3": (150.0, 160.0, 0), "cb4": (120.0, 160.0, 0)})
     # LEDs and their buffers along the top edge
-    LED_Y, R_Y, BUF_Y = 170.0, 166.0, 158.0
-    x = 50.0
+    LED_Y, R_Y, BUF_Y = H - 5.0, H - 9.0, H - 17.0
+    x = 20.0
     for b, group in enumerate(LED_ORDER):
         PLACE[f"ubuf{b}"] = (x + 17.0, BUF_Y, 0)
         PLACE[f"cd_ubuf{b}"] = (x + 17.0 + 8.5, BUF_Y, 90)
@@ -401,13 +408,13 @@ def _place_rest():
             s = sig.lower()
             PLACE[f"led_{s}"] = (x, LED_Y, 90)
             PLACE[f"rl_{s}"] = (x, R_Y, 90)
-            x += 5.0
-        x += 6.0
+            x += 4.5
+        x += 5.0
     # analyzer headers along the bottom edge
     # the address header under the address bus, the data header above the
     # data bus (top-left), the two control headers along the bottom
     # the address header under the stub-free stretch below B and T
-    PLACE.update({"ja0": (200.0, 6.0, 90), "jd0": (130.0, 108.0, 90), "jc0": (100.0, 6.0, 90), "js0": (140.0, 6.0, 90)})
+    PLACE.update({"ja0": (110.0, 6.0, 90), "jd0": (120.0, 155.0, 90), "jc0": (140.0, 6.0, 90), "js0": (160.0, 155.0, 90)})
 
 
 LED_ORDER = [
@@ -420,7 +427,8 @@ LED_ORDER = [
 
 def finish_floorplan():
     _place_rest()
-    STAGE_CHIPS[7] = [c["name"] for c in BOARD["chips"] if c["name"] not in sum(STAGE_CHIPS.values(), [])]
+    dropped = lambda n: n.startswith(("led", "rl", "ubuf", "cd_ubuf"))   # no LEDs or their buffers on this board
+    STAGE_CHIPS[7] = [c["name"] for c in BOARD["chips"] if c["name"] not in sum(STAGE_CHIPS.values(), []) and not dropped(c["name"])]
 
 
 def stage_names():
@@ -755,8 +763,16 @@ def draw_buses(nets):
                 continue
             y = bus_y(name, i)
             # a vertex at every via, so the router's connectivity sees the junctions
-            xs = [BUS_X0] + sorted(x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1) + [BUS_X1]
+            # the probe holes at the left ends alternate between two columns
+            # so their rings clear each other at the 1.0 mm line pitch
+            x_hole = BUS_X0 - (1.6 if i % 2 else 0.0)
+            xs = [x_hole] + sorted(x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1) + [BUS_X1]
             run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", BUS_WIDTH, *[f"{x},{y}" for x in xs], quiet=True)
+            # a probe point at the left end of every line: a plated hole on
+            # the net, which is also the pin that tells freerouting the wire
+            # belongs to something (a protected wire attached to no pin makes
+            # it hang)
+            run("hole", "add", f"{x_hole},{y}", "--drill", 0.6, "--diameter", 1.1, "--net", net, quiet=True)
 
 
 def hide_hand_wiring(dsn):
@@ -811,8 +827,15 @@ def hide_hand_wiring(dsn):
     clearance = 0.15 * 1000
     keepouts = []
     wiring = re.search(r'\n  \(wiring\n(.*?)\n  \)\n', s, re.S)
+    keep = []   # protected wiring of nets the router still has to finish
     if wiring:
-        for layer, w, pts in re.findall(r'\(wire \(path (\S+) (\d+)((?: -?[\d.]+)+)\)', wiring.group(1)):
+        for line in wiring.group(1).split("\n"):
+            m = re.search(r'\(net (\S+)\)', line)
+            if m and m.group(1).strip('"') not in done:
+                keep.append(line)
+        for layer, w, pts, net in re.findall(r'\(wire \(path (\S+) (\d+)((?: -?[\d.]+)+)\) \(net (\S+)\)', wiring.group(1)):
+            if net.strip('"') not in done:
+                continue
             nums = [float(v) for v in pts.split()]
             h = float(w) / 2 + clearance
             for (x1, y1, x2, y2) in zip(nums[0::2], nums[1::2], nums[2::2], nums[3::2]):
@@ -824,14 +847,14 @@ def hide_hand_wiring(dsn):
                 corners = [(x1 - ex + px, y1 - ey + py), (x2 + ex + px, y2 + ey + py), (x2 + ex - px, y2 + ey - py), (x1 - ex - px, y1 - ey - py)]
                 keepouts.append(f'    (keepout "" (polygon {layer} 0 ' + " ".join(f"{x:.1f} {y:.1f}" for x, y in corners) + "))")
         esc_pts = {(round(x * 1000), round(y * 1000)) for net, pts in ESC_VIAS.items() if net not in done for (x, y) in pts}
-        for x, y in re.findall(r'\(via \S+ (-?[\d.]+) (-?[\d.]+)', wiring.group(1)):
-            if (round(float(x)), round(float(y))) in esc_pts:
+        for x, y, net in re.findall(r'\(via \S+ (-?[\d.]+) (-?[\d.]+) \(net (\S+)\)', wiring.group(1)):
+            if (round(float(x)), round(float(y))) in esc_pts or net.strip('"') not in done:
                 continue
             r = 300 + clearance
             for layer in ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu"):
                 pts = " ".join(f"{float(x) + r * math.cos(a):.1f} {float(y) + r * math.sin(a):.1f}" for a in [i * math.pi / 6 for i in range(12)])
                 keepouts.append(f'    (keepout "" (polygon {layer} 0 {pts}))')
-        s = s[:wiring.start()] + "\n" + s[wiring.end():]
+        s = s[:wiring.start()] + "\n" + ("  (wiring\n" + "\n".join(keep) + "\n  )\n" if keep else "") + s[wiring.end():]
     # keepouts go into the structure section, after the boundary
     i = s.index("(boundary")
     j = s.index("\n", i)
@@ -914,9 +937,10 @@ def main():
         x, y, r = PLACE[n]
         run("place", n, f"{x},{y}", "--rotation", r, quiet=True)
     if "--no-stubs" not in sys.argv:
-        draw_stubs(chips)
+        if not NO_STUBS:
+            draw_stubs(chips)
+            draw_header_stubs(chips)
         draw_smd_stubs(chips, nets)
-        draw_header_stubs(chips)
         draw_power_vias([c for c in chips if not c["package"].startswith(("DIP", "LQFP"))], pinmaps, comps, extras)
         draw_buses(nets)
     if FOUR:
