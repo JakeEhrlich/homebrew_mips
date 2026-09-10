@@ -152,43 +152,65 @@ part as crag, in stock as a 3225) with two 18 pF loads; divisor 8 is
 
 ## 9. The PCB project (flatland)
 
-`boards/grit/pcb/` is a flatland project generated from the board file:
+`boards/grit/pcb/` is a flatland project generated from the board file,
+built up in stages so that each step can be looked at before and after
+routing:
 
 ```
 cargo run --release -- export grit > boards/grit/netlist.json
-python3 boards/grit/pcb/build.py            # library, netlist, floorplan, check
-python3 boards/grit/pcb/build.py --route    # + freerouting, check, gerbers, BOM, pick-and-place
+python3 boards/grit/pcb/build.py --stage=N            # library, netlist, placement, hand wiring, check
+python3 boards/grit/pcb/build.py --stage=N --route    # + freerouting, check, renders
+python3 boards/grit/pcb/build.py --stage=7 --route --outputs   # + gerbers, BOM, pick-and-place
 ```
 
-`build.py` writes `lib/` (an index of the packages the flatland libraries
-did not have: the three DIP sockets, LQFP-48, TSSOP-16, SOIC-20W, SC-88,
-SOT-23-5, SOT-143, the 3225 crystal, the 7050 oscillator, the three
-switches, the headers and the DB9), then drives `pcb` to add every chip
-of the board file as an instance, join every net, and place the parts.
-Passives, the LED, the jack and the SOT-23 come from
-`~/flatland/library-jlcpcb`.  Re-running regenerates `pcb.json` from
-scratch, so the floorplan lives in the script, not in the project file.
+| Stage | Adds |
+|---|---|
+| 1 | program flash, SRAM, UART, on explicit bus wires |
+| 2 | a0, a1 (the address drivers) |
+| 3 | pc0, pc1, b0, b1, t0, t1 |
+| 4 | the ALU |
+| 5 | the sequencer at the left end of the bus; flags chip, microcode ROM and pipeline register above the data bus |
+| 6 | oscillator, multiplexer, inverter, supervisor, transceiver |
+| 7 | everything else: passives, LEDs and buffers, switches, headers, jack, DB9 |
 
-**Floorplan**, 230 x 175 mm, two layers, y up:
+**The buses are literal wires.**  Sixteen data lines and sixteen address
+lines run the length of the board on the top layer at 1.0 mm pitch, the
+data bus above the chip row and the address bus below it.  The DIPs sit
+rotated so their data pins face the data bus and their address pins the
+address bus; every bus pin gets a bottom-layer stub beside its column
+(0.55 mm pitch, three slots outside the column and five inside, in an
+order that no jog crosses another stub) to a 0.2/0.5 mm via on its
+line.  The UART's 0.5 mm pads escape straight out to a via row and the
+bus pads continue the same way.  Header pins on bus nets and the
+select pull-downs get stubs too.  Every SMD pad on 5 V or ground gets a
+via to the planes.  All of that is drawn by the generator before the
+router runs.
+
+**The router sees only what is left.**  Freerouting cannot leave the
+LQFP's pads, cannot add plane vias, and treats protected wiring it
+cannot "complete" as work, thrashing on it.  So the DSN it is given is
+rewritten: nets that flatland already reports as one island are dropped
+and their copper becomes keepouts, the escape vias of unfinished nets
+become one-pin parts, and the inner layers are marked as power layers.
+The residual nets (control lines, clock, reset, serial, LEDs) route in
+seconds.  `--keep-redundant` on the import, because flatland's
+redundant-segment pass is quadratic and takes hours on this board.
+
+**Floorplan**, 300 x 175 mm, four layers, y up:
 
 | Where | What |
 |---|---|
-| top edge | 30 LEDs and their resistors in the buffer order of section 5, the four 74HC541 under them |
-| row at y = 129 | seq0, seq1, mir0, mir1, alu0..alu3 (DIP-24, long axis vertical, 12.5 mm pitch) |
-| row at y = 93 | pc0, pc1, a0, a1, b0, b1, t0, t1 |
-| row at y = 46 | uc0, uc1, rom0, rom1, ram0, ram1 (DIP-32 / DIP-28, 20 mm pitch) |
-| left edge | the clock: oscillator, multiplexer, inverter, step button, slide switch; the clock header at the top-left |
-| right of the rows | reset (MAX811L, button), the two bank DIP switches with their pull-ups, the UART with its crystal, the SP3232, the DB9 at the bottom-right corner |
-| bottom-left | jack, polyfuse, MOSFET, 100 uF, power LED |
-| bottom edge | the four 2 x 10 analyzer headers |
+| the chip row, y = 60 | seq0, rom0, rom1, ram0, ram1, uart0, a0, a1, pc0, pc1, b0, b1, t0, t1, alu0..alu3, left to right (GALs at 13 mm pitch, memories at 20) |
+| above the data bus | seq1, uc0, uc1, mir0, mir1; the data-bus header; the bulk capacitors |
+| top edge | 30 LEDs and their buffers; the DB9 at the top-right corner with the transceiver under it |
+| left strip | the jack (plug from the left edge), fuse, MOSFET, 100 uF, power LED; the clock corner above them; the clock header top-left |
+| bottom edge | bank DIP switches and pull-ups, the control and sequencer headers, the address header under B and T where no stubs run |
 
-A 100 nF sits just above every socket and beside every SMD chip; the
-four 10 uF are spread over the rows.  Ground pour on the bottom, 5 V
-pour on the top.  Design check: 0 errors before routing.  The unverified
-footprints (section 9's "verify" and the ones marked VERIFY in
-`lib/footprints/*.json`: SOT-143, the switches, the oscillator, the
-DB9's pin order) are the things to hold the datasheets against before
-ordering.
+Decoupling sits over the socket column whose stubs run the other way.
+Design check: 0 errors with everything placed and the buses drawn,
+before routing.  The unverified footprints (SOT-143, the switches, the
+oscillator, the DB9's pin order) are the things to hold the datasheets
+against before ordering.
 
 ## 10. Bill of materials
 

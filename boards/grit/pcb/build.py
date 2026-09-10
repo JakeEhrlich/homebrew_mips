@@ -301,8 +301,8 @@ HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 # 180 degrees so their data pins face the data bus and their address
 # pins the address bus.
 ROW_Y = 60.0
-BUS_X0, BUS_X1 = 10.0, 296.0
-DBUS_Y0, ABUS_Y0, BUS_PITCH = 86.0, 34.0, 1.0
+BUS_X0, BUS_X1 = 14.0, 296.0
+DBUS_Y0, ABUS_Y0, BUS_PITCH = 89.0, 31.0, 1.0   # 13 mm channels between the row and each band for the control lines
 BUS_WIDTH = 0.3
 STUB_WIDTH = 0.25
 VIA_DRILL, VIA_DIA = 0.2, 0.5    # 0.15 mm ring: hole edge to other copper 0.30 (JLCPCB wants 0.28); stubs at 0.55 mm pitch clear it
@@ -337,11 +337,90 @@ STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
 # seq0 in the row at the left end of the bus (it reads D11..D15); the
 # flags chip, the microcode ROM and the pipeline register above the data
 # bus band, which ends at y = 101
-PLACE.update({"seq0": (22.0, ROW_Y, 0), "seq1": (24.0, 125.0, 0), "uc0": (46.0, 125.0, 0), "uc1": (66.0, 125.0, 0), "mir0": (86.0, 125.0, 0), "mir1": (99.0, 125.0, 0)})
+PLACE.update({"seq0": (22.0, ROW_Y, 0), "seq1": (24.0, 128.0, 0), "uc0": (46.0, 128.0, 0), "uc1": (66.0, 128.0, 0), "mir0": (86.0, 128.0, 0), "mir1": (99.0, 128.0, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
 # stage 6: clock and reset
 PLACE.update({"osc0": (8.0, 150.0, 90), "umux0": (8.0, 142.0, 0), "uinv0": (8.0, 135.0, 0), "rst0": (36.0, 150.0, 0), "xcvr0": (125.0, 125.0, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
+
+
+# stage 7: everything else
+def _place_rest():
+    # decoupling: between each socket and its bus band, or beside an SMD chip
+    by_name = {c["name"]: c for c in BOARD["chips"]}
+    for n, (x, y, r) in list(PLACE.items()):
+        if n in ("seq0", "a0", "a1", "pc0", "pc1", "b0", "b1", "t0", "t1", "alu0", "alu1", "alu2", "alu3"):
+            # above the column whose stubs do not run upward (its data pins
+            # go up, its address pins down); the stub tracks fill the space
+            # above the other column
+            pads = dip_pads(by_name[n])
+            up, down = {-1: 0, 1: 0}, {-1: 0, 1: 0}
+            for pin in by_name[n]["pins"]:
+                net = pin.get("net") or ""
+                if net.startswith("D") and net[1:].isdigit():
+                    up[pads[pin["pin"]][2]] += 1
+                elif net.startswith("ADDR"):
+                    down[pads[pin["pin"]][2]] += 1
+            for col, above in ((-1, True), (1, True), (-1, False), (1, False)):
+                if (up if above else down)[col] == 0:
+                    break
+            PLACE["cd_" + n] = (x + col * 3.81, y + (18.5 if above else -18.5), 0)
+        elif n in ("rom0", "rom1", "ram0", "ram1"):
+            PLACE["cd_" + n] = (x, y + 23.5, 0)
+        elif n in ("seq1", "mir0", "mir1"):
+            PLACE["cd_" + n] = (x, y + 17.5, 0)
+        elif n in ("uc0", "uc1"):
+            PLACE["cd_" + n] = (x, y + 22.5, 0)
+    PLACE.update({"cd_uart0": (118.0, 67.0, 90), "cd_xcvr0": (260.0, 131.0, 0), "cd_osc0": (8.0, 156.5, 0), "cd_rst0": (36.0, 155.0, 0), "cd_umux0": (8.0, 138.5, 0), "cd_uinv0": (8.0, 131.5, 0)})
+    # the UART's crystal below it, between the chip and the address band
+    PLACE.update({"x1": (125.0, 44.0, 0), "xc1": (121.0, 40.0, 90), "xc2": (129.0, 40.0, 90)})
+    # transceiver's charge-pump capacitors and the DB9 at the top-right edge
+    PLACE.update({"c1": (253.0, 125.0, 90), "c2": (255.5, 125.0, 90), "c3": (264.5, 125.0, 90), "c4": (267.0, 125.0, 90), "j1": (272.0, 166.0, 180)})
+    # clock corner: step button, slide switch, debounce, clock header
+    PLACE.update({"swstep0": (9.0, 118.0, 0), "rstep0": (8.0, 124.5, 0), "cst0": (8.0, 127.5, 0), "swm0": (9.0, 108.0, 0), "jclk0": (5.0, 168.0, 90)})
+    # reset button by the supervisor
+    PLACE.update({"swr0": (36.0, 162.0, 0)})
+    # bank switches and their pull-ups, and the select pull-downs, bottom-left
+    PLACE.update({"swb0": (40.0, 8.0, 0), "swb1": (56.0, 8.0, 0)})
+    for i in range(4):
+        PLACE[f"rp_pbank{i}"] = (33.0 + i * 3.5, 15.5, 90)
+    for i in range(3):
+        PLACE[f"rp_ubank{i}"] = (49.0 + i * 3.5, 15.5, 90)
+    PLACE.update({"rd0": (230.0, 12.0, 270), "rd1": (234.0, 12.0, 270)})   # pad 1 (the address line) toward the bus
+    # power entry
+    # power entry in the strip left of the sequencer, the plug entering from the left edge
+    PLACE.update({"jpwr0": (8.0, 43.0, 90), "cb0": (8.0, 58.0, 0), "f0": (8.0, 65.0, 0), "q0": (8.0, 70.0, 0), "rlp0": (8.0, 75.0, 0), "ledp0": (8.0, 79.0, 0),
+                  "cb1": (135.0, 80.0, 0), "cb2": (200.0, 112.0, 0), "cb3": (175.0, 112.0, 0), "cb4": (115.0, 112.0, 0)})
+    # LEDs and their buffers along the top edge
+    LED_Y, R_Y, BUF_Y = 170.0, 166.0, 158.0
+    x = 50.0
+    for b, group in enumerate(LED_ORDER):
+        PLACE[f"ubuf{b}"] = (x + 17.0, BUF_Y, 0)
+        PLACE[f"cd_ubuf{b}"] = (x + 17.0 + 8.5, BUF_Y, 90)
+        for sig in group:
+            s = sig.lower()
+            PLACE[f"led_{s}"] = (x, LED_Y, 90)
+            PLACE[f"rl_{s}"] = (x, R_Y, 90)
+            x += 5.0
+        x += 6.0
+    # analyzer headers along the bottom edge
+    # the address header under the address bus, the data header above the
+    # data bus (top-left), the two control headers along the bottom
+    # the address header under the stub-free stretch below B and T
+    PLACE.update({"ja0": (200.0, 6.0, 90), "jd0": (130.0, 108.0, 90), "jc0": (100.0, 6.0, 90), "js0": (140.0, 6.0, 90)})
+
+
+LED_ORDER = [
+    ["CLK", "RESET", "PCDRV", "ADRV", "MEMRD_n", "WE_n", "ALUOE", "TDRV"],
+    ["ALD", "BLD", "TLD", "PCLD", "PCINC", "IRLD", "NEL", "AUX0"],
+    ["IR0", "IR1", "IR2", "IR3", "IR4", "STEP0", "STEP1", "STEP2"],
+    ["STEP3", "F0", "F1", "AUX1", "RST_n"],
+]
+
+
+def finish_floorplan():
+    _place_rest()
+    STAGE_CHIPS[7] = [c["name"] for c in BOARD["chips"] if c["name"] not in sum(STAGE_CHIPS.values(), [])]
 
 
 def stage_names():
@@ -577,6 +656,95 @@ def draw_corner_loops(side_vias, inward):
                 run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *[f"{x:.3f},{y:.3f}" for x, y in pts], quiet=True)
 
 
+def draw_header_stubs(chips):
+    """Analyzer-header pins on a bus net: a bottom-layer track from the
+    pin to a via on its bus line.  The header is two rows of pins at the
+    same x, so the pin in the row nearer the bus goes straight and the
+    other jogs 1.27 mm sideways first."""
+    for c in chips:
+        if not c["part"].startswith("Header 2x10"):
+            continue
+        x0, y0, rot = PLACE[c["name"]]
+        assert rot == 90
+        for p in c["pins"]:
+            net = p.get("net") or ""
+            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            if bus is None:
+                continue
+            k = p["pin"] - 1
+            col, row = k // 2, k % 2          # footprint: odd pins row 0, even pins row 1
+            x, y = x0 + col * 2.54, y0 + row * 2.54
+            yb = bus_y(bus, int(net[len(bus):]))
+            up = yb > y
+            straight = (row == 1) == up       # the pin nearer the bus goes straight
+            xt = x if straight else x + 1.27
+            pts = [f"{x:.3f},{y:.3f}"] + ([] if straight else [f"{xt:.3f},{y:.3f}"]) + [f"{xt:.3f},{yb}"]
+            run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *pts, quiet=True)
+            run("via", "add", f"{xt:.3f},{yb}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+            VIA_XS.setdefault(net, []).append(round(xt, 3))
+
+
+def component_pads(comp_name):
+    """{pin name: [(x, y, is_smd)]} of a library component, from its files."""
+    import glob
+    for d in (os.path.join(LIB, "components"), os.path.join(JLC, "components")):
+        path = os.path.join(d, comp_name + ".json")
+        if os.path.exists(path):
+            break
+    else:
+        raise SystemExit(f"no component file for {comp_name}")
+    comp = json.load(open(path))
+    fp = json.load(open(os.path.normpath(os.path.join(os.path.dirname(path), os.path.expanduser(comp["footprint"]["url"])))))
+    pads = {pd["name"]: (pd["at"][0], pd["at"][1], pd["type"] == "smd") for pd in fp["pads"]}
+    out = {}
+    for pin in comp["pins"]:
+        names = pin.get("pad", pin["name"])
+        if isinstance(names, str):
+            names = [names]
+        out[pin["name"]] = [pads[nm] for nm in names]
+    return out
+
+
+def draw_power_vias(chips, pinmaps, comps, extras=()):
+    """Every SMD pad on 5 V, ground or a bus net: a short escape straight
+    away from the part's centre, then a via; a bus pad continues on the
+    bottom layer to a via on its bus line.  (The router never adds plane
+    vias, and these nets are hidden from it as finished.)"""
+    import math
+    for c in chips:
+        name = c["name"]
+        x0, y0, rot = PLACE[name]
+        pads = component_pads(comps[name])
+        th = math.radians(rot)
+        wanted = [(pinmaps[name].get(str(p["pin"])), p.get("net") or "") for p in c["pins"]]
+        wanted += [(pin, net) for (chip, pin, net) in extras if chip == name]
+        for pin, net in wanted:
+            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
+            if net not in ("VCC", "GND") and bus is None:
+                continue
+            if pin is None:
+                continue
+            for (px, py, smd) in pads[pin]:
+                if not smd:
+                    continue
+                rx, ry = px * math.cos(th) - py * math.sin(th), px * math.sin(th) + py * math.cos(th)
+                x, y = x0 + rx, y0 + ry
+                L = math.hypot(rx, ry) or 1.0
+                ux, uy = rx / L, ry / L
+                if abs(ux) >= abs(uy):
+                    ux, uy = (1.0 if ux > 0 else -1.0), 0.0
+                else:
+                    ux, uy = 0.0, (1.0 if uy > 0 else -1.0)
+                xe, ye = x + ux * 1.0, y + uy * 1.0
+                run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", STUB_WIDTH, f"{x:.3f},{y:.3f}", f"{xe:.3f},{ye:.3f}", quiet=True)
+                run("via", "add", f"{xe:.3f},{ye:.3f}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                if bus is not None:
+                    yb = bus_y(bus, int(net[len(bus):]))
+                    run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, f"{xe:.3f},{ye:.3f}", f"{xe:.3f},{yb}", quiet=True)
+                    run("via", "add", f"{xe:.3f},{yb}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+                    VIA_XS.setdefault(net, []).append(round(xe, 3))
+
+
 def draw_buses(nets):
     """The explicit bus wires: one protected trace per bit, only for bits
     that have pins in this stage."""
@@ -599,7 +767,11 @@ def hide_hand_wiring(dsn):
     unrouted work, and either hangs or stops placing vias."""
     import re, math
     s = open(dsn).read()
-    done = set(VIA_XS) | {"VCC", "GND"}
+    st = json.loads(subprocess.run([PCB, "-p", os.path.join(HERE, "pcb.json"), "status", "--json"], capture_output=True, text=True).stdout)
+    done = {n["name"] for n in st["nets"] if len(n["islands"]) <= 1}
+    not_done = sorted(set(VIA_XS) - done)
+    if not_done:
+        print("hand-wired but not complete:", not_done)
     # the escape vias of nets the router still has to finish become
     # one-pin parts ESC<n>, the way flatland exports netted holes
     esc_parts = {}   # net -> [part names]
@@ -669,6 +841,7 @@ def hide_hand_wiring(dsn):
 
 # --------------------------------------------------------------------- main
 def main():
+    finish_floorplan()
     names = write_library()
     if os.path.exists(os.path.join(HERE, "pcb.json")):
         os.remove(os.path.join(HERE, "pcb.json"))
@@ -695,9 +868,11 @@ def main():
         wanted = set(only.split(","))
     chips = [c for c in BOARD["chips"] if c["name"] in wanted]
     pinmaps = {}
+    comps = {}
     for c in chips:
         comp_name, params, pinmap = component_for(c)
         pinmaps[c["name"]] = pinmap
+        comps[c["name"]] = comp_name
         args = ["add", c["name"], comp_name]
         for k, v in params.items():
             args += ["-P", f"{k}={v}"]
@@ -713,10 +888,13 @@ def main():
                 continue
             nets.setdefault(p["net"], []).append(f"{c['name']}.{cp}")
     # extras the board file does not carry: crystal case pads, jack switch contact to the sleeve
+    extras = []
     if "x1" in wanted:
         nets["GND"] += ["x1.2", "x1.4"]
+        extras += [("x1", "2", "GND"), ("x1", "4", "GND")]
     if "jpwr0" in wanted:
         nets["GND"] += ["jpwr0.SW"]
+        extras += [("jpwr0", "SW", "GND")]
     for net, pins in nets.items():
         if len(pins) < 2:
             print("single-pin net", net, pins)
@@ -738,6 +916,8 @@ def main():
     if "--no-stubs" not in sys.argv:
         draw_stubs(chips)
         draw_smd_stubs(chips, nets)
+        draw_header_stubs(chips)
+        draw_power_vias([c for c in chips if not c["package"].startswith(("DIP", "LQFP"))], pinmaps, comps, extras)
         draw_buses(nets)
     if FOUR:
         run("pour", "new", "gnd", "--layer", "In1.Cu", "--net", "GND", "--follow-outline", quiet=True)
@@ -775,10 +955,10 @@ def main():
         run("route", "--import", os.path.join(HERE, "build", "grit.ses"), "--keep-redundant")
         run("check", check=False)
         run("visualize", "pcb", "-o", os.path.join(HERE, "build", f"stage{STAGE}-routed.png"), quiet=True)
-        if STAGE >= 7:
-            run("gerbers", check=False)
-            run("bom", "--all", check=False)
-            run("pnp", check=False)
+    if "--outputs" in sys.argv:
+        run("gerbers", check=False)
+        run("bom", "--all", check=False)
+        run("pnp", check=False)
 
 
 if __name__ == "__main__":
