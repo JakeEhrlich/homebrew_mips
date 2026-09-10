@@ -16749,6 +16749,1606 @@
       ]
     },
     {
+      "name": "rb_d0",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d1",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d2",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d2",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d3",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D3",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d3",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d4",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D4",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d4",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d5",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D5",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D5",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d5",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D5",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d6",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D6",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D6",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d6",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D6",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d7",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D7",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D7",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d7",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D7",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d8",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D8",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D8",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d8",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D8",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d9",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D9",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D9",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d9",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D9",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d10",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D10",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D10",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d10",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D10",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d11",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D11",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D11",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d11",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D11",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d12",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D12",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D12",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d12",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D12",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d13",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D13",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D13",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d13",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D13",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d14",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D14",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D14",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d14",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D14",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_d15",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "D15",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_D15",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_d15",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_D15",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr0",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR0",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr0",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR0",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr1",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR1",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr1",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR1",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr2",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR2",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr2",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR2",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr3",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR3",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr3",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR3",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr4",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR4",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr4",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR4",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr5",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR5",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR5",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr5",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR5",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr6",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR6",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR6",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr6",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR6",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr7",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR7",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR7",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr7",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR7",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr8",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR8",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR8",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr8",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR8",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr9",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR9",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR9",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr9",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR9",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr10",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR10",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR10",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr10",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR10",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr11",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR11",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR11",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr11",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR11",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr12",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR12",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR12",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr12",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR12",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr13",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR13",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR13",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr13",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR13",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr14",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR14",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR14",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr14",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR14",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "rb_addr15",
+      "part": "4.7k 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C23162",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "ADDR15",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "LEDA_ADDR15",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
+      "name": "lb_addr15",
+      "part": "LED red 0603",
+      "package": "0603",
+      "block": "Debug LEDs",
+      "stage": "Board",
+      "model": {
+        "kind": "passive"
+      },
+      "lcsc": "C2286",
+      "pins": [
+        {
+          "pin": 1,
+          "name": "1",
+          "net": "LEDA_ADDR15",
+          "kind": "passive"
+        },
+        {
+          "pin": 2,
+          "name": "2",
+          "net": "GND",
+          "kind": "passive"
+        }
+      ]
+    },
+    {
       "name": "ja0",
       "part": "Header 2x10 2.54 mm",
       "package": "PinHeader_2x10",
@@ -17913,6 +19513,102 @@
     },
     {
       "name": "LEDA_RST_n"
+    },
+    {
+      "name": "LEDA_D0"
+    },
+    {
+      "name": "LEDA_D1"
+    },
+    {
+      "name": "LEDA_D2"
+    },
+    {
+      "name": "LEDA_D3"
+    },
+    {
+      "name": "LEDA_D4"
+    },
+    {
+      "name": "LEDA_D5"
+    },
+    {
+      "name": "LEDA_D6"
+    },
+    {
+      "name": "LEDA_D7"
+    },
+    {
+      "name": "LEDA_D8"
+    },
+    {
+      "name": "LEDA_D9"
+    },
+    {
+      "name": "LEDA_D10"
+    },
+    {
+      "name": "LEDA_D11"
+    },
+    {
+      "name": "LEDA_D12"
+    },
+    {
+      "name": "LEDA_D13"
+    },
+    {
+      "name": "LEDA_D14"
+    },
+    {
+      "name": "LEDA_D15"
+    },
+    {
+      "name": "LEDA_ADDR0"
+    },
+    {
+      "name": "LEDA_ADDR1"
+    },
+    {
+      "name": "LEDA_ADDR2"
+    },
+    {
+      "name": "LEDA_ADDR3"
+    },
+    {
+      "name": "LEDA_ADDR4"
+    },
+    {
+      "name": "LEDA_ADDR5"
+    },
+    {
+      "name": "LEDA_ADDR6"
+    },
+    {
+      "name": "LEDA_ADDR7"
+    },
+    {
+      "name": "LEDA_ADDR8"
+    },
+    {
+      "name": "LEDA_ADDR9"
+    },
+    {
+      "name": "LEDA_ADDR10"
+    },
+    {
+      "name": "LEDA_ADDR11"
+    },
+    {
+      "name": "LEDA_ADDR12"
+    },
+    {
+      "name": "LEDA_ADDR13"
+    },
+    {
+      "name": "LEDA_ADDR14"
+    },
+    {
+      "name": "LEDA_ADDR15"
     }
   ],
   "bus_descriptions": {

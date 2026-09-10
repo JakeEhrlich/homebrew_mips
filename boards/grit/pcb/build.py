@@ -287,6 +287,7 @@ def component_for(chip):
     if part.startswith("18pF"): return "capacitor-0603", {"value": "18p", "lcsc": "C1653"}, ident(2)
     if part.startswith("LED"): return "led-0603-red", {}, {"1": "A", "2": "K"}
     if part.startswith("1k"): return "resistor-0603", {"value": "1k", "lcsc": "C21190"}, ident(2)
+    if part.startswith("4.7k"): return "resistor-0603", {"value": "4.7k", "lcsc": "C23162"}, ident(2)
     if part.startswith("10k"): return "resistor-0603", {"value": "10k", "lcsc": "C25804"}, ident(2)
     raise SystemExit(f"no component for {name}: {part}")
 
@@ -343,7 +344,7 @@ def bus_of(net):
 
 
 PLACE = {}
-STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
+STAGE_CHIPS = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: []}
 X_SEQ, X_UC, X_MIR, X_ROM, X_RAM = 30.0, 56.0, 80.0, 112.0, 144.0
 X_GAL0 = 170.0
 X_UART = X_GAL0 + 6 * GAL_DX + 8.0
@@ -378,7 +379,7 @@ STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
 PLACE.update({"seq0": (X_SEQ, ROW_A, 0), "seq1": (X_SEQ, ROW_B, 0), "uc0": (X_UC, ROW_A, 0), "uc1": (X_UC, ROW_B, 0), "mir0": (X_MIR, ROW_A, 0), "mir1": (X_MIR, ROW_B, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
 # stage 6: clock and reset in the left strip, the transceiver under the UART
-PLACE.update({"osc0": (8.0, 132.0, 90), "umux0": (8.0, 124.0, 0), "uinv0": (8.0, 117.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
+PLACE.update({"osc0": (8.0, 132.0, 90), "umux0": (17.0, 124.0, 0), "uinv0": (8.0, 117.0, 0), "rst0": (8.0, 100.0, 0), "xcvr0": (X_UART, ROW_B, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -460,10 +461,34 @@ LED_ORDER = [
 ]
 
 
+def _place_debug():
+    """Stage 7: the bus headers and the bus LED banks.  The data header
+    sits above the data band and the address header between the address
+    and control bands, both over the uc/mir gap where the band region
+    has no vertical tracks; their pins drop straight into the band.  The
+    LED banks sit right of the bands' ends: a buffer, a column of
+    resistors, a column of LEDs per byte."""
+    PLACE.update({"jd0": (HDR_X0, DBUS_Y0 + 16 * BUS_PITCH + 3.7, 90), "ja0": (HDR_X0, 3.2, 90)})
+    # a resistor and an LED per line, in two columns of eight per bus,
+    # right of the band's end; the resistor's bus pad reaches the line's
+    # end tap through the router
+    for b, yc in enumerate((DBUS_Y0 - 2.0, DBUS_Y0 + 17.0, ABUS_Y0 - 4.5, ABUS_Y0 - 23.5)):
+        x = BUS_X1 + 7.0
+        for i in range(8):
+            sig = (["D", "ADDR"][b // 2] + str((b % 2) * 8 + i)).lower()
+            PLACE[f"rb_{sig}"] = (x, yc - 7.7 + i * 2.2, 0)
+            PLACE[f"lb_{sig}"] = (x + 5.0, yc - 7.7 + i * 2.2, 0)
+
+
+HDR_X0 = 46.0   # left end of the bus headers (2x10, turned along the bands)
+
+
 def finish_floorplan():
     _place_rest()
-    dropped = lambda n: n.startswith(("led", "rl", "ubuf", "cd_ubuf"))   # no LEDs or their buffers on this board
-    STAGE_CHIPS[7] = [c["name"] for c in BOARD["chips"] if c["name"] not in sum(STAGE_CHIPS.values(), []) and not dropped(c["name"])]
+    _place_debug()
+    dropped = lambda n: n.startswith(("led", "rl", "ubuf", "cd_ubuf"))   # no control-signal LEDs on this board yet
+    STAGE_CHIPS[7] = ["jd0", "ja0"] + [c["name"] for c in BOARD["chips"] if c["name"].startswith(("lb_", "rb_"))]
+    STAGE_CHIPS[8] = [c["name"] for c in BOARD["chips"] if c["name"] not in sum(STAGE_CHIPS.values(), []) and not dropped(c["name"])]
 
 
 def stage_names():
@@ -558,7 +583,9 @@ def draw_stubs(chips):
                 pick = min(rest, key=lambda it: it["hi"] - it["lo"])
             order.append(pick)
             rest.remove(pick)
-        for side, group, cap in (("out", order[:n_out], n_out), ("in", order[n_out:], n_in)):
+        # the inside slots first (they cross nothing in the gap), the outside
+        # ones only for what does not fit
+        for side, group, cap in (("in", order[:n_in], n_in), ("out", order[n_in:], n_out)):
             sign = col if side == "out" else -col
             slots, placed = [], []   # per slot: spans; placed: (slot, jog rows)
             for it in group:
@@ -782,10 +809,11 @@ def draw_corner_loops(side_vias, inward):
 
 
 def draw_header_stubs(chips):
-    """Analyzer-header pins on a bus net: a bottom-layer track from the
-    pin to a via on its bus line.  The header is two rows of pins at the
-    same x, so the pin in the row nearer the bus goes straight and the
-    other jogs 1.27 mm sideways first."""
+    """Bus-header pins: the header lies along its band (turned 90), its
+    two rows of pins at the same x positions; each pin drops on the
+    bottom layer straight into the band to a via on its line, the pin in
+    the row further from the band jogging 1.27 mm sideways first so it
+    does not run through the nearer pin."""
     for c in chips:
         if not c["part"].startswith("Header 2x10"):
             continue
@@ -793,20 +821,41 @@ def draw_header_stubs(chips):
         assert rot == 90
         for p in c["pins"]:
             net = p.get("net") or ""
-            bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
-            if bus is None:
+            b = bus_of(net)
+            if b is None or b[0] == "CTRL":
                 continue
             k = p["pin"] - 1
             col, row = k // 2, k % 2          # footprint: odd pins row 0, even pins row 1
             x, y = x0 + col * 2.54, y0 + row * 2.54
-            yb = bus_y(bus, int(net[len(bus):]))
-            up = yb > y
-            straight = (row == 1) == up       # the pin nearer the bus goes straight
-            xt = x if straight else x + 1.27
-            pts = [f"{x:.3f},{y:.3f}"] + ([] if straight else [f"{xt:.3f},{y:.3f}"]) + [f"{xt:.3f},{yb}"]
+            yb = bus_y(*b)
+            toward_band = yb > y
+            near_row = (row == 1) == toward_band
+            xt = x if near_row else x + 1.27
+            pts = [f"{x:.3f},{y:.3f}"] + ([] if near_row else [f"{xt:.3f},{y:.3f}"]) + [f"{xt:.3f},{yb}"]
             run("trace", "add", "--layer", "B.Cu", "--net", net, "--width", STUB_WIDTH, *pts, quiet=True)
             run("via", "add", f"{xt:.3f},{yb}", "--net", net, "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
             VIA_XS.setdefault(net, []).append(round(xt, 3))
+
+
+def silk_pass(chips):
+    """Reference designators on the silkscreen: hidden on the 0603
+    resistors and capacitors (the refdes says nothing a probe needs, and
+    at 1 mm text they collide); an LED's label sits to its right at
+    0.8 mm, since its refdes names the bit; a buffer's label goes below
+    it, clear of its capacitor; a header's along its outer edge."""
+    names = {c["name"] for c in chips}
+    hide = [n for n in names if n.startswith(("rb_", "rl_", "cd_", "cb", "rp_", "rd", "rstep", "cst", "c1", "c2", "c3", "c4", "xc", "rlp"))]
+    if hide:
+        run("label", *sorted(hide), "--hide", quiet=True)
+    leds = [n for n in names if n.startswith(("lb_", "led_", "ledp"))]
+    if leds:
+        run("label", *sorted(leds), "--at", "2.4,0", "--size", "0.8", quiet=True)
+    bufs = [n for n in names if n.startswith(("ubus", "ubuf"))]
+    if bufs:
+        run("label", *sorted(bufs), "--at", "0,-8.2", quiet=True)
+    hdrs = [n for n in names if n.startswith(("ja", "jd", "jc", "js"))]
+    if hdrs:
+        run("label", *sorted(hdrs), "--at", "1.27,3.2", "--size", "0.9", quiet=True)
 
 
 def component_pads(comp_name):
@@ -848,6 +897,8 @@ def draw_power_vias(chips, pinmaps, comps, extras=()):
             bus = b[0] if b else None
             if net not in ("VCC", "GND") and bus is None:
                 continue
+            if bus is not None and not name.startswith(("rd", "umux")):
+                continue   # the LED buffers' inputs reach the bus taps through the router
             if pin is None:
                 continue
             for (px, py, smd) in pads[pin]:
@@ -890,8 +941,11 @@ def draw_buses(nets):
             else:
                 x_hole, drill, dia = BUS_X0 - (1.6 if i % 2 else 0.0), 0.6, 1.1
             taps = [x_hole]   # only the probe hole at the left end; the gaps hold the mini-buses
-            xs = sorted(set(taps + [x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1])) + [BUS_X1]
+            x_end = BUS_X1 + (1.6 if i % 2 else 0.0) if name != "CTRL" else BUS_X1
+            xs = sorted(set(taps + [x for x in VIA_XS.get(net, []) if BUS_X0 < x < BUS_X1])) + [x_end]
             run("trace", "add", "--layer", "F.Cu", "--net", net, "--width", BUS_WIDTH, *[f"{x},{y}" for x in xs], quiet=True)
+            if name != "CTRL":   # a tap at the right end for the LED buffers
+                run("hole", "add", f"{x_end},{y}", "--drill", drill, "--diameter", dia, "--net", net, quiet=True)
             # a probe point at the left end of every line: a plated hole on
             # the net, which is also the pin that tells freerouting the wire
             # belongs to something (a protected wire attached to no pin makes
@@ -1064,7 +1118,7 @@ def main():
         if not NO_STUBS:
             draw_stubs(chips)
             draw_minibuses(chips)
-            draw_header_stubs(chips)
+        draw_header_stubs(chips)
         draw_smd_stubs(chips, nets)
         draw_power_vias([c for c in chips if not c["package"].startswith(("DIP", "LQFP"))], pinmaps, comps, extras)
         draw_buses(nets)
@@ -1074,6 +1128,7 @@ def main():
     else:
         run("pour", "new", "gnd", "--layer", "B.Cu", "--net", "GND", "--follow-outline", quiet=True)
         run("pour", "new", "vcc", "--layer", "F.Cu", "--net", "VCC", "--follow-outline", quiet=True)
+    silk_pass(chips)
     run("status", quiet=True)
     pre = run("check", check=False, quiet=True).stdout
     errs = [l for l in pre.splitlines() if l.startswith("error") and "nets-routed" not in l]

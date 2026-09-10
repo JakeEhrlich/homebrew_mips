@@ -746,7 +746,7 @@ fn block_of(name: &str) -> (&'static str, &'static str) {
         "osc" | "swm" | "swstep" | "rstep" | "cst" | "uinv" | "umux" | "jclk" => ("Clock", "Board"),
         "rst" | "swr" => ("Reset", "Board"),
         "jpwr" | "f" | "q" | "cb" | "cd" | "ledp" | "rlp" => ("Power", "Board"),
-        "ubuf" | "led" | "rl" => ("Debug LEDs", "Board"),
+        "ubuf" | "led" | "rl" | "ubus" | "lb" | "rb" => ("Debug LEDs", "Board"),
         "ja" | "jd" | "jc" | "js" => ("Analyzer headers", "Board"),
         "swb" | "rp" | "rd" => ("Bank switches", "Board"),
         _ => ("?", "?"),
@@ -1195,6 +1195,21 @@ fn physical(nl: &mut Netlist) {
                 nl.connect(gnd, led, 2);
             }
         }
+    }
+
+    // Bus LEDs: an LED and 4.7k straight on every data and address line,
+    // lit when the bit is 1.  About 0.6 mA at a CMOS high, within the
+    // rating of every driver on the bus (the UART, the weakest, sources
+    // 1 mA); a modern red 0603 is plainly visible at that.
+    for sig in (0..16).map(|i| format!("D{i}")).chain((0..16).map(|i| format!("ADDR{i}"))) {
+        let src = nl.net(&sig);
+        let mid = nl.net(&format!("LEDA_{sig}"));
+        let r = two_pin(nl, &format!("rb_{}", sig.to_ascii_lowercase()), "4.7k 0603", "0603", Some("C23162"));
+        let led = two_pin(nl, &format!("lb_{}", sig.to_ascii_lowercase()), "LED red 0603", "0603", Some("C2286"));
+        nl.connect(src, r, 1);
+        nl.connect(mid, r, 2);
+        nl.connect(mid, led, 1);
+        nl.connect(gnd, led, 2);
     }
 
     // Logic-analyzer headers, 2 x 10 pins each.
