@@ -293,7 +293,7 @@ def component_for(chip):
 # address drivers a0/a1; 3 + pc, b, t; 4 + the ALU; 5 + the sequencer,
 # microcode ROM and pipeline register; 6 + clock and reset; 7 everything.
 STAGE = int(next((a.split("=")[1] for a in sys.argv if a.startswith("--stage=")), "1"))
-W, H = 230.0, 175.0
+W, H = 300.0, 175.0   # one chip row between the two buses needs the width
 HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 
 # The buses are literal horizontal wires on the top layer: the data bus
@@ -301,11 +301,12 @@ HOLES = [(4, 4), (W - 4, 4), (4, H - 4), (W - 4, H - 4)]
 # 180 degrees so their data pins face the data bus and their address
 # pins the address bus.
 ROW_Y = 60.0
-BUS_X0, BUS_X1 = 20.0, 150.0
+BUS_X0, BUS_X1 = 10.0, 296.0
 DBUS_Y0, ABUS_Y0, BUS_PITCH = 86.0, 34.0, 1.0
 BUS_WIDTH = 0.3
 STUB_WIDTH = 0.25
-VIA_DRILL, VIA_DIA = 0.3, 0.6
+VIA_DRILL, VIA_DIA = 0.2, 0.5    # 0.15 mm ring: hole edge to other copper 0.30 (JLCPCB wants 0.28); stubs at 0.55 mm pitch clear it
+STUB_PITCH = 0.55
 
 
 def bus_y(name, i):
@@ -320,22 +321,26 @@ for i, n in enumerate(["rom0", "rom1", "ram0", "ram1"]):
 PLACE["uart0"] = (125.0, ROW_Y, 0)
 STAGE_CHIPS[1] = ["rom0", "rom1", "ram0", "ram1", "uart0"]
 # stage 2: the address drivers, on the row too
-PLACE["a0"] = (140.0, ROW_Y, 0)
-PLACE["a1"] = (152.5, ROW_Y, 0)
+GAL_DX = 13.0   # three stub slots outside each column, five inside
+PLACE["a0"] = (146.0, ROW_Y, 0)
+PLACE["a1"] = (146.0 + GAL_DX, ROW_Y, 0)
 STAGE_CHIPS[2] = ["a0", "a1"]
 # stage 3: the other latches
 for i, n in enumerate(["pc0", "pc1", "b0", "b1", "t0", "t1"]):
-    PLACE[n] = (165.0 + i * 12.5, ROW_Y, 0)
+    PLACE[n] = (146.0 + (2 + i) * GAL_DX, ROW_Y, 0)
 STAGE_CHIPS[3] = ["pc0", "pc1", "b0", "b1", "t0", "t1"]
-# stage 4: the ALU, above the data bus
+# stage 4: the ALU, on the row too (it reads A from the address bus and drives D)
 for i, n in enumerate(["alu0", "alu1", "alu2", "alu3"]):
-    PLACE[n] = (140.0 + i * 12.5, 112.0, 0)
+    PLACE[n] = (146.0 + (8 + i) * GAL_DX, ROW_Y, 0)
 STAGE_CHIPS[4] = ["alu0", "alu1", "alu2", "alu3"]
 # stage 5: sequencer at the end of the bus, microcode ROM and pipeline register beside it
-PLACE.update({"seq0": (30.0, 112.0, 0), "seq1": (42.5, 112.0, 0), "uc0": (60.0, 112.0, 0), "uc1": (80.0, 112.0, 0), "mir0": (97.5, 112.0, 0), "mir1": (110.0, 112.0, 0)})
+# seq0 in the row at the left end of the bus (it reads D11..D15); the
+# flags chip, the microcode ROM and the pipeline register above the data
+# bus band, which ends at y = 101
+PLACE.update({"seq0": (22.0, ROW_Y, 0), "seq1": (24.0, 125.0, 0), "uc0": (46.0, 125.0, 0), "uc1": (66.0, 125.0, 0), "mir0": (86.0, 125.0, 0), "mir1": (99.0, 125.0, 0)})
 STAGE_CHIPS[5] = ["seq0", "seq1", "uc0", "uc1", "mir0", "mir1"]
 # stage 6: clock and reset
-PLACE.update({"osc0": (8.0, 118.0, 90), "umux0": (8.0, 110.0, 0), "uinv0": (8.0, 100.0, 0), "rst0": (8.0, 90.0, 0), "xcvr0": (185.0, 112.0, 0)})
+PLACE.update({"osc0": (8.0, 150.0, 90), "umux0": (8.0, 142.0, 0), "uinv0": (8.0, 135.0, 0), "rst0": (36.0, 150.0, 0), "xcvr0": (125.0, 125.0, 0)})
 STAGE_CHIPS[6] = ["osc0", "umux0", "uinv0", "rst0", "xcvr0"]
 
 
@@ -390,9 +395,9 @@ def draw_stubs(chips):
             i = int(net[len(bus):])
             x, y, col = pads[p["pin"]]
             cols.setdefault(col, []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, i)})
+        n_out = 3 if n == 24 else 2     # slots that fit between neighbouring chips
+        n_in = 5 if n == 24 else 10     # slots between the two columns
         for col, items in cols.items():
-            inside = n > 24 or col == 1
-            sign = 1 if (col == -1) == inside else -1   # +x from a left pad going inside, etc.
             order = []
             rest = list(items)
             while rest:
@@ -407,30 +412,35 @@ def draw_stubs(chips):
                     pick = min(rest, key=lambda it: abs(it["y"] - it["yb"]))
                 order.append(pick)
                 rest.remove(pick)
-            # slots: a track takes the innermost slot whose occupants it does
-            # not overlap in y (with margin), and which is not further out
-            # than an already placed track it would cross
-            slots = []   # per slot: list of (lo, hi)
-            placed = []  # (slot, y)
-            for it in order:
-                lo, hi = sorted((it["y"], it["yb"]))
-                lo, hi = lo - 0.6, hi + 0.6
-                s = 0
-                while True:
-                    if s < len(slots) and any(not (hi < a or lo > b) for (a, b) in slots[s]):
-                        s += 1
-                        continue
-                    if any(ps > s and lo < py < hi for (ps, py) in placed):
-                        s += 1
-                        continue
-                    break
-                while s >= len(slots):
-                    slots.append([])
-                slots[s].append((lo, hi))
-                placed.append((s, it["y"]))
-                it["slot"] = s
-            for it in order:
-                xt = it["x"] + sign * (1.2 + 0.7 * it["slot"])
+            # the pins nearest their bus take the outside of the column, the
+            # rest the inside; each side is allocated on its own since a jog
+            # can only cross tracks on its own side
+            for side, group, cap in (("out", order[:n_out], n_out), ("in", order[n_out:], n_in)):
+                sign = col if side == "out" else -col   # outward from the pad, or toward the chip centre
+                slots = []
+                placed = []
+                for it in group:
+                    lo, hi = sorted((it["y"], it["yb"]))
+                    lo, hi = lo - 0.6, hi + 0.6
+                    s = 0
+                    while True:
+                        if s < len(slots) and any(not (hi < a or lo > b) for (a, b) in slots[s]):
+                            s += 1
+                            continue
+                        if any(ps > s and lo < py < hi for (ps, py) in placed):
+                            s += 1
+                            continue
+                        break
+                    while s >= len(slots):
+                        slots.append([])
+                    slots[s].append((lo, hi))
+                    placed.append((s, it["y"]))
+                    it["slot"] = s
+                    it["sign"] = sign
+                if len(slots) > cap:
+                    raise SystemExit(f"{c['name']} column {col}: {len(slots)} {side}side stub slots needed, {cap} fit")
+            for it in items:
+                xt = it["x"] + it["sign"] * (1.2 + STUB_PITCH * it["slot"])
                 run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
                 run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                 VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
