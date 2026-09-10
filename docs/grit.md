@@ -24,7 +24,7 @@ equal flag.  A microword is one bit per control line, latched into a
 pipeline register at every clock edge, so every control line changes
 only at edges and each clock does one transfer that settles before the
 next.  Hold times and bus turnarounds are met by the order of the
-microwords, not by strobes.  13 GALs and 10 other chips; the program,
+microwords, not by strobes.  15 GALs and 10 other chips; the program,
 the microcode and every GAL are reprogrammable in their sockets.
 
 ## 2. Programmer's view
@@ -35,7 +35,10 @@ at even byte addresses, addresses are 16 bits.  No byte operations.
 **Registers.**  A is the address register and the ALU's first operand:
 its outputs are the address bus whenever the PC is not fetching.  B is
 the second operand and the value a store writes.  The PC addresses the
-program flash.
+program flash.  A third latch T is not in the programmer's model:
+memory data bound for A or the PC lands there first, so that no
+register ever changes the address bus at the edge that ends a strobe;
+every instruction may clobber it.
 
 **Instructions.**  One word; the opcode is bits 15:11.  Immediates are
 the following word.
@@ -45,7 +48,7 @@ the following word.
 | 0 | RESET | fetch from the PC (what runs out of reset, PC = 0) | 2 |
 | 1 | LDA imm | A = next word | 6 |
 | 2 | LDB imm | B = next word | 6 |
-| 3 | LDA (A) | A = mem[A] | 7 |
+| 3 | LDA (A) | A = mem[A] | 9 |
 | 4 | LDB (A) | B = mem[A] | 7 |
 | 5 | STB (A) | mem[A] = B | 8 |
 | 6 | ADDA | A = A + B | 7 |
@@ -55,14 +58,12 @@ the following word.
 | 10 | NORA | A = not (A or B) | 7 |
 | 11 | NORB | B = not (A or B) | 7 |
 | 12 | MOVAB | A = B | 7 |
-| 13 | JMP imm | PC = next word | 5 |
-| 14 | JEQ imm | if A == B then PC = next word, else skip it | 7 |
+| 13 | JMP imm | PC = next word | 8 |
+| 14 | JEQ imm | if A == B then PC = next word, else skip it | 10 or 6 |
 | 15 | NOP | | 3 |
 | 16 | HALT | never fetches; the step counter shows it | |
 
-Reading the UART: use `LDB (A)`.  `LDA (A)` changes the address at the
-edge that ends the read strobe, and the 16550 wants it held 20 ns
-longer; the model reports it.
+Any load may read the UART; the bus treats it exactly as a memory.
 
 Registers r0..r31 of the MIPS-like macro layer are SRAM words at
 0x8000 + 2n.  `lw rt, (rs)` is `LDA &rs; LDA (A); LDB (A); LDA &rt;
@@ -100,8 +101,8 @@ microcode variants without touching the program.
 |---|---|---|
 | 0 | PCDRV | the PC drives Addr |
 | 11 | ADRV | A drives Addr (and so the ALU sees A) |
-| 12 | IORD | the I/O read strobe: the UART's RD#.  Only with MEMRD, only in `LDB (A)` |
-| 13 | IOWR | the I/O write strobe: the UART's WR#.  Only with WE, only in `STB (A)` |
+| 12 | TLD | T loads D at the ending edge |
+| 13 | TDRV | T drives D |
 | 1 | MEMRD | the memory selected by Addr drives D (flash, SRAM or UART, by Addr's top bits) |
 | 2 | ALUOE | the ALU drives D |
 | 3 | WE | the memory selected by Addr takes D |
@@ -130,29 +131,20 @@ microcode generator checks them):
 2. An access at A (MEMRD, WE or ALUOE with ADRV) is preceded by a word
    with only ADRV: the address, and the ALU's operand, are valid a clock
    before anything strobes or samples them.
-3. A word that loads B or the IR from memory, or writes, is followed by
-   the same word without the load: the address and the data outlive
+3. A word that loads B, T or the IR from memory, or writes, is followed
+   by the same word without the load: the address and the data outlive
    the capture by a clock, so no clock skew between the chips can turn
    the capture into a hold violation.  The word after a fetch is that
    hold word, `PCDRV MEMRD`, so an instruction that starts by taking
    the address bus from the PC begins with an idle word.
-4. A word that changes the address at its edge (a load into the PC, or
-   into A from memory) is followed by a word with no strobe: no chip
-   sees its address move under a read, which for the UART would be a
-   read with side effects.  The PC is its own data source and needs no
-   hold; A's hold then rests on the memory's output-disable time
-   against the clock skew between the pipeline register and the A
-   chips, under 2 ns.
+4. The one bus rule: a register is never loaded at the end of a strobe
+   while it drives the address bus.  Memory data for A or the PC lands
+   in T, and A or the PC takes it from T in a word with no strobe.  So
+   every device on the bus, memory or UART, sees the address stable
+   from a word before its strobe to a word after.
 5. A conditional instruction's two variants differ only at steps whose
    ROM read happens while NEL is fresh: word 1 has ADRV (NEL latches at
    its end), word 2 has not, the variants differ from step 3.
-6. Memory and I/O have separate strobes, as on the 8080 and ISA buses:
-   the UART's RD# and WR# are IORD and IOWR, asserted only by `LDB (A)`
-   and `STB (A)`.  `LDA (A)` changes the address at the edge that ends
-   its read, from a different chip than the strobe and in no fixed
-   order, which a memory tolerates and a device with read side effects
-   must not be shown; it asserts MEMRD only, so the UART is never
-   strobed by it whatever value it loads.
 
 **The sequences.**  Each line is one clock.
 
@@ -161,15 +153,15 @@ FETCH   = PCDRV MEMRD IRLD      HOLD = PCDRV MEMRD
 RESET     FETCH ; HOLD
 LDA imm   PCINC ; PCDRV MEMRD ALD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
 LDB imm   PCINC ; PCDRV MEMRD BLD ; PCDRV MEMRD ; PCINC ; FETCH ; HOLD
-LDA (A)   nop ; ADRV ; ADRV MEMRD ALD ; ADRV ; PCINC ; FETCH ; HOLD
-LDB (A)   nop ; ADRV ; ADRV MEMRD IORD BLD ; ADRV MEMRD IORD ; PCINC ; FETCH ; HOLD
-STB (A)   nop ; ADRV ; ADRV ALUOE passB WE IOWR ; ADRV ALUOE passB ; nop ; PCINC ; FETCH ; HOLD
+LDA (A)   nop ; ADRV ; ADRV MEMRD TLD ; ADRV MEMRD ; nop ; TDRV ALD ; PCINC ; FETCH ; HOLD
+LDB (A)   nop ; ADRV ; ADRV MEMRD BLD ; ADRV MEMRD ; PCINC ; FETCH ; HOLD
+STB (A)   nop ; ADRV ; ADRV ALUOE passB WE ; ADRV ALUOE passB ; nop ; PCINC ; FETCH ; HOLD
 ADDA      nop ; ADRV ; ADRV ALUOE add ALD ; nop ; PCINC ; FETCH ; HOLD
 ADDB      nop ; ADRV ; ADRV ALUOE add BLD ; nop ; PCINC ; FETCH ; HOLD
 MOVAB     nop ; ADRV ; ADRV ALUOE passB ALD ; nop ; PCINC ; FETCH ; HOLD
-JMP imm   PCINC ; PCDRV MEMRD PCLD ; PCDRV ; FETCH ; HOLD
-JEQ imm   nop ; ADRV ; PCINC ; then NEL=0: PCDRV MEMRD PCLD ; PCDRV     NEL=1: PCINC ; nop
-          then both: FETCH ; HOLD
+JMP imm   PCINC ; PCDRV MEMRD TLD ; PCDRV MEMRD ; nop ; TDRV PCLD ; nop ; FETCH ; HOLD
+JEQ imm   nop ; ADRV ; PCINC ; then NEL=0: PCDRV MEMRD TLD ; PCDRV MEMRD ; nop ; TDRV PCLD ; nop ; FETCH ; HOLD
+                                 NEL=1: PCINC ; FETCH ; HOLD
 NOP       PCINC ; FETCH ; HOLD
 HALT      nop x 16 (the counter wraps and it repeats)
 ```
@@ -199,10 +191,11 @@ private wires from the IR/step chip and to the pipeline register.
 | A-low, A-high | CLK | none | D0..D7 / D8..D15, ALD, ADRV | A0..A7 / A8..A15; A1..A15 enabled by ADRV, A0 always |
 | B-low | CLK | none | D0..D7, BLD, RST_n | B0..B7, RS1, RESET |
 | B-high | CLK | none | D8..D15, BLD | B8..B15 |
+| T-low, T-high | CLK | none | D0..D7 / D8..D15, TLD, TDRV | T0..T7 / T8..T15, on the data bus, enabled by TDRV |
 | ALU 0 | CLK2X | none | A0..3, B0..3, F1, F0, ALUOE | S0..3 (enabled by ALUOE), carry out, NE out, CLK (the divide by two) |
 | ALU 1, 2, 3 | none | none | the next four bits of A and B, carry and NE in, F1, F0, ALUOE | four sums, carry out, NE out; ALU 3's NE out is NE |
 
-Thirteen GALs.  The latches are `Q := LD & D + !LD & Q` per bit; the PC
+Fifteen GALs.  The latches are `Q := LD & D + !LD & Q` per bit; the PC
 is a 15-bit counter (PCINC) with a load (PCLD wins); the step counter
 clears on IRLD and counts otherwise; the pipeline register is `Q := M`;
 the ALU slices are 4-bit ripple adders with the function folded into
@@ -231,7 +224,7 @@ is high at power-up (a zero register behind an active-low pin).
 | program flash, 2 x SST39SF040 | A0..A13 from Addr1..Addr14; A14, A15 to GND; A16..A18 jumpers | chip 0 D0..7, chip 1 D8..15 | CE# = Addr15 | OE# = MEMRD_n, WE# = VCC |
 | microcode ROM, 2 x SST39SF040 | A0..A3 = STEP0..3, A4 = NEL, A5..A9 = IR0..4, A10..A12 jumpers, the rest GND | chip 0 M0..7, chip 1 M8..15 | CE# = GND | OE# = GND, WE# = VCC |
 | 2 x AS7C164A | A0..A12 from Addr1..Addr13 | as the program flash | CE2 = Addr15, CE1# = Addr14 | OE# = MEMRD_n, WE# = WE_n |
-| TL16C550 | A0..A2 from Addr1..Addr3 | D0..7 | CS0 = Addr14, CS1 = Addr15, CS2# = GND, ADS# = GND | RD1# = IORD_n, WR1# = IOWR_n, RD2 = WR2 = GND; MR = RESET |
+| TL16C550 | A0..A2 from Addr1..Addr3 | D0..7 | CS0 = Addr14, CS1 = Addr15, CS2# = GND, ADS# = GND | RD1# = MEMRD_n, WR1# = WE_n, RD2 = WR2 = GND; MR = RESET |
 
 UART: XIN from the oscillator, XOUT open, BAUDOUT# to RCLK, DTR# looped
 to DSR# and DCD#, RI# high, SOUT/SIN and RTS#/CTS# through the SP3232's
@@ -268,7 +261,7 @@ four is one more term if the scope says so.
 
 | Part | Count | Role |
 |---|---|---|
-| ATF22V10C-7 (DIP-24, socketed) | 13 | section 4 |
+| ATF22V10C-7 (DIP-24, socketed) | 15 | section 4 |
 | SST39SF040 (DIP-32, socketed) | 4 | program, microcode |
 | AS7C164A 8K x 8 (DIP-28) | 2 | registers and data |
 | TL16C550 (LQFP-48) | 1 | serial |
@@ -277,11 +270,13 @@ four is one more term if the scope says so.
 | MAX811L + button | 1 | reset |
 | headers: serial, program bank, microcode bank | | |
 
-23 chips.
+25 chips.
 
 ## 7. Choices made along the way
 
-1. Registers in SRAM: no register-file chips.
+1. Registers in SRAM: no register-file chips.  Which is why T exists:
+   with two latches and one of them the address, a memory value bound
+   for the address register has nowhere else to land.
 2. A small ISA plus a microcode ROM instead of MIPS I in hardware or
    microcode as the program: a real assembler target, immediates from
    the program stream, and a microcode table that is small, fixed and
@@ -375,10 +370,13 @@ block diagram.
   either order.  A value loaded into A that looks like a UART address
   can select the UART for a few nanoseconds with the read strobe still
   low: a runt read.  Ideal traces hid it; 20 ns of trace mismatch
-  showed it.  The cure is the one every Intel-style bus has, separate
-  I/O strobes (rule 6): wiring the UART's RD# to the memory read line
-  had made a device out of something that is allowed to be read at a
-  changing address.
+  showed it.  Two wrong cures came first, a select bit for the UART and
+  then separate I/O strobes; both treated the UART differently from
+  the memories, when the fault was the machine changing an address
+  register at the end of its own strobe.  The T latch is the right one
+  (rule 4): the bus then has one protocol for everything on it, which
+  is what PISC gets from a register file with more than one register
+  to land memory data in.
 - **The condition had to be latched.**  NE is only meaningful while A
   drives the bus (the ALU's A inputs are the address bus), so the ROM's
   condition bit is NEL, latched at the end of ADRV words, and JEQ is
