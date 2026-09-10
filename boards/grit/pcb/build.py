@@ -18,6 +18,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BOARD = json.load(open(os.path.join(HERE, "..", "netlist.json")))
 PCB = os.environ.get("PCB", os.path.expanduser("~/flatland/target/release/pcb"))
 JLC = os.path.expanduser("~/flatland/library-jlcpcb")
+# freerouting 2.2.4 (the installed app) hangs on nets that mix protected
+# wiring with pins still to route; 2.4.1 does not.  $FREEROUTING points at
+# the launcher of the build to use.
+FREEROUTING = os.environ.get("FREEROUTING", "/Applications/freerouting.app/Contents/MacOS/freerouting")
 LIB = os.path.join(HERE, "lib")
 ROUTE = "--route" in sys.argv
 CORE_PREFIXES = ("seq", "mir", "pc", "a", "b", "t", "alu", "rom", "uc", "ram", "uart", "xcvr", "osc", "umux", "uinv", "rst")
@@ -461,75 +465,98 @@ VIA_XS = {}   # net -> [x of every via on its bus line]
 
 
 def draw_stubs(chips):
-    """Every DIP pin on a bus net gets a bottom-layer track beside its
-    column, up to the data bus or down to the address bus, ending in a
-    via on the bus line.  Tracks in a column are staggered; the order is
-    chosen so that no pin's jog to its track crosses a track that started
-    at another pin (a track may only pass a pin whose own track is further
-    out).  DIP-24 columns use the outside on the left and the inside on
-    the right; wider DIPs use the inside for both."""
-    for c in chips:
-        if not c["package"].startswith("DIP"):
-            continue
+    """Bottom-layer tracks beside the DIP columns.  Two kinds: a stub from
+    a bus pin to a via on its bus line (only toward the near bus: the far
+    bus, past the other row, is the router's), and a link between the
+    same pin of two chips stacked in one column when they carry the same
+    net (rom0/rom1's address pins, a0/a1's control pins).  A stacked pair
+    is one column group, so the slot allocation sees every track beside
+    the column at once: a track takes the innermost slot whose occupants
+    it does not overlap in y, and never a slot further out than a track
+    it would cross with one of its jogs.  DIP-24 columns have three slots
+    outside and five inside; wider DIPs two and ten."""
+    groups = {}   # (x of the column, package kind) -> {"n": pins, "items": [...]}
+    dips = [c for c in chips if c["package"].startswith("DIP")]
+    for c in dips:
         n = int(c["package"].split("-")[1].split(" ")[0])
         pads = dip_pads(c)
-        cols = {}
+        upper = PLACE[c["name"]][1] > (ROW_A + ROW_B) / 2
         for p in c["pins"]:
             net = p.get("net") or ""
             bus = "D" if net.startswith("D") and net[1:].isdigit() else "ADDR" if net.startswith("ADDR") else None
             if bus is None:
                 continue
-            i = int(net[len(bus):])
+            if (bus == "D") != upper and PLACE[c["name"]][1] < DBUS_Y0:
+                continue   # the far bus, past the other row
             x, y, col = pads[p["pin"]]
-            cols.setdefault(col, []).append({"net": net, "x": x, "y": y, "yb": bus_y(bus, i)})
-        n_out = 3 if n == 24 else 2     # slots that fit between neighbouring chips
-        n_in = 5 if n == 24 else 10     # slots between the two columns
-        for col, items in cols.items():
-            order = []
-            rest = list(items)
-            while rest:
-                # a track may take the next slot if it spans no other remaining pin
-                pick = None
-                for it in rest:
-                    lo, hi = sorted((it["y"], it["yb"]))
-                    if not any(lo < o["y"] < hi for o in rest if o is not it):
-                        pick = it
-                        break
-                if pick is None:
-                    pick = min(rest, key=lambda it: abs(it["y"] - it["yb"]))
-                order.append(pick)
-                rest.remove(pick)
-            # the pins nearest their bus take the outside of the column, the
-            # rest the inside; each side is allocated on its own since a jog
-            # can only cross tracks on its own side
-            for side, group, cap in (("out", order[:n_out], n_out), ("in", order[n_out:], n_in)):
-                sign = col if side == "out" else -col   # outward from the pad, or toward the chip centre
-                slots = []
-                placed = []
-                for it in group:
-                    lo, hi = sorted((it["y"], it["yb"]))
-                    lo, hi = lo - 0.6, hi + 0.6
-                    s = 0
-                    while True:
-                        if s < len(slots) and any(not (hi < a or lo > b) for (a, b) in slots[s]):
-                            s += 1
-                            continue
-                        if any(ps > s and lo < py < hi for (ps, py) in placed):
-                            s += 1
-                            continue
-                        break
-                    while s >= len(slots):
-                        slots.append([])
-                    slots[s].append((lo, hi))
-                    placed.append((s, it["y"]))
-                    it["slot"] = s
-                    it["sign"] = sign
-                if len(slots) > cap:
-                    raise SystemExit(f"{c['name']} column {col}: {len(slots)} {side}side stub slots needed, {cap} fit")
-            for it in items:
-                xt = it["x"] + it["sign"] * (1.2 + STUB_PITCH * it["slot"])
-                run("trace", "add", "--layer", "B.Cu", "--net", it["net"], "--width", STUB_WIDTH, f"{it['x']},{it['y']}", f"{xt:.3f},{it['y']}", f"{xt:.3f},{it['yb']}", quiet=True)
-                run("via", "add", f"{xt:.3f},{it['yb']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
+            yb = bus_y(bus, int(net[len(bus):]))
+            groups.setdefault((round(x, 2), n, "B.Cu"), []).append({"net": net, "x": x, "jogs": [y], "lo": min(y, yb), "hi": max(y, yb), "end": yb, "via": True, "col": col})
+    # links within a stack: only with --links.  Two parallel links between
+    # the same pins of stacked chips have interleaved endpoints along the
+    # column, so on one layer they must cross; the router does better
+    # with both layers.
+    by_pos = {}
+    if "--links" not in sys.argv:
+        by_pos = None
+    for c in (dips if by_pos is not None else []):
+        x, y, r = PLACE[c["name"]]
+        by_pos.setdefault((round(x, 2), c["package"], r), []).append(c)
+    for key, pair in (by_pos or {}).items():
+        if len(pair) != 2:
+            continue
+        upper, lower = sorted(pair, key=lambda c: -PLACE[c["name"]][1])
+        n = int(upper["package"].split("-")[1].split(" ")[0])
+        pu, pl = dip_pads(upper), dip_pads(lower)
+        nets_l = {p["pin"]: p.get("net") for p in lower["pins"]}
+        for p in upper["pins"]:
+            net = p.get("net")
+            if not net or nets_l.get(p["pin"]) != net or net in ("VCC", "GND"):
+                continue
+            (xu, yu, col), (xl, yl, _) = pu[p["pin"]], pl[p["pin"]]
+            groups.setdefault((round(xu, 2), n, "F.Cu"), []).append({"net": net, "x": xu, "jogs": [yu, yl], "lo": yl, "hi": yu, "end": yl, "via": False, "col": col})
+    for (xcol, n, layer), items in groups.items():
+        col = items[0]["col"]
+        n_out = 3 if n == 24 else 2
+        n_in = 5 if n == 24 else 10
+        # greedy order: a track may go next if its span contains no other
+        # remaining track's jog row
+        order, rest = [], list(items)
+        while rest:
+            pick = next((it for it in rest if not any(it["lo"] < j < it["hi"] for o in rest if o is not it for j in o["jogs"])), None)
+            if pick is None:
+                pick = min(rest, key=lambda it: it["hi"] - it["lo"])
+            order.append(pick)
+            rest.remove(pick)
+        for side, group, cap in (("out", order[:n_out], n_out), ("in", order[n_out:], n_in)):
+            sign = col if side == "out" else -col
+            slots, placed = [], []   # per slot: spans; placed: (slot, jog rows)
+            for it in group:
+                lo, hi = it["lo"] - 0.6, it["hi"] + 0.6
+                s = 0
+                while True:
+                    if s < len(slots) and any(not (hi < a or lo > b) for (a, b) in slots[s]):
+                        s += 1
+                        continue
+                    if any(ps > s and any(lo < j < hi for j in pj) for (ps, pj) in placed):
+                        s += 1
+                        continue
+                    break
+                while s >= len(slots):
+                    slots.append([])
+                slots[s].append((lo, hi))
+                placed.append((s, it["jogs"]))
+                it["slot"], it["sign"] = s, sign
+            if len(slots) > cap:
+                raise SystemExit(f"column at x={xcol} on {layer}: {len(slots)} {side}side slots needed, {cap} fit")
+        for it in items:
+            xt = it["x"] + it["sign"] * (1.2 + STUB_PITCH * it["slot"])
+            y0 = it["jogs"][0]
+            pts = [f"{it['x']},{y0}", f"{xt:.3f},{y0}", f"{xt:.3f},{it['end']}"]
+            if not it["via"]:
+                pts.append(f"{it['x']},{it['end']}")
+            run("trace", "add", "--layer", layer, "--net", it["net"], "--width", STUB_WIDTH, *pts, quiet=True)
+            if it["via"]:
+                run("via", "add", f"{xt:.3f},{it['end']}", "--net", it["net"], "--drill", VIA_DRILL, "--diameter", VIA_DIA, quiet=True)
                 VIA_XS.setdefault(it["net"], []).append(round(xt, 3))
 
 
@@ -975,7 +1002,7 @@ def main():
         if os.path.exists(ses):
             os.remove(ses)
         with open(os.path.join(HERE, "build", "freerouting.log"), "w") as log:
-            subprocess.run(["timeout", next((a.split("=")[1] for a in sys.argv if a.startswith("--timeout=")), "600"), "/Applications/freerouting.app/Contents/MacOS/freerouting", "-de", dsn, "-do", ses, "-mp", passes, "-dct", "0", "-da", "-dl", "--gui.enabled=false"], stdout=log, stderr=subprocess.STDOUT, text=True, env={**os.environ, "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true"})
+            subprocess.run(["timeout", next((a.split("=")[1] for a in sys.argv if a.startswith("--timeout=")), "600"), FREEROUTING, "-de", dsn, "-do", ses, "-mp", passes, "-dct", "0", "-da", "-dl", "--gui.enabled=false"], stdout=log, stderr=subprocess.STDOUT, text=True, env={**os.environ, "JAVA_TOOL_OPTIONS": "-Djava.awt.headless=true"})
         run("route", "--import", os.path.join(HERE, "build", "grit.ses"), "--keep-redundant")
         run("check", check=False)
         run("visualize", "pcb", "-o", os.path.join(HERE, "build", f"stage{STAGE}-routed.png"), quiet=True)
