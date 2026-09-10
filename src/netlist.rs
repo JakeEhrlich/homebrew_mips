@@ -1167,7 +1167,7 @@ impl Netlist {
                 nets.push(NetRec { name: rail.into(), tie: Some(if rail == "VCC" { Fixed::High } else { Fixed::Low }), pull: None, role: None });
             }
         }
-        Board { name: name.into(), description: description.into(), period_ns, params, layout, chips, nets }
+        Board { name: name.into(), description: description.into(), period_ns, params, layout, chips, nets, bus_descriptions: BTreeMap::new() }
     }
     /// Get or create a net by name.
     pub fn net(&mut self, name: &str) -> NetId {

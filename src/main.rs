@@ -21,7 +21,8 @@ fn main() {
             let b = board(&args[2]);
             let template = std::fs::read_to_string(&args[3]).expect("template");
             let data = serde_json::to_string(&b).expect("json");
-            print!("{}", template.replace("__BOARD_JSON__", &data));
+            let title = format!("{}{} Chip Map", b.name[..1].to_uppercase(), &b.name[1..]);
+            print!("{}", template.replace("__BOARD_JSON__", &data).replace("__TITLE__", &title));
         }
         Some("slack") if args.len() >= 3 => slack(&board(&args[2]), args.get(3).and_then(|v| v.parse().ok()).unwrap_or(8.0), args.get(4).and_then(|v| v.parse().ok()).unwrap_or(2)),
         _ => eprintln!("usage: mips32 export <board> | mips32 chipmap <board> <template.html> | mips32 slack <board> [max_ns] [programs]"),

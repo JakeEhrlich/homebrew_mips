@@ -1,4 +1,4 @@
-<title>Crag Chip Map</title>
+<title>__TITLE__</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root {
@@ -90,7 +90,9 @@ aside .legend svg { width: 42px; height: 12px; flex: none; }
 <script id="data" type="application/json">__BOARD_JSON__</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
-const STIM = new Set(['CLK']);
+// Stimulus: the clock nets (role "clk"); the board's own bus descriptions when it has them.
+const STIM = new Set(DATA.nets.filter(n => n.role === 'clk').map(n => n.name));
+const BOARD_DESC = DATA.bus_descriptions || null;
 const DESC = {
 "PC": "Program counter, word address bits 14:2. Byte bits 1:0 are implicit zero; bits above 14 are hard zero (32 KB code space).",
 "INC": "PC + 4, as a word address (PC[14:2] + 1). Next sequential fetch address and the PC+4 that travels with the instruction.",
@@ -260,7 +262,7 @@ const DESC = {
 "FILL": "Shifter fill bit: the sign of FB for SRA / SRAV, else 0.",
 "SH": "Shifter stage 2: SY rotated by 8 * FA[4:3] (plus one more for right shifts), with the mask and fill folded in. The final shift result.",
 };
-const descOf = bus => DESC[bus] || '';
+const descOf = bus => BOARD_DESC ? (BOARD_DESC[bus] || '') : (DESC[bus] || '');
 function busOf(net){ const m = /^([A-Za-z][A-Za-z0-9]*?_?)(\d+)$/.exec(net); if (m && !/\d$/.test(m[1].replace(/_$/,'')) ) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; if (m) return {bus:m[1].replace(/_$/,''), bit:+m[2]}; return {bus:net, bit:null}; }
 // ---------- blocks ----------
 const blocks = new Map();
@@ -471,7 +473,7 @@ for (const e of edges) {
   hit.addEventListener('click', ev => { ev.stopPropagation(); select({type:'bus', name:bus}); });
 }
 el('text', {x:CLKX, y:BOT0 - 2 - 12, class:'note'}, gBg).textContent = '';
-el('text', {x:CLKX, y: totalH - 14, class:'note'}, gBg).textContent = 'clock generator (dashed): CLK, RESET, PH_RF, PH_CE, PH_SD';
+el('text', {x:CLKX, y: totalH - 14, class:'note'}, gBg).textContent = 'clock generator (dashed): ' + [...STIM].join(', ');
 // ---------- interaction ----------
 const panel = document.getElementById('panel');
 let selected = null;

@@ -980,16 +980,88 @@ pub fn build_netlist() -> Netlist {
     nl
 }
 
+/// What each bus is, for the chip map.
+pub fn bus_descriptions() -> BTreeMap<String, String> {
+    let d: &[(&str, &str)] = &[
+        ("ADDR", "The address bus, byte address bits 15:1 (everything is 16-bit words). The A latch drives it on ADRV, the PC on PCDRV, nobody in the word between. Addr15 and Addr14 pick the chip: 0x = flash, 10 = SRAM, 11 = UART."),
+        ("D", "The data bus. One driver per clock: the memory or device that Addr selects on MEMRD, the ALU on ALUOE, or T on TDRV. Read by A, B, T, the PC and the IR at the clock edge."),
+        ("A", "Bit 0 of the A latch. Not an address line (the bus has none); it goes to the ALU only. Bits 1..15 of A are the address bus, ADDR."),
+        ("B", "The B latch: the ALU's second operand and the value a store writes. Point-to-point into the ALU."),
+        ("M", "The microcode ROM's data: the next microword, latched into the pipeline register at every edge."),
+        ("IR", "The instruction register: the opcode, bits 15:11 of the instruction word. Address bits A5..A9 of the microcode ROM."),
+        ("STEP", "The step counter: cleared by the fetch, counting every other clock. Address bits A0..A3 of the microcode ROM."),
+        ("NEL", "The condition: the ALU's not-equal, latched at the end of every word in which A is on the bus, held otherwise. Address bit A4 of the microcode ROM."),
+        ("NE", "The not-equal chain: NE0, NE1, NE2 run between the ALU slices (does any bit so far differ?) and NE, out of the top slice, is A differs from B. NE feeds the NEL latch."),
+        ("COUT", "Carry between ALU slices: COUT0 from slice 0 into slice 1, and so on."),
+        ("ALU0_C1", "Carry into bit 1 of ALU slice 0: a macrocell fed back inside the chip; the pin goes nowhere."),
+        ("ALU0_C2", "Carry into bit 2 of ALU slice 0 (internal)."),
+        ("ALU0_C3", "Carry into bit 3 of ALU slice 0 (internal)."),
+        ("ALU1_C1", "Carry into bit 5 of the sum, inside ALU slice 1 (internal)."),
+        ("ALU1_C2", "Carry into bit 6, inside ALU slice 1 (internal)."),
+        ("ALU1_C3", "Carry into bit 7, inside ALU slice 1 (internal)."),
+        ("ALU2_C1", "Carry into bit 9, inside ALU slice 2 (internal)."),
+        ("ALU2_C2", "Carry into bit 10, inside ALU slice 2 (internal)."),
+        ("ALU2_C3", "Carry into bit 11, inside ALU slice 2 (internal)."),
+        ("ALU3_C1", "Carry into bit 13, inside ALU slice 3 (internal)."),
+        ("ALU3_C2", "Carry into bit 14, inside ALU slice 3 (internal)."),
+        ("ALU3_C3", "Carry into bit 15, inside ALU slice 3 (internal)."),
+        ("CO", "The PC's carry from bit 8 into bit 9."),
+        ("PCDRV", "Microword bit 0: the PC drives Addr, and counts a word at the edge. Also the flash's OE# through MEMRD."),
+        ("ADRV", "Microword bit 11: A drives Addr (and so the ALU sees A). Never in the word next to a PCDRV word."),
+        ("MEMRD_n", "Microword bit 1, active low: the memory or device that Addr selects drives D. OE# of the flash and SRAM, RD# of the UART."),
+        ("ALUOE", "Microword bit 2: the ALU drives D."),
+        ("WE_n", "Microword bit 3, active low: the memory or device that Addr selects takes D. WE# of the SRAM, WR# of the UART, for the whole clock."),
+        ("ALD", "Microword bit 4: A copies D at the ending edge."),
+        ("BLD", "Microword bit 5: B copies D at the ending edge."),
+        ("PCLD", "Microword bit 6: the PC copies D at the ending edge."),
+        ("PCINC", "Microword bit 7: PC += 2 at the ending edge."),
+        ("IRLD", "Microword bit 8: the IR copies D[15:11] and the step counter clears at the ending edge. The fetch."),
+        ("F", "Microword bits 9 and 10, the ALU function: F1 F0 = 00 add, 01 and, 10 nor, 11 pass B."),
+        ("TLD", "Microword bit 12: T copies D at the ending edge."),
+        ("TDRV", "Microword bit 13: T drives D."),
+        ("AUX", "Microword bits 14 and 15, spare: debug outputs."),
+        ("CLK2X", "The oscillator, 9.216 MHz: the divider's clock and the UART's XIN."),
+        ("CLK", "The machine clock, 4.608 MHz, CLK2X divided by two in ALU slice 0. Every other GAL's clock; every flop moves on its rising edge."),
+        ("RST_n", "The MAX811L's reset output, active low: power-on and the button."),
+        ("RS", "RS1: the first stage of the reset synchroniser, RST_n sampled on CLK (a synchroniser flop). RESET is the second stage."),
+        ("RESET", "Reset synchronised to CLK, active high: a factor of every product term in the IR, step counter, pipeline register and PC; the UART's MR."),
+        ("MR_n", "The reset button, to the MAX811L's manual-reset input (pulled up inside the part)."),
+        ("PBANK", "Program flash bank: A16..A18 of the program flash, from a 3-way jumper (tied low here)."),
+        ("UBANK", "Microcode bank: A10..A12 of the microcode ROM, from a 3-way jumper (tied low here)."),
+        ("SIN", "Serial in, from the transceiver."),
+        ("SOUT", "Serial out, to the transceiver."),
+        ("URTS_n", "The UART's RTS#, to the transceiver's second pair."),
+        ("UCTS_n", "The UART's CTS#, from the transceiver's second pair."),
+        ("UDTR_n", "DTR# looped back to DSR# and DCD#: the modem status always reads ready."),
+        ("UBAUD", "BAUDOUT# to RCLK: the baud generator clocks its own receiver."),
+        ("RS232_TX", "RS-232 TX, to the header."),
+        ("RS232_RX", "RS-232 RX, from the header."),
+        ("RS232_RTS", "RS-232 RTS, to the header."),
+        ("RS232_CTS", "RS-232 CTS, from the header."),
+        ("XC_c1A", "SP3232 charge pump: C1+ to its capacitor."),
+        ("XC_c1B", "SP3232 charge pump: C1- to its capacitor."),
+        ("XC_c2A", "SP3232 charge pump: C2+ to its capacitor."),
+        ("XC_c2B", "SP3232 charge pump: C2- to its capacitor."),
+        ("XC_VP", "SP3232 V+ reservoir."),
+        ("XC_VM", "SP3232 V- reservoir."),
+        ("GND", "Ground."),
+        ("VCC", "+5 V."),
+    ];
+    d.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+}
+
 /// The board file.
 pub fn board() -> Board {
     let nl = build_netlist();
-    nl.export(
+    let mut b = nl.export(
         "grit",
         "Microprogrammed 16-bit machine: ATF22V10C logic, SST39SF040 program flash and microcode ROM, AS7C164A SRAM, TL16C550 UART, MAX811L reset, 9.216 MHz oscillator.",
         PERIOD as f64 / NS as f64,
         BTreeMap::new(),
         layout(),
-    )
+    );
+    b.bus_descriptions = bus_descriptions();
+    b
 }
 
 // ---------------------------------------------------------------------------

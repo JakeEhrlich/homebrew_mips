@@ -130,6 +130,10 @@ pub struct Board {
     pub layout: Vec<Column>,
     pub chips: Vec<ChipRec>,
     pub nets: Vec<NetRec>,
+    /// What each bus (a net name without its bit index) is, for the chip
+    /// map.  Empty: the map falls back to its own table.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub bus_descriptions: BTreeMap<String, String>,
 }
 
 /// Metadata a builder attaches to every chip it adds to a [`Netlist`].
@@ -252,6 +256,7 @@ mod tests {
                 pins: vec![PinRec { pin: 1, name: "CLK".into(), net: "CLK".into(), kind: PinKind::In }],
             }],
             nets: vec![NetRec { name: "CLK".into(), tie: None, pull: None, role: Some("clk".into()) }],
+            bus_descriptions: BTreeMap::new(),
         };
         let j = b.to_json();
         assert_eq!(Board::from_json(&j).unwrap(), b);
